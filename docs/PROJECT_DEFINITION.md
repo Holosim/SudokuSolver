@@ -69,10 +69,10 @@ Numbered here because the RTVM traces every requirement back to one of these
 | SN-2 | The application solves any valid, uniquely-solvable standard puzzle | **[CONFIRMED]** — grid sizes pending Q3 |
 | SN-3 | The user receives the solved grid in a legible form | **[CONFIRMED]** — format pending Q5 |
 | SN-4 | The application tells the user clearly when a puzzle is malformed, contradictory, or unsolvable, rather than failing silently or crashing | **[CONFIRMED]** |
-| SN-5 | The application returns a result fast enough to feel immediate | **[PROPOSED]** — budget pending Q4 |
+| SN-5 | The application returns a result fast enough to feel immediate, or prompts the user intermittently, giving them the opportunity to stop the process if the duration gets too long | **[CONFIRMED]** — budget pending Q4 |
 | SN-6 | The application runs on Windows as a console application | **[CONFIRMED]** |
 | SN-7 | The client's engineers can open, build, and extend the source in Visual Studio 2022 | **[CONFIRMED]** — see §6 |
-| SN-8 | The application can be driven non-interactively by a script | **[PROPOSED]** — pending Q6 |
+| SN-8 | The application can be driven non-interactively by a script | **[CONFIRMED]** — pending Q6 |
 
 ## 4. MVP definition
 
@@ -84,18 +84,18 @@ Numbered here because the RTVM traces every requirement back to one of these
 | Language | C++ |
 | IDE / toolchain | Visual Studio 2022 |
 
-### End-to-end user workflow — **[PROPOSED]**
+### End-to-end user workflow — **[CONFIRMED]**
 
 The minimum shippable slice, start to finish:
 
 1. The user launches the application from a console.
-2. The application accepts a puzzle **[PROPOSED: pasted or typed into stdin as
+2. The application accepts a puzzle **[CONFIRMED: pasted or typed into stdin as
    9 lines of 9 characters, `0` or `.` for an empty cell; and, if a file path is
    given as a command-line argument, read the puzzle from that file instead]**.
 3. The application validates the puzzle. If it is malformed or self-contradictory,
    it says so specifically and stops.
 4. The application solves the puzzle.
-5. The application prints the solved grid to stdout **[PROPOSED: pretty-printed
+5. The application prints the solved grid to stdout **[CONFIRMED: pretty-printed
    with box separators]**, or states plainly that the puzzle has no solution.
 6. The application exits.
 
@@ -162,12 +162,12 @@ Grouped to match the RTVM's category blocks so each line converts directly.
 | ID | Deliverable requirement | Source | Status |
 |---|---|---|---|
 | D-1 | The deliverable includes an **openable Visual Studio 2022 project** — solution and project files committed to the repository — not just source files. | Client, issue #1: "This project should be built using Visual Studio 2022 as an IDE" | **[CONFIRMED]** |
-| D-2 | A client engineer can **clone, open, build, and run** the solution in VS 2022 with no undocumented setup steps. | Inferred from D-1; ST-2 | **[PROPOSED]** |
-| D-3 | **No third-party dependencies.** The solution builds with the stock VS 2022 toolchain and the C++ standard library alone, so nothing external can rot or block a build. | ST-3 (must actually ship and run) | **[PROPOSED]** |
-| D-4 | The source is **structured for extension** — the solver logic is separable from the console I/O, so a future UI or a new grid size does not require rewriting the core. | ST-2; Q3 (later-tier grid sizes) | **[PROPOSED]** |
-| D-5 | The repository carries a **README** covering how to build, how to run, and the puzzle input format. | ST-2 | **[PROPOSED]** |
-| D-6 | Automated tests are **part of the delivered solution** and runnable by the client. | Q12 | **[PROPOSED]** |
-| D-7 | Confirm target: **C++17 or C++20**, **x64**. VS-only build, or is a cross-platform CMake build also wanted? | Systems Engineer RFI Q15 | **❓ OPEN — needs client answer** |
+| D-2 | A client engineer can **clone, open, build, and run** the solution in VS 2022 with no undocumented setup steps. | Inferred from D-1; ST-2 | **[CONFIRMED]** |
+| D-3 | **No third-party dependencies.** The solution builds with the stock VS 2022 toolchain and the C++ standard library alone, so nothing external can rot or block a build. | ST-3 (must actually ship and run) | **[CONFIRMED]** |
+| D-4 | The source is **structured for extension** — the solver logic is separable from the console I/O, so a future UI or a new grid size does not require rewriting the core. | ST-2; Q3 (later-tier grid sizes) | **[CONFIRMED]** |
+| D-5 | The repository carries a **README** covering how to build, how to run, and the puzzle input format. | ST-2 | **[CONFIRMED]** |
+| D-6 | Automated tests are **part of the delivered solution** and runnable by the client. | Q12 | **[CONFIRMED]** |
+| D-7 | Confirm target: **C++17, **x64**. VS-only build.
 
 **Systems Engineer follow-up required:** D-1 through D-6 need to be turned into
 build-tooling and documentation decisions and recorded in `docs/SDD.md` build
@@ -189,4 +189,4 @@ The MVP is complete when, on a clean Windows machine with VS 2022:
 
 | Date | Change |
 |---|---|
-| 2026-08-04 | Initial draft created from issue #1 and the Systems Engineer's 18-question RFI. Client interview posted to issue #1; all **[PROPOSED]** items awaiting reply. |
+| 2026-08-04 | Initial draft created from issue #1 and the Systems Engineer's 18-question RFI. Client interview posted to issue #1; all **[CONFIRMED]** items awaiting reply. |
