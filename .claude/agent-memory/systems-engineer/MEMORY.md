@@ -2,9 +2,7 @@
 
 ## RTVM conventions
 
-<!-- ID scheme (e.g. RTVM-<product-prefix>-###), category tags in use,
-     and the verification-method vocabulary (test, analysis,
-     demonstration, inspection). -->
+- [RTVM conventions](rtvm-conventions.md) — ID scheme (`RTVM-nnn` in per-category blocks), `SN-#`/`TP-nnn` companions, verification + status vocabulary.
 
 ## Cross-product interface standards
 
@@ -14,11 +12,9 @@
 
 ## Requirements patterns and traps
 
-<!-- Requirement types that tend to get written ambiguously, and the
-     phrasing that's proven to tighten them up. -->
+- [Blocked without a project definition](blocked-without-project-definition.md) — no `PROJECT_DEFINITION.md` means escalate with a structured RFI; never fabricate line items.
 
 ## Documentation index
 
-<!-- Where the current SDD, interface docs, and test procedures live for
-     each active product line (VR HMD, gesture-tracking gloves, video
-     jukebox controller). -->
+- [Sudoku Solver project context](sudoku-solver-project-context.md) — the client ask, and why the pre-existing `docs/` tree is empty elevator-sim template shells, not real upstream scope.
+- Sudoku Solver: `docs/RTVM.md` (conventions live; matrix pending scope), `docs/SDD.md` + `docs/IMPLEMENTATION_PLAN.md` not yet created.
