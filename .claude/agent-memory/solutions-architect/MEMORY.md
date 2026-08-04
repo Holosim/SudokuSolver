@@ -32,6 +32,13 @@ entry, keep it terse, and fold near-duplicates together.
 - 2026-08-04 — The client names their IDE in the brief. Treat named tooling as
   a deliverable requirement about the artifact, not an incidental build detail
   — see [[deliverable-requirements-pattern]].
+- 2026-08-04 — **This client answers scope interviews by editing the document
+  and committing it, not by commenting on the issue.** When re-triggered with
+  no new issue comment, diff/read `docs/PROJECT_DEFINITION.md` before assuming
+  nothing happened — their `[PROPOSED]`→`[CONFIRMED]` flips and inline
+  additions *are* the reply. They also add scope in their own voice inside
+  existing lines (SN-5 grew an abort-prompt clause this way), so read the whole
+  doc rather than only the items you flagged as open.
 
 ## Open questions log
 
@@ -51,3 +58,5 @@ entry, keep it terse, and fold near-duplicates together.
 - 2026-08-04 — Answered a Systems Engineer RFI with a **draft** `docs/PROJECT_DEFINITION.md` marking every unconfirmed item `[PROPOSED]` rather than deciding on the client's behalf — proposals with recommended defaults let the client confirm in one reply without me inventing intent.
 - 2026-08-04 — Recommended-default form for scope interviews: put every open decision to the client *with* a recommended answer, so silence-cost is low and a single "all defaults" reply unblocks the pipeline.
 - 2026-08-04 — Algorithm choice and test-framework choice are explicitly **not** architect decisions on this project; redirected to the Systems Engineer as *how*, not *what*.
+- 2026-08-04 — When the client adds a scope clause without numbers ("prompt intermittently so the user can stop it"), I supply the concrete thresholds myself (5s / repeat 5s / exit code 3) rather than starting another interview round. A vague requirement is untestable; a stated number is correctable in one line. Only the *what* though — how the solve becomes interruptible stayed with engineering.
+- 2026-08-04 — Any user-facing prompt on this project must carry a "must not hang a non-interactive/scripted caller" constraint, because ST-4 (scripted caller) is confirmed. Applies to every future interactive addition, not just the solve prompt.
