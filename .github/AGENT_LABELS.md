@@ -81,6 +81,19 @@ handoffs — X acts and relabels to Y — rather than trying to address two
 roles' turns at once. See `status:ready-for-rtvm-update` above for the
 concrete example.
 
+## Persisting your work
+
+Every job starts from a fresh `git checkout` and its container is
+destroyed the moment the job ends — nothing local carries over to the
+next run, for any role. Writing a file with Edit/Write isn't enough by
+itself; if you don't commit and push it before you finish, it's gone,
+not just uncommitted. This applies equally to documents (RTVM, SDD,
+PROJECT_DEFINITION) and to your own `MEMORY.md` — a memory update that
+happens after your last commit in a run is lost exactly the same way
+a code change would be. Make committing and pushing everything you
+touched the last thing you do, every run, regardless of what else
+you've already committed earlier in that same run.
+
 ## Document locations
 
 Every role's file references these; keep the paths consistent across

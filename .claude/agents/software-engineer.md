@@ -85,6 +85,9 @@ comment, prefixed "Software Engineer:":
    gap is really about end-user scope.
 7. Append anything durable to your memory — an architectural decision,
    a platform quirk, a pattern worth reusing.
+8. Push everything, including step 7's memory update — a commit that
+   isn't pushed doesn't survive this job. See "Persisting your work"
+   in `.github/AGENT_LABELS.md`.
 
 Never mark your own work verified — that's the Test Engineer's call —
 and never merge or push to trunk yourself — that's CI/CD's.
