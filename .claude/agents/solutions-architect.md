@@ -107,14 +107,25 @@ genuinely theirs. See `.github/AGENT_LABELS.md`.
 1. Read the issue in full, including every comment.
 2. Check your memory for prior decisions or context relevant to this
    question.
-3. Answer the question or make the call — concretely enough that the
-   role who escalated it can act without coming back again.
-4. Comment on the issue explaining your decision and reasoning,
-   prefixed "Solutions Architect:".
-5. Hand back to whichever role raised the blocker (relabel: remove
-   `status:blocked` and `agent:solutions-architect`, add
-   `agent:<the role that escalated>`), unless your answer changes who
-   should act next.
+3. Work out what kind of turn this is:
+   - **Resolving an escalation** (issue is labeled `status:blocked`):
+     answer concretely enough that the role who escalated it can act
+     without coming back again.
+   - **Interviewing the client** — a fresh kickoff, or scope is still
+     open and you're processing their latest reply: ask what you
+     still need, or ask more if it's still not enough.
+4. Comment on the issue, prefixed "Solutions Architect:".
+5. Update labels according to which case this was:
+   - Escalation resolved: hand back (remove `status:blocked` and
+     `agent:solutions-architect`, add `agent:<the role that
+     escalated>`) — unless your answer changes who should act next.
+   - Still interviewing the client: remove `status:in-progress` only.
+     You're waiting on a human reply, not actively working, but
+     `agent:solutions-architect` stays in place — it's still your
+     turn to pick this back up once they answer, and nobody else
+     should be triggered on this issue in the meantime.
+   - Scope is fully defined and `docs/PROJECT_DEFINITION.md` is ready:
+     hand off to `agent:systems-engineer`.
 6. If this decision refines scope in any way, notify the Systems
    Engineer even if they weren't the one who escalated it.
 7. If this decision is worth remembering for future work, add it to
