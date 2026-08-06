@@ -85,8 +85,14 @@ jobs:
                of this handoff.
             2. Read .claude/agent-memory/${{ steps.role.outputs.role }}/MEMORY.md
                for anything relevant you've learned on past issues.
-            3. Do the work the issue is asking of you.
-            4. Post one comment on the issue before you finish — no
+            3. If this task touches one of the standard docs
+               (docs/PROJECT_DEFINITION.md, docs/RTVM.md, docs/SDD.md,
+               docs/IMPLEMENTATION_PLAN.md), check whether it already
+               exists before writing to it — every project starts with
+               a pre-structured skeleton for these. Fill in that
+               existing structure; don't replace it with something new.
+            4. Do the work the issue is asking of you.
+            5. Post one comment on the issue before you finish — no
                matter what happened. This isn't conditional on
                success: if you completed the task, say what you did;
                if you hit an error, ran out of information you
@@ -95,7 +101,7 @@ jobs:
                can. The comment thread should never go quiet with no
                record of what was attempted. Prefix it with your role
                name (e.g. "Software Engineer:").
-            5. Hand off by running exactly one command:
+            6. Hand off by running exactly one command:
                  gh issue edit ${{ steps.role.outputs.issue }} \
                    --remove-label "agent:${{ steps.role.outputs.role }}" \
                    --remove-label "status:in-progress" \
@@ -108,7 +114,7 @@ jobs:
                "status:in-progress" and leave your own agent:* label in
                place, so nothing else gets triggered on this issue
                until they reply.
-            6. If you learned something durable — a pattern, a gotcha,
+            7. If you learned something durable — a pattern, a gotcha,
                an architectural decision — append it to your MEMORY.md.
                Keep entries short and dated.
           claude_args: |
