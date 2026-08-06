@@ -25,10 +25,13 @@ gh label create "status:verified"         --color 2cbe4e --description "Linked R
 gh label create "status:cancelled"        --color 999999 --description "Test iteration voided by an RTVM/procedure change; restarts on next build" --force
 gh label create "status:needs-human"      --color b60205 --description "Automated escalation exhausted; a human needs to look at this" --force
 gh label create "status:waiting-on-lock"  --color fef2c0 --description "Backed off after failing to acquire a file lock" --force
+gh label create "status:retry-1"          --color fbca04 --description "Auto-retrying after a rate-limit/overload error, attempt 1 of 3" --force
+gh label create "status:retry-2"          --color f9a825 --description "Auto-retrying after a rate-limit/overload error, attempt 2 of 3" --force
+gh label create "status:retry-3"          --color e8890c --description "Auto-retrying after a rate-limit/overload error, attempt 3 of 3" --force
 
 # Type labels
 gh label create "type:requirement" --color c5def5 --description "Traces to an RTVM line item" --force
 gh label create "type:blocker"     --color e99695 --description "A question raised by an agent, not a client-facing ask" --force
 gh label create "type:bug"         --color ee0701 --description "A defect, not a new requirement" --force
 
-echo "Done — run 'gh label list' to confirm all 17 are there."
+echo "Done — run 'gh label list' to confirm all 20 are there."

@@ -36,15 +36,25 @@ unclear who should act next, that's itself a question for
 - `status:cancelled` — a test procedure or requirement changed
   mid-test; the in-flight test iteration is void and will restart once
   a new build is ready
-- `status:needs-human` — an automated escalation path has been
+- `status:needs-human` — either an automated escalation path has been
   exhausted (e.g. five consecutive fail/rebuild/retest cycles on the
-  same requirement). The relay stops here on purpose. A human reviews
-  the thread and either resolves it directly or manually relabels to
+  same requirement, or three automatic retries of a rate-limit/overload
+  error), or the run itself couldn't execute at all
+  (credit balance exhausted, invalid or revoked API key, key lacks
+  model access, or a missing OIDC permission) — nothing an agent could
+  act on in any of these cases. The relay stops here on purpose. A
+  human reviews the thread and either resolves it directly or
+  manually relabels to
   resume.
 - `status:waiting-on-lock` — this issue's agent backed off after
   failing to acquire a file lock (see `docs/LOCKING.md`). A scheduled
   sweep retries it periodically; no action needed unless it's stuck
   for an unusually long time.
+- `status:retry-1` / `status:retry-2` / `status:retry-3` — a run
+  failed with a rate-limit or service-overload error and is being
+  retried automatically, with an increasing delay (30s, 60s, 120s).
+  Purely informational; no action needed unless it escalates to
+  `status:needs-human` after the third attempt.
 
 ## Type labels
 
