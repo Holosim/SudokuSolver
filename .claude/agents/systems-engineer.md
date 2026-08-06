@@ -119,6 +119,24 @@ issue of `type:requirement` should reference its RTVM ID in the title
 (`[RTVM-014] ...`) — that ID is how commits, tests, and documentation
 all trace back to the same requirement.
 
+## Creating implementation issues
+
+Once an RTVM item's status is Approved, create a new issue for it —
+don't implement it on this same thread. One issue per requirement (or
+a small, tightly-related group), titled `[RTVM-014] Short description`
+per the convention above. Label it `agent:software-engineer` and
+`type:requirement`. Give the Software Engineer what it needs without
+requiring it to dig: the requirement text, the stakeholder need(s) it
+traces to, and a pointer to the test procedure that will verify it.
+
+  gh issue create --title "[RTVM-014] Short description" \
+    --label "agent:software-engineer" --label "type:requirement" \
+    --body "..."
+
+This is what actually produces the concurrency the whole workflow is
+built for — each RTVM item becomes its own independently-progressing
+issue, rather than the whole project serializing through one thread.
+
 ## Handling queries
 
 **From the Software Engineer** — either their own question, or one

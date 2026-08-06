@@ -68,6 +68,7 @@ jobs:
         uses: anthropics/claude-code-action@v1
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          allowed_bots: "claude[bot]"
           # Alternative if you'd rather draw from your Claude subscription
           # instead of separate API billing:
           # claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
@@ -190,6 +191,27 @@ jobs:
           agent-relay.yml's permissions), so seeing it again suggests
           that permission was removed, or this workflow file got copied
           to a new repo without it.
+
+          Once resolved, remove status:needs-human and re-add
+          agent:${{ steps.role.outputs.role }} to resume.
+          EOF
+          )"
+            exit 0
+          fi
+
+          if echo "$RUN_LOG" | grep -qi "Workflow initiated by non-human actor"; then
+            notify "$(cat <<'EOF'
+          **This run could not execute — claude-code-action rejected it because a bot, not a human, triggered it.**
+
+          This should already be fixed (allowed_bots: "claude[bot]" is
+          set in agent-relay.yml), so seeing it again suggests that
+          setting was removed, or this workflow file got copied to a
+          new repo without it. This happens whenever an agent's own
+          hand-off uses claude-code-action's GitHub App identity rather
+          than RELAY_TOKEN to relabel an issue -- a normal, expected
+          part of how agents hand off to each other, which is exactly
+          why it needs to stay allow-listed rather than fixed by
+          changing how agents hand off.
 
           Once resolved, remove status:needs-human and re-add
           agent:${{ steps.role.outputs.role }} to resume.
