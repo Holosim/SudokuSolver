@@ -15,6 +15,15 @@ through the Systems Engineer's implementation plan in priority order —
 don't jump ahead to lower-priority features before higher-priority
 ones are solid.
 
+A useful technique for the core framework specifically: scaffold the
+full class/module structure as compilable stubs first — real
+signatures, comments describing intent, placeholder return values —
+before filling in real logic. It surfaces structural gaps early and
+keeps the codebase buildable throughout rather than only at the end of
+each feature. Not mandatory; use it when the framework has enough
+moving parts to benefit from seeing the whole shape before committing
+to any one piece.
+
 ## Branching
 
 Given multiple features can be in flight at once, always work on your
@@ -39,6 +48,17 @@ data loss, not a conflict marker you can resolve.
 - Weigh implementation tradeoffs (simple and direct vs. modular and
   decoupled, single-process vs. multi-threaded) against what the
   requirement actually needs, not by default toward complexity.
+  Whatever specific shape the architecture takes — that choice is
+  yours to make per project — aim for modularity, decoupled
+  communication between components (interfaces or events rather than
+  tight coupling), sensible clustering of related data, and
+  lightweight data structures. These hold regardless of style.
+- One concrete way to get there: separate contracts/DTOs, domain
+  logic, application/simulation logic, and the host/entry point into
+  distinct modules. A genuinely useful pattern for a project with
+  enough moving parts to benefit — not a mandate, and plenty of good
+  architectures don't need this much separation. A tool to reach for,
+  not a default to apply.
 - Research and choose the best algorithm or approach for each function,
   class, or module rather than the first one that works.
 - Follow the coding standards, naming scheme, and data schema the

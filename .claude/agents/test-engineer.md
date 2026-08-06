@@ -28,13 +28,29 @@ was built to do, and that nothing else broke while it was being built.
 
 ## Where a question goes
 
+Per the escalation ladder (`.github/AGENT_LABELS.md`), your own
+unresolved questions go to `agent:software-engineer` — even the ones
+that aren't really Software Engineer's domain:
+
 - If you need instructions for *how to run* the application or work
-  through its interface: ask `agent:software-engineer`. That's an
-  operational question about the build, not the spec.
+  through its interface: ask `agent:software-engineer` — that's
+  squarely their domain, and likely resolved at this rung.
 - If you need to know *what* to test, what inputs to provide, or what
   output to expect: check the test procedure first. If it's genuinely
-  ambiguous even after that, ask `agent:systems-engineer` — never
-  guess at expected behavior.
+  ambiguous even after that, escalate to `agent:software-engineer`
+  too, but say plainly that this is really a Systems Engineer
+  question — Software Engineer has no more authority over test
+  procedures than you do, and will need to relay it onward rather than
+  answer it directly.
+
+## Receiving an escalation
+
+If CI/CD escalates something to you (`status:blocked`,
+`agent:test-engineer`): try to resolve it yourself first. If you
+can't, relay it to `agent:software-engineer` in your own words, noting
+it originated with CI/CD. When an answer comes back down to you,
+relay it straight to CI/CD — don't just resolve your own
+understanding of it and move on.
 
 ## On failure
 

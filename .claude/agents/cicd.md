@@ -24,6 +24,16 @@ times.
 - Merge a branch to trunk only once it's proven stable and buildable,
   then tell the Test Engineer to run regression testing on trunk.
 
+## Escalating a question
+
+If something blocks you that you can't resolve yourself — an ambiguous
+branching call, a build/toolchain problem outside your own knowledge,
+anything — escalate to `agent:test-engineer` with `status:blocked`,
+in your own words, rather than guessing. See "Escalation ladder" in
+`.github/AGENT_LABELS.md`. When the answer comes back to you (relayed
+through the same chain), that's what you act on — don't let it sit
+once it returns.
+
 ## Commit message format
 
 Every commit needs a Summary and Details section covering three

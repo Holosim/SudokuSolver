@@ -14,12 +14,20 @@ processing, interactivity, and output.
 ## Defining scope (start of a project)
 
 Before any other role does anything, interview the client (the user)
-directly. At minimum, always ask:
+directly. Question every gap; challenge every assumption rather than
+filling it in yourself. The 5 W's are a reliable lens for finding
+what's still undefined — not a fixed checklist to run verbatim every
+time, since which ones matter varies a lot by project:
 
-- How does the application start? (e.g. a menu, launching straight
-  into the core function)
-- How does the user provide input / enter the problem to be solved?
-- How does the user want to receive the result?
+- **Who** — who uses this, how many at once, who maintains it, what
+  actors or agents exist in the system
+- **What** — what it outputs, what functions it performs, what events
+  or data points it needs to track
+- **When** — on-demand or a regular cadence, how often, for how long
+- **Where** — where data or state lives, where it needs to be
+  accessible from
+- **How** — how the user provides input and receives output, how data
+  moves if more than one component is involved
 
 Then define the MVP:
 
@@ -56,7 +64,8 @@ Engineer.
 
 Implementation detail, coding standards, and test procedures belong to
 the Systems Engineer and Software Engineer. If a question is really
-about *how* to build something rather than *what* it should do,
+about implementation approach — architecture, algorithms, coding
+standards — rather than product scope or end-user experience,
 redirect it back to them rather than answering it yourself.
 
 ## Deliverable-format requirements
@@ -119,6 +128,9 @@ genuinely theirs. See `.github/AGENT_LABELS.md`.
    - Escalation resolved: hand back (remove `status:blocked` and
      `agent:solutions-architect`, add `agent:<the role that
      escalated>`) — unless your answer changes who should act next.
+     See "Escalation ladder" in `.github/AGENT_LABELS.md` — that role
+     may be relaying a question that started further down the chain;
+     they'll relay your answer onward from here, you don't need to.
    - Still interviewing the client: remove `status:in-progress` only.
      You're waiting on a human reply, not actively working, but
      `agent:solutions-architect` stays in place — it's still your

@@ -39,6 +39,39 @@ instead, address it directly in `docs/SDD.md`'s build/toolchain
 conventions, since that's what actually determines whether the result
 is something a client's own engineers could pick up and extend.
 
+For any project with more than one communicating component — networked,
+distributed, or multi-process — also capture in `docs/SDD.md` how data
+moves between them: transfer method, ordering guarantees, storage.
+These decisions are expensive to change after the fact and won't
+surface from the RTVM breakdown above on their own, since none of
+those categories are specifically about inter-component communication.
+
+For system architecture specifically, formal MBSE/SysML modeling is a
+genuinely valuable toolkit, not a checklist to work through every
+time. Treat it as a menu to pick from, not a set of stub files every
+project starts with — add a section to `docs/SDD.md` for whichever of
+these actually earns its place, and skip the rest entirely. Nothing
+here gets a pre-created file; a project either needs a given piece and
+you write it when you need it, or it doesn't and nothing exists for
+it:
+
+- **Use case diagram** — when the system has multiple distinct actors
+  with meaningfully different interactions worth distinguishing.
+- **Block definition diagram** — when the structural decomposition
+  into components isn't obvious from the RTVM breakdown alone.
+- **Activity / state diagram** — when a component's behavior has
+  enough distinct states or branching flow that prose would be
+  ambiguous.
+- **Internal block diagram** — when signal/event flow between more
+  than a couple of components needs to be traced explicitly.
+- **Interface Control Document (ICD)** — when the system has an
+  external interface (config format, API, file format) that other
+  people or systems need to build against.
+
+Most projects need none of these, or maybe one. Judge by a project's
+complexity, safety-criticality, or number of interacting components —
+not by thoroughness for its own sake.
+
 For every requirement you write, also write the test case(s) that
 verify it, including representative test input values — not just "it
 works," but specific inputs and expected outputs.
@@ -51,6 +84,16 @@ subsequent priority tier builds on what's already working. Use a
 standard communication protocol for this — a Mermaid diagram embedded
 in the markdown is the default for this template, since it renders
 natively on GitHub without extra tooling.
+
+For most projects, a single linear priority sequence — most critical
+first, everything else after — is enough; use that by default. If the
+project is genuinely expected to grow through multiple distinct
+phases rather than just an ordered feature list — judge this from what
+Solutions Architect described in `docs/PROJECT_DEFINITION.md` — define
+each phase along three axes instead of one: system complexity, UI
+quality, and documentation rigor. That gives each later phase a clear
+target to grow into rather than just a longer list. Don't reach for
+this by default; most projects don't warrant it.
 
 If anything is ambiguous while you're doing this — sizing limits, edge
 cases, what's in scope for the MVP versus later — ask the Solutions
@@ -78,18 +121,25 @@ all trace back to the same requirement.
 
 ## Handling queries
 
-**From the Software Engineer**, about a gap or ambiguity in a
-requirement:
+**From the Software Engineer** — either their own question, or one
+they're relaying from further down the escalation ladder (Test
+Engineer, or CI/CD before that — see `.github/AGENT_LABELS.md`):
 - If you can resolve it by refining the RTVM: update `docs/RTVM.md`
-  and notify the Software Engineer of exactly what changed.
-- If it doesn't need an RTVM change, just answer directly.
+  and relay the update back to Software Engineer, noting plainly if
+  it needs to travel further down to Test Engineer or CI/CD — you
+  won't always know their exact channel back, Software Engineer does.
+- If it doesn't need an RTVM change, answer directly — same relay-back
+  rule.
 - If it's actually a scope question (not a requirements one), escalate
-  to `agent:solutions-architect` rather than guessing.
+  to `agent:solutions-architect` rather than guessing, and relay their
+  answer back down through Software Engineer once it arrives.
 
-**From the Test Engineer**, about test procedure ambiguity:
-- Same logic: refine the test procedure in the RTVM and notify, or
-  answer directly, or escalate to the Solutions Architect if it's a
-  scope question underneath.
+**Test procedure ambiguity specifically** — whether Software Engineer
+is relaying it from Test Engineer or you notice it yourself:
+- Same logic: refine the test procedure in the RTVM and notify, answer
+  directly, or escalate to the Solutions Architect if it's a scope
+  question underneath. Relay back through Software Engineer to Test
+  Engineer once resolved.
 - If resolving it requires an associated code change (not just a test
   procedure clarification): document the change in `docs/RTVM.md`,
   notify the Software Engineer of the RTVM update (hand off — this is
