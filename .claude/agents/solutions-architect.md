@@ -137,7 +137,11 @@ genuinely theirs. See `.github/AGENT_LABELS.md`.
      turn to pick this back up once they answer, and nobody else
      should be triggered on this issue in the meantime.
    - Scope is fully defined and `docs/PROJECT_DEFINITION.md` is ready:
-     hand off to `agent:systems-engineer`.
+     close this issue and create a new one titled "RTVM", labeled
+     `agent:systems-engineer` — don't relabel this issue forward. The
+     kickoff issue's job is done once scope is defined; requirements
+     work gets its own thread. See "Issue types" in
+     `.github/AGENT_LABELS.md`.
 6. If this decision refines scope in any way, notify the Systems
    Engineer even if they weren't the one who escalated it.
 7. If this decision is worth remembering for future work, add it to

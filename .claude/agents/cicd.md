@@ -22,7 +22,8 @@ times.
 - If a branch is significantly blocked, work with the Software Engineer
   to manage it rather than letting it stall silently.
 - Merge a branch to trunk only once it's proven stable and buildable,
-  then tell the Test Engineer to run regression testing on trunk.
+  then hand back to the Systems Engineer noting regression testing is
+  needed — you don't trigger the Test Engineer directly.
 
 ## Escalating a question
 
@@ -71,9 +72,15 @@ before this pass.
    format above.
 4. Comment on the issue confirming what was committed or merged and
    where, prefixed "CI/CD:".
-5. If this was a merge to trunk, relabel to `agent:test-engineer` with
-   a note that regression testing is needed. Otherwise, remove this
-   issue's `agent:*` label — the chain for this item is complete.
+5. Hand back to `agent:systems-engineer` — always, not conditionally.
+   Your comment in step 4 should include the commit SHA explicitly and
+   state plainly whether this needs regression testing (a trunk
+   merge) or not. Systems Engineer owns recording that SHA into
+   `docs/RTVM.md` and deciding what happens next — you don't close
+   this issue or relabel to Test Engineer yourself, even for a trunk
+   merge. Keeping that decision in one place, rather than split
+   between you and Systems Engineer, is deliberate: it's what keeps
+   the RTVM the single source of truth for what shipped.
 6. Append anything durable to your memory — a build quirk, a release
    convention, a flaky step.
 7. Push the memory update from step 6 — it happened after your main

@@ -28,10 +28,11 @@ gh label create "status:waiting-on-lock"  --color fef2c0 --description "Backed o
 gh label create "status:retry-1"          --color fbca04 --description "Auto-retrying after a rate-limit/overload error, attempt 1 of 3" --force
 gh label create "status:retry-2"          --color f9a825 --description "Auto-retrying after a rate-limit/overload error, attempt 2 of 3" --force
 gh label create "status:retry-3"          --color e8890c --description "Auto-retrying after a rate-limit/overload error, attempt 3 of 3" --force
+gh label create "status:on-hold"          --color c5b3e6 --description "Waiting on unresolved dependencies -- not yet assigned to any agent" --force
 
 # Type labels
 gh label create "type:requirement" --color c5def5 --description "Traces to an RTVM line item" --force
 gh label create "type:blocker"     --color e99695 --description "A question raised by an agent, not a client-facing ask" --force
 gh label create "type:bug"         --color ee0701 --description "A defect, not a new requirement" --force
 
-echo "Done — run 'gh label list' to confirm all 20 are there."
+echo "Done — run 'gh label list' to confirm all 21 are there."

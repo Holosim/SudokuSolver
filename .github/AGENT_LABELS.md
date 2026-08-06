@@ -55,6 +55,13 @@ unclear who should act next, that's itself a question for
   retried automatically, with an increasing delay (30s, 60s, 120s).
   Purely informational; no action needed unless it escalates to
   `status:needs-human` after the third attempt.
+- `status:on-hold` — this issue has declared dependencies that aren't
+  satisfied yet, so it carries no `agent:*` label — it isn't anyone's
+  turn. A scheduled sweep (`dependency-check.yml`) checks it
+  periodically and releases it to `agent:software-engineer` once
+  every dependency clears. No action needed unless it's stuck for an
+  unusually long time, in which case check whether its declared
+  dependency issues actually exist and are progressing.
 
 ## Type labels
 
@@ -72,6 +79,60 @@ Issues that trace to a requirement start with the RTVM ID:
 
 This makes the RTVM ID searchable across issues, commits, and PRs without
 needing a label per ID.
+
+## Issue types
+
+Every project runs through these at minimum — not an exhaustive list,
+just the baseline. Each of the first five is a single issue producing
+one artifact; the sixth is many issues, one per buildable feature:
+
+1. **Project Kickoff** — triggers Solutions Architect's client
+   interview; produces `docs/PROJECT_DEFINITION.md`.
+2. **RTVM** — Systems Engineer breaks the Project Definition down into
+   requirements; produces `docs/RTVM.md`'s line items.
+3. **SDD** — Systems Engineer defines system architecture, with
+   Solutions Architect and Software Engineer input as needed; produces
+   `docs/SDD.md`.
+4. **Implementation Plan** — Systems Engineer sequences the build with
+   Solutions Architect, most-critical-first; produces
+   `docs/IMPLEMENTATION_PLAN.md`, and is what actually creates the
+   Generate Code Base issue and every `[RTVM-014]`-style issue below,
+   each with its dependencies declared.
+5. **Generate Code Base** — Software Engineer's first task: the actual
+   project scaffolding (a Visual Studio solution, an Unreal project,
+   whatever the platform needs). No dependencies of its own; almost
+   everything else depends on it.
+6. **`[RTVM-014] ...`** — one issue per atomic, buildable, testable
+   feature. This is where Software Engineer, Test Engineer, and CI/CD
+   all work via comments and hand-offs on the *same* issue — never a
+   new issue per action taken on one feature.
+
+The first five each close themselves out and create the next one in
+the chain — they don't relabel forward the way the sixth type does.
+
+## Declaring dependencies
+
+When Systems Engineer creates the Generate Code Base issue and the
+`[RTVM-014]`-style issues during the Implementation Plan step, any
+issue that isn't immediately ready to start needs its dependencies
+declared in its body, under a `## Dependencies` heading:
+
+```
+## Dependencies
+- Finish-Start: #12
+- Start-Start: #15
+```
+
+**Finish-Start** — the referenced issue must be closed first.
+**Start-Start** — the referenced issue must have started (moved past
+`status:on-hold`), but doesn't need to be finished — the two can
+progress concurrently once both are underway.
+
+An issue with any declared dependency gets `status:on-hold` instead of
+`agent:software-engineer` when created — `dependency-check.yml` checks
+it periodically and releases it automatically once every dependency
+clears. An issue with no dependencies (like Generate Code Base itself)
+gets `agent:software-engineer` immediately.
 
 ## Escalation ladder
 

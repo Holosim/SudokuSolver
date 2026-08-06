@@ -38,9 +38,9 @@ Blocked / Withdrawn.
 
 ## Requirements
 
-| Req ID | Requirement | Stakeholder Need(s) | Verification Method | Status |
-| --- | --- | --- | --- | --- |
-| | | | | |
+| Req ID | Requirement | Stakeholder Need(s) | Verification Method | Status | Commit(s) |
+| --- | --- | --- | --- | --- | --- |
+| | | | | | |
 
 ## Test Procedures
 
