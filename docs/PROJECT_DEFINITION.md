@@ -20,27 +20,36 @@ has actually responded, before handing off to the Systems Engineer.
 > against. If a later decision changes, the Solutions Architect updates this
 > document, logs it in §8, and notifies the Systems Engineer — scope does not
 > change by side conversation.
+>
+> **Revised 2026-08-07** (client, issue #1): the long-solve timings in §4.4
+> changed — budget **10 s**, first prompt **15 s**, repeat **every 10 s** — and
+> the solver must **keep working while a prompt is up**. See §8. §4.4.1 records
+> the client's architecture-discovery question about how the interrupt is
+> realised; that one is the Systems Engineer's to answer, not scope's.
 
 ## Mission Statement
 
-
-<!-- Why this exists, in one or two sentences — the problem it solves
-     and for whom. -->
+A Windows console application that takes a standard 9×9 Sudoku puzzle and
+returns the solved grid — quickly, legibly, and with a clear, specific answer
+when a puzzle cannot be solved — delivered as a Visual Studio 2022 solution the
+client's own engineers can open, build, and extend.
 
 ## Value
 
-<!-- What's gained by building this. Keep it concrete; avoid
-     restating the mission statement in different words. -->
+- The user gets a correct, complete grid without solving it by hand.
+- The user is never left guessing: every run ends in a stated outcome (solved,
+  not unique, invalid, unsolvable, aborted) and a matching exit code.
+- The user is never trapped waiting — a long solve announces itself and can be
+  stopped (§4.4).
+- Scripts can drive it unattended and branch on the result (ST-4).
+- The client owns a maintainable codebase, not just an executable (§6).
 
 ## Stakeholders and Needs
 
-<!-- Numbered stakeholder needs (SN-1, SN-2, ...). One entry per
-     need, not per stakeholder — a single stakeholder can have
-     several. -->
-
-| Need ID | Stakeholder | Description & Rationale |
-| --- | --- | --- |
-| SN-1 | | |
+Stakeholders are listed in §"In scope for MVP" (`ST-1`…`ST-4`); the numbered
+stakeholder needs `SN-1`…`SN-8` follow in the same section and are the IDs the
+RTVM traces against. They are kept in one place there rather than duplicated
+here, so they cannot drift apart.
 
 ## MVP Definition
 
@@ -55,9 +64,12 @@ has actually responded, before handing off to the Systems Engineer.
 | V4 | The client's own engineers can extend the program later | Deliverable requirements (§6) |
 | V5 | The user is never trapped waiting on the program | Abortable solve (§4.4) |
 
-- **Target platform:**
-- **Language / stack:**
-- **Output format and delivery:**
+- **Target platform:** Windows, console application, x64
+- **Language / stack:** C++17, stock Visual Studio 2022 toolchain, standard
+  library only — no third-party dependencies, no CMake (§6, D-3/D-7)
+- **Output format and delivery:** Pretty-printed 9×9 grid on stdout, diagnostics
+  and progress prompts on stderr, outcome signalled by process exit code
+  (`0`/`1`/`2`/`3`); delivered as a committed, openable VS 2022 solution
 
 
 ## Scope
@@ -136,6 +148,7 @@ The complete journey, start to finish:
 |---|---|
 | Primary output | Pretty-printed 9×9 grid with box separators, to stdout |
 | Diagnostics | A specific, human-readable message naming the problem (which cell, which conflict) |
+| Streams | **stdout carries the result only** (the solved grid and the non-unique note). Diagnostics and the §4.4 progress prompts go to **stderr**, so a scripted caller capturing stdout is never handed prompt text it has to filter out |
 | Later tiers | 81-character single-line output, writing to a file, and solve metrics (elapsed time, guess counts) are **not** in the MVP |
 | Exit codes | `0` solved · `1` invalid input (malformed or contradictory) · `2` no solution exists · `3` aborted by the user (§4.4) |
 
@@ -149,15 +162,50 @@ performance budget, and both hold:
 
 | Aspect | Decision |
 |---|---|
-| Performance budget | Any standard 9×9 puzzle, including a hard 17-clue grid, solves in **under 1 second** on a typical desktop. This is the number the performance requirement is verified against. |
-| Progress prompt | If a solve has not finished after **5 seconds**, the application tells the user it is still working and offers to stop. The prompt **repeats every 5 seconds** while the solve continues. |
-| Abort | The user can stop the solve at the prompt. The application then reports that the solve was abandoned at the user's request and exits with code `3`. Declining the prompt continues the solve. |
+| Performance budget | Any standard 9×9 puzzle, including a hard 17-clue grid, solves in **under 10 seconds** on a typical desktop. This is the number the performance requirement is verified against. |
+| First progress prompt | If a solve has not finished after **15 seconds**, the application tells the user it is still working and offers to stop. |
+| Repeat interval | The prompt **repeats every 10 seconds** thereafter while the solve is still running — 15 s, 25 s, 35 s, and so on. |
+| Solve continues during the prompt | **The solve does not pause.** Work continues in the background while the prompt is on screen and while the application is waiting for an answer. Prompting must not cost the user solve time. |
+| No answer required | Continuing is the **default**. The prompt is an offer, not a question the program waits on — if the user does not answer, the solve simply carries on to the next prompt. |
+| Solve finishes while a prompt is pending | The result is printed and the application exits normally (`0`/`2`). An unanswered prompt is abandoned; the application does **not** wait for a keypress that is no longer relevant. |
+| Abort | The user may stop the solve at any prompt. The application then reports that the solve was abandoned at the user's request and exits with code `3`. |
+| Prompt destination | Progress prompts and their messages go to **stderr**, so `stdout` carries only the puzzle result. A scripted caller capturing stdout gets a clean grid; a human at a console sees both interleaved as normal. |
 | Never silent | The application must never sit with no output while working. Whatever the input, the user always gets either a result, a diagnostic, or a prompt. |
-| Non-interactive callers | A scripted caller with no interactive console must not be blocked by the prompt. The intent is that the program is still usable, unattended, from a script. *How* that is achieved (a no-prompt flag, a timeout default, detecting a non-interactive stdin) is an engineering decision for the Systems Engineer — the scope requirement is only that piping a puzzle in from a script cannot hang forever waiting on a keypress. |
+| Non-interactive callers | A scripted caller with no interactive console must not be blocked or delayed by the prompt. Because continuing is the default and the solve never pauses, an unattended run always terminates with a result and an exit code. *How* this is achieved is an engineering decision (§4.4.1). |
 
-The 1-second budget is the expectation for real puzzles; the prompt is the
+The 10-second budget is the expectation for real puzzles; the prompt is the
 safety net that guarantees SN-5's "never leave the user waiting on an apparently
-hung program" holds even for a pathological input.
+hung program" holds even for a pathological input. The **5-second gap** between
+the budget (10 s) and the first prompt (15 s) is deliberate: a puzzle that only
+just overruns the budget finishes without ever nagging the user.
+
+### 4.4.1 Architecture discovery item — how the prompt and abort are realised
+
+Raised by the client on issue #1: *"we need to determine if that interrupt is
+possible in a command prompt application. Will that require multi-threading, or
+is there a simpler solution?"*
+
+**This is an engineering question, not a scope one, and it belongs to the
+Systems Engineer.** It is recorded here because the client asked it and because
+the answer must be written down before implementation starts — it is a required
+outcome of architecture discovery, to be documented in `docs/SDD.md`, not left
+to whoever writes the code first.
+
+The scope constraints the chosen approach must satisfy — all from the table
+above, and non-negotiable:
+
+1. Solving continues while a prompt is displayed and while an answer is awaited.
+2. The user can abort at a prompt and the process exits with code `3`.
+3. No answer is required; the default is to continue.
+4. A completed solve is reported immediately, even with a prompt outstanding.
+5. An unattended (piped / redirected / no-console) run never blocks and never
+   hangs.
+6. Timing is wall-clock against the solve, at 15 s then every 10 s.
+
+Whether that is met with a worker thread, a timer plus a cooperative
+check inside the solver loop, non-blocking console polling, a console control
+handler, or something else is entirely the Systems Engineer's call. Scope has no
+preference and will not express one.
 
 ### 4.5 Other confirmed scope decisions
 
@@ -192,10 +240,10 @@ Grouped to match the RTVM's category blocks so each line converts directly.
 |---|---|
 | `UI` | Launch straight into solving, no menu; accept an optional file-path argument; read a puzzle from stdin otherwise; the §4.4 progress prompt and abort interaction |
 | `DATA-IN` | Parse a 9×9 grid; accept `0` and `.` as empty; validate shape, characters, and internal consistency, naming the specific fault |
-| `CORE` | Solve any valid 9×9 puzzle within the 1-second budget; detect unsolvable puzzles; detect non-uniqueness; be interruptible so §4.4's abort is possible |
+| `CORE` | Solve any valid 9×9 puzzle within the 10-second budget; detect unsolvable puzzles; detect non-uniqueness; keep running while a prompt is displayed, and be interruptible so §4.4's abort is possible |
 | `DATA-OUT` | Hold the solved grid and the outcome (solved / solved-but-not-unique / invalid / unsolvable / aborted) |
-| `OUT` | Pretty-printed grid to stdout; specific diagnostic messages; the four distinct process exit codes |
-| `NFR` | 1-second performance budget on a hard 17-clue grid; no crash on any input; never silent while working; self-contained x64 Windows executable |
+| `OUT` | Pretty-printed grid to stdout; diagnostics and progress prompts to stderr; the four distinct process exit codes |
+| `NFR` | 10-second performance budget on a hard 17-clue grid; prompt timing at 15 s then every 10 s; no crash on any input; never silent while working; self-contained x64 Windows executable |
 
 ## 6. Deliverable requirements
 
@@ -230,19 +278,22 @@ The MVP is complete when, on a clean Windows machine with VS 2022:
 1. The solution opens and builds without manual intervention (D-1, D-2, D-7).
 2. Each shipped sample puzzle (§4.2) produces the correct documented outcome,
    including the non-unique and unsolvable cases.
-3. A hard 17-clue puzzle solves within the 1-second budget.
+3. A hard 17-clue puzzle solves within the 10-second budget.
 4. Malformed, contradictory, and unsolvable inputs each produce a specific
    message and the correct exit code — no crash, no silence.
-5. A solve that exceeds 5 seconds prompts the user, and choosing to stop exits
-   cleanly with code `3` (§4.4).
-6. A puzzle piped in from a script produces a result and an exit code without
+5. A solve that exceeds 15 seconds prompts the user, re-prompts every 10 seconds
+   after that, and choosing to stop exits cleanly with code `3` (§4.4).
+6. A solve that is prompting continues to make progress — an unanswered prompt
+   neither pauses the solver nor delays the result once it is found (§4.4).
+7. A puzzle piped in from a script produces a result and an exit code without
    waiting on interactive input.
-7. `docs/RTVM.md` shows every line item at status `Verified`.
+8. `docs/RTVM.md` shows every line item at status `Verified`.
 
 ## 8. Change log
 
 | Date | Change |
 |---|---|
 | 2026-08-04 | Initial draft created from issue #1 and the Systems Engineer's 18-question RFI. Client interview posted to issue #1; all proposals awaiting reply. |
+| 2026-08-07 | **Scope refinement from the client (issue #1).** Performance budget changed from **1 s to 10 s**; first progress prompt moved from 5 s to **15 s**; repeat interval changed from 5 s to **10 s**. New requirement: the solve **continues in the background while a prompt is displayed and while awaiting a reply** — prompting must not pause the solver, and continuing is the default so no answer is required. Consequent decisions by the Solutions Architect: a result found while a prompt is outstanding is reported immediately rather than waiting on a keypress; progress prompts and diagnostics go to **stderr** so stdout stays clean for ST-4. The client's question — whether the interrupt is achievable in a console app and whether it needs multi-threading — is an engineering question and is recorded as an architecture-discovery item for the Systems Engineer in §4.4.1, to be answered in `docs/SDD.md`. Also filled in the previously blank Mission Statement, Value, and MVP platform/stack/output fields from already-confirmed scope (no new scope). Exit codes, grid size, input format, and everything in §4.6 are unchanged. |
 | 2026-08-04 | **Approved.** Client confirmed all proposed defaults by editing this document (commit `a773755`) and answered D-7 (C++17 / x64 / VS-only). New scope from the client on `SN-5`: a long solve must prompt the user and be abortable — specified in §4.4, with the 5-second threshold, repeat interval, exit code `3`, and the non-interactive-caller constraint set by the Solutions Architect. Restructured §4 into confirmed decisions (input, output, long-solve, other, out-of-scope) rather than open questions. All 18 RFI questions in `docs/RTVM.md` §6 are now answered; §6.5 Q15–Q16 are answered by §6 D-1…D-7, and Q8 (algorithm) and Q17 (test framework) are returned to the Systems Engineer as engineering decisions. |
 

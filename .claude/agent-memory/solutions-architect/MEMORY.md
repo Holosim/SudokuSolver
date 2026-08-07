@@ -33,6 +33,20 @@ entry, keep it terse, and fold near-duplicates together.
   doc rather than only the items you flagged as open.
 
 
+- 2026-08-07 — The client *does* also comment directly on the issue when changing
+  scope after approval (timing revision on #1). So: check both the thread and the
+  document diff each run — neither channel alone is reliable.
+- 2026-08-07 — The client asks engineering questions directly of the architect
+  (multi-threading vs. simpler interrupt). Don't answer them —
+  see [[architect-owns-what-not-how]].
+
+## Patterns worth reusing
+
+- [[deliverable-requirements-pattern]] — named IDE/toolchain in a brief is a
+  deliverable requirement, captured separately from features.
+- [[architect-owns-what-not-how]] — client *how* questions become documented
+  architecture-discovery items for the Systems Engineer, never architect answers.
+
 ## Open questions log
 
 <!-- Ambiguities that have reached this role more than once. If the same
@@ -48,4 +62,6 @@ entry, keep it terse, and fold near-duplicates together.
 - 2026-08-04 — Algorithm choice and test-framework choice are explicitly **not** architect decisions on this project; redirected to the Systems Engineer as *how*, not *what*.
 - 2026-08-04 — When the client adds a scope clause without numbers ("prompt intermittently so the user can stop it"), I supply the concrete thresholds myself (5s / repeat 5s / exit code 3) rather than starting another interview round. A vague requirement is untestable; a stated number is correctable in one line. Only the *what* though — how the solve becomes interruptible stayed with engineering.
 - 2026-08-04 — Any user-facing prompt on this project must carry a "must not hang a non-interactive/scripted caller" constraint, because ST-4 (scripted caller) is confirmed. Applies to every future interactive addition, not just the solve prompt.
+- 2026-08-07 — Long-solve timings revised by the client: budget **10 s** (was 1 s), first prompt **15 s** (was 5 s), repeat **every 10 s**, and the solve must keep running while a prompt is up. Deliberate 5 s gap between budget and first prompt so a marginal overrun never nags.
+- 2026-08-07 — Continuing is the *default* answer to any progress prompt on this project, and prompts/diagnostics go to **stderr** while stdout carries only the result. Both follow from ST-4: a non-blocking prompt plus a clean stdout means an unattended run can never hang or need text filtering. Apply to any future prompt, not just the solve one.
 
