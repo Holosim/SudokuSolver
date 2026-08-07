@@ -306,5 +306,33 @@ jobs:
             exit 0
           fi
 
-          echo "Claude Code failed for a reason not in the known list — failing normally."
+          IS_ERROR_LINE="$(echo "$RUN_LOG" | grep -o '"is_error":[[:space:]]*true' | head -1 || true)"
+          COST_LINE="$(echo "$RUN_LOG" | grep -oE '"total_cost_usd":[[:space:]]*[0-9.]+' | head -1 || true)"
+          TURNS_LINE="$(echo "$RUN_LOG" | grep -oE '"num_turns":[[:space:]]*[0-9]+' | head -1 || true)"
+
+          if [[ -n "$IS_ERROR_LINE" ]]; then
+            notify "$(cat <<EOF
+          **This run failed partway through — Claude Code reported an error result, but not one this workflow recognizes specifically.**
+
+          What's known from the run log: ${TURNS_LINE:-turn count unavailable}, ${COST_LINE:-cost unavailable}.
+
+          A non-trivial cost alongside an error result usually means
+          something failed partway through a real session rather than
+          at the very start — worth checking whether this coincided
+          with hitting a spending limit mid-run, which can surface
+          differently than the upfront credit-balance error this
+          workflow already catches.
+
+          Check the full run log (Actions -> this run -> "Run Claude
+          Code as ${{ steps.role.outputs.role }}") for the exact cause
+          — this workflow can't pin it down automatically from here.
+
+          Once resolved, remove status:needs-human and re-add
+          agent:${{ steps.role.outputs.role }} to resume.
+          EOF
+          )"
+            exit 0
+          fi
+
+          echo "Claude Code failed for a reason not in the known list, and no result JSON was found either — failing normally."
           exit 1
