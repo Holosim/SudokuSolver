@@ -12,6 +12,7 @@
 ## Project context
 
 - [SudokuSolver project context](sudoku-solver-project-context.md) — client ask, the 2026-08-07 scope revision numbers, and the legacy-docs trap.
+- [SDD architecture decisions](sdd-architecture-decisions.md) — why the console interrupt needs no threads, the non-blocking-stdin dispatch, solver/test-framework/CRT choices.
 
 ## Documentation index
 

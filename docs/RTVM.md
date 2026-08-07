@@ -91,7 +91,7 @@ Blocked / Withdrawn.
 | RTVM-501 | The first progress prompt is emitted when the solve has been running for 15 s, within a tolerance of ±1.0 s. | SN-5 | Test (TP-501) | Approved | |
 | RTVM-502 | Progress prompts repeat every 10 s thereafter — at 25 s, 35 s, 45 s and so on — each within ±1.0 s of its nominal time, for as long as the solve is running. | SN-5 | Test (TP-502) | Approved | |
 | RTVM-503 | The solve does not pause while a prompt is displayed or while a reply is awaited: the RTVM-204 search-step count strictly increases across every prompt window. | SN-5 | Test (TP-503) | Approved | |
-| RTVM-504 | The application is never silent while working. From launch to exit the user always has either a result, a diagnostic, or a prompt — no interval longer than the RTVM-502 repeat interval passes with no output while a solve is running. | SN-5 | Test (TP-504) | Approved | |
+| RTVM-504 | The application is never silent while working. From launch to exit the user always has either a result, a diagnostic, or a prompt. The longest permitted interval with no output on either stream is bounded by the RTVM-501 first-prompt threshold **before** the first prompt (15 s + 1.0 s tolerance = 16.0 s) and by the RTVM-502 repeat interval **thereafter** (10 s + 1.0 s tolerance = 11.0 s). See §7 I-12. | SN-5 | Test (TP-504) | Approved | |
 | RTVM-505 | No input causes an unhandled exception, an access violation, an assertion dialog, or a non-zero exit code outside the set in RTVM-405. Every run terminates. | SN-4 | Test (TP-505) | Approved | |
 | RTVM-506 | The delivered executable is a self-contained x64 Windows console application that runs on a clean Windows machine with no installed runtime or third-party component beyond what a stock Windows install provides. | SN-6, SN-7 | Test (TP-506) | Approved | |
 | RTVM-507 | The build provides a documented diagnostic means of forcing a solve to run past the prompt thresholds without altering ordinary behaviour, so that RTVM-004…008 and RTVM-501…504 are verifiable end-to-end. It is documented in `docs/SDD.md`, not in the user-facing README, and is inert in normal use. | SN-5 | Test (TP-507) | Approved | |
@@ -157,8 +157,9 @@ code `3`; the process terminates within 1.0 s of the response
 **TP-006 — no response required.** Run with the long-solve hook active
 and an interactive-equivalent stdin that is held open but never
 written to. Expect prompts at 15 s, 25 s, 35 s and 45 s; the process
-still running and still emitting prompts after 45 s; no point at which
-output stops for longer than 11.0 s. Then send the stop response and
+still running and still emitting prompts after 45 s; and, **after the
+first prompt**, no point at which output stops for longer than 11.0 s
+(§7 I-12). Then send the stop response and
 confirm exit `3`. Verifies the process never sat blocked on a read.
 
 **TP-007 — lapsed prompt abandoned.** Configure the long-solve hook to
@@ -360,9 +361,20 @@ reply is pending or not. This is §7 acceptance criterion 6.
 
 **TP-504 — never silent.** Run each of `P-EASY`, `P-HARD17`,
 `P-UNSOLVABLE`, `P-BADCHAR`, and the long-solve hook to 60 s.
-Timestamp every byte written to either stream. Assert that in no run is
-there an interval from process start to process exit longer than 11.0 s
-with no output on either stream.
+Timestamp every byte written to either stream. Assert, for every run:
+
+1. The interval from process start to the **first** byte of output on
+   either stream is at most **16.0 s** (the RTVM-501 threshold plus its
+   tolerance). For the four ordinary fixtures this is bounded far more
+   tightly by RTVM-500; for the long-solve hook run it is the 15 s
+   first prompt.
+2. **After** the first byte of output, no interval with no output on
+   either stream exceeds **11.0 s** (the RTVM-502 repeat interval plus
+   its tolerance), up to process exit.
+
+The two-part form is deliberate — see §7 I-12. A single 11.0 s bound
+measured from process start would contradict RTVM-501, which requires
+silence until 15 s.
 
 **TP-505 — robustness corpus.** Run the application over a corpus of at
 least 25 inputs and assert for each: process exits, exit code in
@@ -599,7 +611,14 @@ grid itself which is byte-normative):
 | Not unique | stdout | `Note: this puzzle has more than one solution; the solution shown is the first one found.` |
 | No solution | stdout | `This puzzle has no solution.` |
 | Aborted | stderr | `Solve abandoned at user request.` |
-| Progress prompt | stderr | `Still working (15s elapsed). Type s then Enter to stop; no response needed - the solve continues.` |
+| Progress prompt | stderr | `Still working (15s elapsed). 1234567 steps taken. Type s then Enter to stop; no response needed - the solve continues.` |
+
+The progress-prompt wording above is now **pinned by `docs/SDD.md` §2.8**.
+The `N steps taken` sentence is the live RTVM-204 counter and is present
+so that RTVM-503 ("the solve did not pause") is observable from stderr
+alone, without instrumentation — TP-503's process-level half reads it
+from consecutive prompt lines. The leading `Still working (Ns elapsed).`
+sentence is unbroken, so TP-004's regex still matches as written.
 
 ### 6.3 Reference machine for RTVM-500
 
@@ -631,27 +650,46 @@ any of them and the affected RTVM item will be reissued.
 | I-9 | Missing or unreadable file argument | Treated as invalid input: specific stderr diagnostic, exit `1`. Not covered by §4.1, but it is the only exit code whose meaning fits. | RTVM-009 |
 | I-10 | How a >15 s solve is produced for test | A build-provided diagnostic hook (RTVM-507). A "pathological" puzzle cannot be relied on: any solver good enough to meet the 10 s budget on `P-HARD17` will also dispatch the known brute-force-hostile grids in milliseconds, so there is no input that reliably exercises the prompt path. | RTVM-507 |
 | I-11 | Abort latency | 1.0 s from response to solver return. Unspecified in scope; without a number "the user can stop it" is not verifiable. | RTVM-203 |
+| I-12 | "Never silent" vs. the deliberate 15 s of silence before the first prompt | Two bounds, not one: **16.0 s** from process start to the first output, **11.0 s** between outputs thereafter. Found while writing the SDD — as originally worded, RTVM-504 imposed a single 11.0 s bound measured from process start, which RTVM-501 (first prompt at 15 s) contradicts outright, making TP-504 unpassable by any conforming implementation. Resolved in favour of RTVM-501, because `docs/PROJECT_DEFINITION.md` §4.4 states the 5 s gap between the 10 s budget and the 15 s prompt is *deliberate* — a puzzle that only just overruns must finish without nagging. The alternative fix, a start-up banner on stderr, was rejected for defeating that stated intent. **No scope change: the program's behaviour is unaltered, only the bound RTVM-504 asserts.** | RTVM-504, RTVM-006 |
+| I-13 | Upper bound on bytes read while looking for a 9-character line | A single line is capped at 4096 bytes before being declared malformed. Within the cap, the exact observed length is reported (TP-102 expects that); beyond it, "more than 4096 characters". Needed so TP-505's 1 MB single line and 10 000-line cases produce the same shape fault promptly rather than buffering a megabyte to reach the same answer. Does not change which inputs are accepted — every input over 9 characters is malformed either way. | RTVM-102, RTVM-505 |
 
-## 8. Carried forward to the SDD
+## 8. Carried forward to the SDD — **CLOSED 2026-08-07 (issue #3)**
 
-Not RTVM line items — recorded here so they are not lost between issues.
+Not RTVM line items — recorded here so they were not lost between
+issues. All five are now answered in `docs/SDD.md`; the pointers below
+are kept so the trail from requirement to decision stays readable.
 
-1. **§4.4.1 architecture discovery.** How the progress prompt, the
-   non-blocking read, and the abort are realised in a Windows console
-   application — worker thread, cooperative polling, console control
-   handler, or otherwise — must be answered and written down in
-   `docs/SDD.md`. The six behavioural constraints in §4.4.1 are the
-   acceptance criteria for whatever is chosen; RTVM-004…008,
-   RTVM-203, RTVM-501…504 and RTVM-507 are their testable form.
-2. **Algorithm choice** (Project Definition §4.5, RFI Q8) — mine to
-   decide, constrained only by RTVM-500 and RTVM-203. Goes in
-   `docs/SDD.md`, not here.
-3. **Test framework choice** (Project Definition §4.5, RFI Q17) — mine
-   to decide, constrained by RTVM-905. Goes in `docs/SDD.md`.
-4. **`DELIV` items RTVM-900…907** must become the SDD's build and
-   toolchain conventions section. RTVM-903 in particular is
-   load-bearing for the later-tier grid sizes and is not decoration.
-5. **Data architecture section of the SDD is not required** unless the
-   §4.4.1 answer introduces a second thread or process, in which case
-   the handoff of the abort signal and the solve result across that
-   boundary needs specifying.
+1. **§4.4.1 architecture discovery.** ✅ Answered in `docs/SDD.md` §1.2
+   and §1.3. **No multi-threading.** The application is single-threaded:
+   the prompt timer and the stop-response check are *polled* from inside
+   the solver's search loop via a `SolveControl` callback, so nothing
+   ever waits and there is nothing to run concurrently. The non-blocking
+   read of standard input dispatches on `GetFileType` — console
+   (`PeekConsoleInput` for a pending `VK_RETURN`), pipe
+   (`PeekNamedPipe`), file (`ReadFile`, EOF latches), or null. `§1.2`
+   carries a constraint-by-constraint table against §4.4.1's six.
+2. **Algorithm choice.** ✅ `docs/SDD.md` §1.5 — bitmask constraint
+   propagation (naked and hidden singles) to fixpoint, then depth-first
+   search ordered by minimum remaining values, candidates tried in
+   ascending digit order, `maxSolutions = 2`. Rejected alternatives
+   recorded there.
+3. **Test framework choice.** ✅ `docs/SDD.md` §3.3 —
+   `Microsoft::VisualStudio::CppUnitTestFramework` (VS 2022 native unit
+   test project). Chosen because it ships with the C++ workload and so
+   is not a third-party dependency (RTVM-902); GoogleTest, Catch2 and
+   doctest rejected as requiring vendoring.
+4. **`DELIV` items RTVM-900…907.** ✅ `docs/SDD.md` §3.1–§3.4 is the
+   build and toolchain conventions section those inspections read.
+   RTVM-903 is carried by §1.1 (a static-library split that makes the
+   separation structural) and §2.3 (`kGridSize` derived from
+   `kBoxSize`, with a `static_assert` guarding the later 16×16 tier).
+5. **Data architecture.** ✅ **Not required** — the §4.4.1 answer
+   introduces no second thread and no second process, so the SDD's Data
+   Architecture section is deliberately absent. `docs/SDD.md` §1.4
+   records that as a decision, and states what would have to be
+   specified if a future tier ever moves the solver off the main thread.
+
+Two RTVM defects were found while writing the SDD and are fixed above:
+§7 **I-12** (RTVM-504 contradicted RTVM-501, making TP-504 unpassable)
+and §7 **I-13** (an unbounded line read behind TP-505). Neither changes
+scope or program behaviour.

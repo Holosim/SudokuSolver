@@ -59,6 +59,29 @@ brute force and filtering to single-fault results takes about a minute.
 an explicit ±1.0 s, and the performance budget got a pinned reference
 machine spec in the RTVM rather than "a typical desktop".
 
+## Two of my own requirements can contradict each other, and only the SDD pass finds it
+
+RTVM-504 said "never silent — no interval longer than the repeat interval
+(11.0 s) with no output". RTVM-501 said "first prompt at 15 s". Both were
+Approved. Together they made TP-504 unpassable by *any* conforming
+implementation: the 0–15 s window is silent by design. Nobody noticed until I
+tried to design the thing that had to satisfy both.
+
+**Why:** each requirement was written from a different sentence of the same
+scope section, and each is individually correct. A safety-net requirement
+("never silent", "always responds", "no gap longer than T") is written as a
+universal, but a threshold requirement elsewhere carves an intentional
+exception out of it. The universal never mentions the exception.
+
+**How to apply:** when the RTVM contains a *universal* bound ("no interval
+longer than…", "always within…", "never more than…"), enumerate every other
+requirement that deliberately delays or suppresses the thing being bounded, and
+write the universal as a **piecewise** bound naming those exceptions. Do this
+during the RTVM pass; the SDD pass is the last cheap chance to catch it, and
+after that it lands on the Test Engineer mid-procedure. Fixing it as an §7
+interpretation (I-12 here) is enough — it changes the assertion, not the
+behaviour, so it is not a scope change and does not need escalating.
+
 ## Ambiguous stream assignment hides in cross-section tension
 
 Two sections of the same approved scope document disagreed about whether
