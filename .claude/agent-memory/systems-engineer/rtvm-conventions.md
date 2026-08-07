@@ -101,3 +101,36 @@ See [[sudoku-solver-project-context]], [[requirements-traps]].
   and tell that issue its job for the item is **regression, not re-litigation**
   — otherwise the same clause gets executed twice and the second run is treated
   as the authority.
+
+### The commit→regression→RTVM loop terminates at the second RTVM update
+
+Added 2026-08-07, issue #5. A trunk merge sends the issue back around:
+CI/CD reports the SHA → Systems Engineer records it and routes to Test
+Engineer for regression → Test Engineer passes → it lands on Systems
+Engineer **again**, and the incoming label is `status:ready-for-rtvm-update`,
+whose fast path reads "hand to `agent:cicd` with `status:ready-for-commit`".
+
+**Do not follow the label the second time round.** The work is already on
+trunk and the docs edit goes straight to `main`, so there is nothing for
+CI/CD to commit — following it spins the same three roles indefinitely.
+The terminal action is: record the regression result, comment, **close**.
+
+**Why:** the fast path is written for the first pass (a feature test
+passing on a branch). The label is set by the Test Engineer, who has no way
+to distinguish "first pass" from "post-merge regression" — that judgement
+is mine. Read the thread, not the label.
+
+**How to apply:** if the thread already contains a CI/CD merge SHA *and*
+a passing regression pass on trunk, that chain is complete. Closing is also
+what releases the downstream `status:on-hold` issues via
+`dependency-check.yml`, so leaving it open to "be safe" stalls the pipeline.
+
+- **"No change required" is a result worth writing down.** A regression pass
+  that moves nothing still gets a line in §9.2 with the SHA and the reason
+  (here: an empty `git diff` of product paths between the branch tip that
+  passed and trunk). Otherwise the next reader cannot tell a re-checked merge
+  from an unchecked one.
+- **Watch for counts in §9.2 that a later issue will read as a checklist.**
+  The RTVM-904 row said "seven §3.4 headings" against a README with eight
+  `#` headings — correct (the eighth is the title) but ambiguous to #22.
+  Prefer naming the items over stating a count.
