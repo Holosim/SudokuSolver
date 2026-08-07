@@ -2,16 +2,12 @@
 
 ## Architecture patterns
 
-<!-- Module layout, naming conventions, and data-schema decisions that
-     should stay consistent across new work. -->
+- [SudokuSolver module layout](sudoku-module-layout.md) — the scaffold decisions that `DELIV` inspections read; don't undo them casually.
 
 ## Platform-specific notes
 
-<!-- Firmware and SDK quirks or constraints, grouped by target. Add a
-     subsection per platform as real work starts on it:
-     - VR HMD gaming interaction
-     - Gesture-tracking gloves (embedded audio)
-     - Video jukebox player / controller -->
+- [No MSVC in the agent runner](no-msvc-in-agent-runner.md) — runs are Linux/g++; how to compile-check a VS 2022 deliverable anyway.
+- [CppUnitTestFramework and the static CRT](msvc-cppunittest-crt.md) — why a `/MT` exe forces the test project to compile core sources itself.
 
 ## Reusable solutions
 
@@ -20,5 +16,4 @@
 
 ## Coding standards
 
-<!-- Pointer to the Systems Engineer's standards doc, plus any
-     clarifications this role has had to make in practice. -->
+- `docs/SDD.md` §2.1–§2.9 is the authoritative standard for this project (naming, const-correctness, `enum class`, no raw `new`, test methods prefixed with the RTVM ID they verify).

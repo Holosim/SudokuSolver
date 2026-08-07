@@ -2,14 +2,11 @@
 
 ## Test harness notes
 
-<!-- Simulation frameworks, hardware-in-the-loop rigs, and how to run
-     each product line's test suite locally vs. in this pipeline. -->
+- [No Windows runner](no-windows-runner.md) — agent runs are Ubuntu with no MSVC/VS; what can substitute (g++ cross-compile, `/tmp` CppUnitTest shim) and what it proves.
 
 ## Platform-specific test considerations
 
-<!-- What "correct" means per platform where it isn't obvious from the
-     RTVM alone — e.g. VR frame-timing tolerances, glove input-latency
-     budgets, jukebox audio-sync tolerances. -->
+- [DELIV inspection coverage](deliv-inspection-coverage.md) — which of TP-900..907 fully execute here, which need Windows, and the extra load-failure checks worth running.
 
 ## Recurring failure patterns
 

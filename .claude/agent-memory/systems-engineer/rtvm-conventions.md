@@ -62,3 +62,23 @@ scheme per functional area or per product line — extend the blocks instead.
   discovery questions, engineering decisions scope explicitly returned to me).
 
 See [[sudoku-solver-project-context]], [[requirements-traps]].
+
+## Added 2026-08-07 (issue #5, first build accepted)
+
+- **Status column semantics, now that items are moving off `Approved`:**
+  *In Implementation* = something is still to be built for this item;
+  *In Test* = the whole test procedure has been executed and passed, or every
+  clause of it that the pipeline can execute (with the remainder listed in §9.2);
+  *Verified* = CI/CD has reported the commit SHA and it is recorded in the
+  Commit(s) column. Never set Verified from a passing test alone — the SHA is
+  the point of the column.
+- **`docs/RTVM.md` §9 "Verification environment, and partial verification"** —
+  the constraint that the runner is not the target platform, plus a per-item
+  ledger of which procedure clauses were actually executed and which remain.
+  Written so the DELIV inspection issues neither redo the executed clauses nor
+  skip the outstanding ones.
+- The `Generate Code Base` issue is not itself an RTVM item, but it *touches*
+  nine of them. Handling it as the `status:ready-for-rtvm-update` fast path
+  works: update the statuses it moved, record what was verified at clause
+  level, hand to `agent:cicd`. The DELIV items' own issues (#21, #22, #14)
+  still own their formal verification.

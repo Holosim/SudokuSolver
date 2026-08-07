@@ -473,6 +473,28 @@ handed to the solver.
 ```cpp
 namespace sudoku {
 
+// A single logical line is capped before being declared malformed, so a 1 MB
+// one-line input is a prompt shape fault rather than a megabyte buffered to
+// reach the same answer (docs/RTVM.md §7 I-13).
+inline constexpr int kMaxLineBytes = 4096;
+
+// Either a grid or the first fault found — never both, never neither.
+class ParseResult {                      // returned by parseGrid
+public:
+    [[nodiscard]] static ParseResult success(Grid g);
+    [[nodiscard]] static ParseResult failure(InputFault f);
+
+    [[nodiscard]] bool ok() const;
+    [[nodiscard]] const Grid& grid() const;         // precondition: ok()
+    [[nodiscard]] const InputFault& fault() const;  // precondition: !ok()
+
+private:
+    ParseResult() = default;                        // no public default ctor
+    bool       m_ok = false;
+    Grid       m_grid{};
+    InputFault m_fault{};
+};
+
 struct SolveProgress {
     std::uint64_t nodesExplored = 0;
     int           currentDepth  = 0;
@@ -500,6 +522,18 @@ struct SolveOptions {
 
 } // namespace sudoku
 ```
+
+`ParseResult` deliberately mirrors `SolveReport`'s shape (§2.4): private default
+constructor and named factories, so that "neither a grid nor a fault" is
+**unrepresentable** rather than merely undocumented. That is the same move §2.4
+uses to make RTVM-300 ("exactly one outcome, never none and never two") a
+property of the type instead of a discipline the caller has to keep. It carries
+the *first* fault only — RTVM-105 / §7 I-7 fix the precedence and the parser
+returns on the first one found, so there is never a list to carry. Added
+2026-08-07: §2.6 named `ParseResult` as `parseGrid`'s return type from the start
+but never defined it; the Software Engineer scaffolded this shape at Generate
+Code Base and it is adopted as specified. Changing it is [RTVM-100] (#6)'s
+business, and any change lands back here.
 
 `formatGrid` returns the 13-line block of `docs/RTVM.md` §6.2 as a `std::string`
 and writes to nothing. TP-400 asserts it byte for byte; keeping it a pure
@@ -610,6 +644,22 @@ not be built and the inspection will fail.
   `samples/` to a clean machine" work without a path convention nobody wrote
   down.
 
+**Two repository-level files are load-bearing requirements, not housekeeping**
+(added 2026-08-07 after both were found wrong in the template at Generate Code
+Base — `docs/RTVM.md` §9.3):
+
+- **`.gitignore` must not exclude `*.sln` or `*.vcxproj`.** A stock Unreal or
+  "Visual Studio" template ignore file often does. RTVM-900 is "an openable
+  committed solution, not source files alone", and an ignored `.sln` fails it
+  *silently* — the tree looks complete and the client's clone has no solution
+  to open. Exclude build output only: `.vs/`, `x64/`, `Debug/`, `Release/`,
+  `*.user`.
+- **`.gitattributes` must pin `samples/*.txt` to LF** (`samples/*.txt text
+  eol=lf`). A blanket `* text=auto` checks the samples out as CRLF on Windows,
+  and TP-907 diffs them against the §6.1 fixtures **byte for byte** — it would
+  fail on line endings alone, on the client's machine and nowhere else.
+  `.sln` / `.vcxproj` are pinned to CRLF, as VS writes them.
+
 ### 3.2 Compiler and linker settings (RTVM-902, RTVM-906, RTVM-506)
 
 | Setting | Value | Because |
@@ -663,6 +713,13 @@ in VS 2022).
 by design. They carry
 `TEST_METHOD_ATTRIBUTE(L"TestCategory", L"Slow")` so the default
 developer run stays fast, and the documented full-suite command includes them.
+
+**If Test Explorer does not list the tests on the first Windows run**, the first
+thing to check is a missing
+`<ProjectSubType>NativeUnitTestProject</ProjectSubType>` in the test project's
+`Globals` property group — the stock template emits it and the scaffold does
+not. Recorded as a watch-item, not a defect: nobody has yet been able to
+reproduce it either way (`docs/RTVM.md` §9.1).
 
 Documented commands (these go in the README, RTVM-905 / TP-905):
 
@@ -746,26 +803,63 @@ set SUDOKU_DIAG_MIN_SOLVE_MS=60000
 SudokuSolver.exe samples\hard17.txt
 ```
 
-### 3.7 Open for Software Engineer confirmation
+### 3.7 Points left to the Software Engineer — outcomes
 
-Two implementation-level points where the Software Engineer's judgement should
-be applied at the Generate Code Base step. Neither changes the architecture; if
-either turns out differently, note it on the relevant issue and it will be
-recorded here.
+Two implementation-level points were left here for the Software Engineer's
+judgement at the Generate Code Base step. Both are now answered (issue #5,
+2026-08-07); the original wording of each is kept so the reasoning behind the
+outcome is still readable.
 
-1. **Static CRT and the test project.** §3.2 specifies `/MT` and `/MTd`
-   throughout so the shipped exe satisfies RTVM-506 on a clean machine.
-   `SudokuCore` and `SudokuSolver.Tests` must match the same CRT linkage to
-   link. If `CppUnitTestFramework` cannot be linked against the static CRT in
-   the installed VS 2022, the **test project alone** may use `/MD` `/MDd` with
-   a matching `SudokuCore` configuration for the test build — RTVM-506
-   constrains the delivered executable, not the test DLL. Say so on the issue
-   if that fallback is taken.
-2. **Console availability probe.** §1.3 tests for a completed line by peeking
-   for a `VK_RETURN` key-down record before calling `ReadConsoleA`. If that
-   proves unreliable against a particular console host, the acceptable
-   alternatives are `_kbhit()`/`_getch()` from `<conio.h>` (CRT, stock, not
-   third-party) for the console case only, keeping the pipe and file cases as
-   specified. What is **not** acceptable under any circumstance is any call
-   that can block — `std::getline(std::cin, …)`, a bare `ReadFile` on a console
-   handle, or `std::cin >>`. RTVM-006 and RTVM-008 exist to catch exactly that.
+#### 1. Static CRT and the test project — **fallback taken**
+
+*Original:* §3.2 specifies `/MT` and `/MTd` throughout so the shipped exe
+satisfies RTVM-506 on a clean machine. `SudokuCore` and `SudokuSolver.Tests`
+must match the same CRT linkage to link. If `CppUnitTestFramework` cannot be
+linked against the static CRT in the installed VS 2022, the **test project
+alone** may use `/MD` `/MDd` — RTVM-506 constrains the delivered executable,
+not the test DLL.
+
+**Outcome.** The fallback is taken. `SudokuSolver.exe` and `SudokuCore.lib`
+remain `/MT` and `/MTd`; **`SudokuSolver.Tests` alone is `/MD` and `/MDd`**,
+because `CppUnitTestFramework` ships linked against the dynamic CRT and a `/MT`
+test DLL fails with `LNK2038: mismatch detected for 'RuntimeLibrary'`.
+**RTVM-506 is unaffected** — it constrains the delivered executable, which is
+still statically linked.
+
+That has one structural consequence: a `/MD` test DLL also cannot link the
+`/MT` `SudokuCore.lib`. Rather than add `Debug-Test` / `Release-Test`
+configurations (an MSBuild project builds one configuration per solution
+configuration, so the core would have to be duplicated), **the test project
+lists `SudokuCore`'s `.cpp` files as its own `ClCompile` items** and compiles
+them under its own CRT setting. The `ProjectReference` on `SudokuCore` is kept
+with `LinkLibraryDependencies=false`, so build order and the RTVM-903
+dependency direction still hold structurally, and the core still demonstrably
+compiles and links with no console-layer object file present. Nothing about the
+delivered executable changes.
+
+**Provisional on one point:** this was decided from documentation, not from an
+MSVC link — the pipeline has no Windows environment (`docs/RTVM.md` §9.1). If
+the first real `Debug|x64` build shows `CppUnitTestFramework` linking happily
+against `/MT`, revert to a plain library link and simplify this section; that
+is strictly the nicer arrangement and the only reason it wasn't chosen is the
+expected `LNK2038`.
+
+#### 2. Console availability probe — **still open, deliberately**
+
+*Original:* §1.3 tests for a completed line by peeking for a `VK_RETURN`
+key-down record before calling `ReadConsoleA`. If that proves unreliable
+against a particular console host, the acceptable alternatives are
+`_kbhit()`/`_getch()` from `<conio.h>` (CRT, stock, not third-party) for the
+console case only, keeping the pipe and file cases as specified. What is **not**
+acceptable under any circumstance is any call that can block —
+`std::getline(std::cin, …)`, a bare `ReadFile` on a console handle, or
+`std::cin >>`. RTVM-006 and RTVM-008 exist to catch exactly that.
+
+**Outcome.** Nothing decided and nothing foreclosed, which is the right state
+at scaffold time: the choice can only be made against a real console host.
+`StdinChannel` exposes `kind()`, `isClosed()` and `tryReadLine()` only, holds
+the handle as an opaque `void*`, and keeps `<windows.h>` out of its header —
+so either route drops in behind that interface without touching a caller. The
+decision belongs to **[RTVM-004] (#17)**, which owns the prompt, the abort and
+the non-blocking stdin path; the non-blocking constraint above is binding on it
+either way.

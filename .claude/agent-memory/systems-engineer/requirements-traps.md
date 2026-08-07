@@ -93,3 +93,55 @@ requirement, enumerate every message the program can emit and assign each
 a stream explicitly in the RTVM, then add an aggregate test asserting
 stdout contains none of the diagnostic substrings. The per-message rules
 drift; the aggregate assertion does not.
+
+## The verification environment can fail to intersect the target platform (2026-08-07)
+
+SudokuSolver is a Windows/VS 2022 deliverable; every agent run executes on an
+Ubuntu runner with no MSVC, no `msbuild`, no Visual Studio and no console
+handles. So most of the RTVM — every console test, every timing test, every
+MSVC build inspection — is unexecutable *by the pipeline that is supposed to
+verify it*, and that only became visible at the first build (issue #5).
+
+**Why:** nothing in the requirements pass asks "what machine executes this
+procedure?" Each TP is written against the target platform, which is correct,
+and the gap lives entirely outside the document.
+
+**How to apply:** when the target platform and the CI platform differ, say so
+in the RTVM as its own section during the RTVM pass, and split each affected
+procedure into clauses that the pipeline can execute and clauses it cannot.
+Then never let a partially-executed procedure be recorded as if it were fully
+executed — a clause-level ledger (`docs/RTVM.md` §9.2 here) is what stops
+"passed" from quietly meaning "passed the half we could run". The *where does
+this get executed* question is a process decision, not a requirements one:
+escalate it to the Solutions Architect as its own `type:blocker` issue rather
+than deciding it (issue #23 here).
+
+## Repository housekeeping files can fail a requirement silently
+
+A template `.gitignore` excluding `*.sln` would have failed RTVM-900 ("a
+committed, openable solution, not source files alone") with no visible symptom
+— the tree looks complete and only the client's clone is broken. A blanket
+`* text=auto` in `.gitattributes` would have checked LF fixtures out as CRLF on
+Windows and failed a byte-for-byte fixture diff on the client's machine and
+nowhere else.
+
+**Why:** these files are treated as housekeeping by everyone, so no requirement
+points at them and no inspection greps them.
+
+**How to apply:** if a requirement says an artifact is *committed*, or a test
+procedure compares bytes, name `.gitignore`/`.gitattributes` explicitly in the
+SDD build-conventions section. Both were caught by the Software Engineer at
+scaffold time here; that was luck, not process.
+
+## An interface section can name a type it never defines
+
+`docs/SDD.md` §2.6 used `ParseResult` as a function's return type and never
+specified it — reviewed by three roles without anyone noticing, because the
+name reads as self-explanatory.
+
+**How to apply:** when writing an interface block, check every type appearing
+in a signature has a definition somewhere in the document. The types that get
+skipped are the ones whose names sound obvious (`*Result`, `*Report`,
+`*Options`). Where the answer is a sum type, mirror whichever type in the same
+document already makes "neither case" unrepresentable — consistency is worth
+more than the marginal design.
