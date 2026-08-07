@@ -69,6 +69,13 @@ jobs:
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
           allowed_bots: "claude[bot]"
+          # Full output includes the actual error detail (error/error_type/
+          # message) on failure, not just the summary result object -- what
+          # we were missing this time. Tradeoff: it also means raw prompts
+          # and tool output land in the log, visible to anyone with read
+          # access to this repo. Reasonable here; worth reconsidering for
+          # anything more sensitive built from this template later.
+          show_full_output: "true"
           # Alternative if you'd rather draw from your Claude subscription
           # instead of separate API billing:
           # claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
