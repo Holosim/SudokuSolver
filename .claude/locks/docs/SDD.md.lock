@@ -1,7 +1,0 @@
-{
-  "path": "docs/SDD.md",
-  "holder": "systems-engineer",
-  "issue": 3,
-  "acquired_at": "2026-08-07T02:46:56Z",
-  "reason": "Authoring the SDD: architecture, coding standards, build/toolchain conventions"
-}
