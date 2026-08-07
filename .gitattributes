@@ -1,2 +1,14 @@
 # Auto detect text files and perform LF normalization
 * text=auto
+
+# Visual Studio writes these with CRLF; pinning avoids a whole-file diff the
+# first time anyone opens the solution.
+*.sln             text eol=crlf
+*.vcxproj         text eol=crlf
+*.vcxproj.filters text eol=crlf
+
+# TP-907 diffs samples/ byte for byte against the docs/RTVM.md 6.1 fixtures,
+# which are written with LF. A CRLF checkout on Windows would break that
+# comparison. The application accepts either (RTVM-106), so pinning LF here
+# costs nothing.
+samples/*.txt     text eol=lf
