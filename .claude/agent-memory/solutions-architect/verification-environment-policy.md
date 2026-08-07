@@ -23,6 +23,15 @@ free, and `docs/RTVM.md` §6.3 already names `windows-latest`) or onto a short,
 individually-justified client-acceptance list that I surface to the client
 *before* acceptance is claimed. Never a blanket "accept the gap".
 
+**Known ceiling (2026-08-07, §7.1.1 / V-8):** no agent in this pipeline can
+create, update or dispatch a GitHub workflow — the relay App installation has
+neither the `workflows` permission nor `actions: write`, both measured with the
+live token, not inferred (`docs/RTVM.md` §9.1.4). So "put it on a Windows
+runner" is not something the agents can execute end-to-end. Expect any future
+CI change to stop at the same wall and to need one repository-owner action:
+grant `Workflows: read & write`, or hand-commit the prepared file. Route the ask
+to the client early rather than letting it become "accept the gap" by attrition.
+
 Generalises beyond this project: whenever the build platform and the
 verification platform diverge, make it a written decision with a named owner
 early, rather than discovering it at the last test procedure.
