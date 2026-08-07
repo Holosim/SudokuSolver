@@ -812,13 +812,29 @@ repository-inspection clauses against the merge result and they hold
 there too; the MSVC build, the VS 2022 solution load and Test Explorer
 discovery remain unexecuted, per §9.1.
 
+**Post-merge regression pass, `main` @ `4edbc6c`, Test Engineer
+2026-08-07 — PASS, no regressions, no status movement in either
+direction.** Recorded here because "we re-ran it and nothing moved" is
+a result, and the next reader of this table should not have to wonder
+whether the merge was ever re-checked. The load-bearing finding is that
+`git diff 9636f45 4edbc6c -- src tests samples SudokuSolver.sln
+.gitignore .gitattributes README.md` is **empty**: the merge changed
+`docs/RTVM.md` §9 and nothing any DELIV procedure inspects, so every
+row below re-confirms rather than re-derives. TP-902, TP-906 and
+TP-903's inspection clauses were fully re-executed on trunk; TP-907's
+fixture clause was re-run specifically because `.gitattributes` was
+touched by the merge, and all five samples are still 90 bytes with zero
+CR bytes; TP-900's executable clauses all hold. The outstanding column
+below is unchanged — none of those clauses became reachable, and none
+is a defect against `4edbc6c`.
+
 | Req | Executed here and passed | Still outstanding |
 | --- | --- | --- |
 | RTVM-900 | `.sln` + three `.vcxproj` tracked in git; all six project files parse as XML; every `ClCompile`/`ClInclude` path exists; solution GUIDs match project GUIDs; `WindowsTargetPlatformVersion` = `10.0` in all three | TP-900's second sentence — the solution opening in VS 2022 with no "project unavailable" and no migration prompt |
 | RTVM-901 | — | All of TP-901: clone, open, Build, on a machine that has never built this. Needs the README (RTVM-904) first |
 | RTVM-902 | **All of TP-902.** No `packages.config` / `vcpkg.json` / `conanfile` / NuGet reference / vendored tree; the only paths outside the repo are `$(VCInstallDir)Auxiliary\VS\UnitTest\{include,lib}` (MSVC toolset) | — |
 | RTVM-903 | **All of TP-903.** Zero console/stream/`argv` references under `src/SudokuCore/`; single bare `9` is `kGridSize`'s own definition; the core links into a test driver with no console-layer object file present | Re-confirm the link clause under MSVC rather than `g++`. Evidence, not verdict, is what changes |
-| RTVM-904 | Seven §3.4 headings present as stubs | All TP-904 content clauses — issue #22 |
+| RTVM-904 | All seven **required sections** of `docs/SDD.md` §3.4 present as stubs — `Prerequisites`, `Build`, `Run`, `Input format`, `Exit codes`, `Samples`, `Tests`. (`README.md` has eight `#` headings; the eighth is the document title, which §3.4 does not require and #22 should not count) | All TP-904 content clauses — issue #22 |
 | RTVM-905 | Test project present in the solution; both placeholder methods compile and pass under a `CppUnitTest.h` shim | TP-905's real clause — discovery and execution through Test Explorer / `vstest.console.exe`, plus the README command |
 | RTVM-906 | **All of TP-906.** `stdcpp17` in both configurations of all three projects; `Debug\|x64` and `Release\|x64` are the only configurations anywhere; no `CMakeLists.txt` / `Makefile` / `meson.build` / other cross-platform build file | — |
 | RTVM-907 | Fixture clause: all five `samples/*.txt` identical to their §6.1 fixtures, 90 bytes each, LF, no trailing blank line | The README clause — all five named with their expected outcome (rides with RTVM-904) |
