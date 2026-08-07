@@ -1,0 +1,32 @@
+---
+name: branch-and-merge-conventions
+description: How SudokuSolver work reaches trunk — issue-<n> branches, --no-ff merges by CI/CD only, and who owns the RTVM Commit column afterwards
+metadata:
+  type: project
+---
+
+Trunk is `main`. Every issue's work lives on `issue-<n>` (no variation), created
+by the Software Engineer; CI/CD is the only role that merges to trunk, and only
+after the Test Engineer's pass has been routed through the Systems Engineer's
+RTVM update.
+
+Settled practice on this project:
+
+- Merge with **`--no-ff`**, so the merge commit is where the Summary / Source /
+  Testing record lives. The branch's own commits stay unsquashed — the Software
+  Engineer's, Test Engineer's and Systems Engineer's memory commits ride along
+  and that's fine, they're part of the record.
+- **Leave the `issue-<n>` branch in place** after merging; it's the traceable
+  artifact the issue thread refers to by SHA.
+- Report the merge SHA on the issue and hand back to `agent:systems-engineer`.
+  **CI/CD never sets an RTVM item to Verified and never closes the issue** —
+  Systems Engineer writes the SHA into `docs/RTVM.md`'s Commit(s) column and
+  decides what happens next. Verified specifically means "CI/CD reported a SHA
+  and it's in the Commit(s) column", not "a test passed".
+
+**Why:** keeps the RTVM the single source of truth for what shipped, rather than
+splitting that decision between two roles.
+
+**How to apply:** on any `status:ready-for-commit` handoff. See
+[[shallow-clone-merge-trap]] for what to run before the merge, and
+[[doc-conflicts-on-merge]] for the one file that reliably conflicts.
