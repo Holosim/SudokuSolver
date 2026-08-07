@@ -16,4 +16,17 @@ namespace sudoku {
 // streams for TP-903.
 [[nodiscard]] std::string formatGrid(const Grid& grid);
 
+// Returns the kCellCount-character form: every cell in row-major order,
+// `0` for an empty cell, no separators and no newline. This is the
+// round-trip form TP-100 asserts parseGrid against, and the identity a
+// grid-to-grid comparison can be made on (TP-101).
+//
+// Added 2026-08-07 under issue #6: docs/SDD.md 2.6 names the round trip in
+// TP-100 but does not name a function for it. Flagged to the Systems
+// Engineer for adoption into 2.6, the same route ParseResult took.
+//
+// Not an input format — parseGrid accepts kGridSize lines only, so an
+// 81-character single line is malformed (RTVM-106).
+[[nodiscard]] std::string toCompactString(const Grid& grid);
+
 } // namespace sudoku
