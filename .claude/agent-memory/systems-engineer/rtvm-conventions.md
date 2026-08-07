@@ -82,3 +82,22 @@ See [[sudoku-solver-project-context]], [[requirements-traps]].
   works: update the statuses it moved, record what was verified at clause
   level, hand to `agent:cicd`. The DELIV items' own issues (#21, #22, #14)
   still own their formal verification.
+
+### Refined 2026-08-07 (issue #5, CI/CD commit confirmation `85bab27`)
+
+- **Verified needs two things, not one:** every clause of the procedure
+  executed and passed *on the real toolchain where a clause names one*, **and**
+  a CI/CD trunk SHA in the Commit(s) column. The default role instruction
+  ("record the SHA, set Verified") assumes a feature whose test fully passed;
+  it is wrong for an item with an unexecuted clause. Record the SHA on those
+  items anyway — it says which scaffold they sit on — and leave the status.
+  Written into `docs/RTVM.md` §9.2 so it isn't re-decided per issue.
+- **A procedure that is pure repository inspection can reach Verified without
+  the target platform** — TP-902 and TP-906 are entirely file/project-setting
+  checks, so they were Verified at `85bab27` while TP-900/903/907 (each with
+  one Windows-or-MSVC clause left) stayed In Test. Judge per procedure text,
+  not per category: `DELIV` is not uniformly platform-bound.
+- When an item is Verified ahead of its own inspection issue, say so in §9.2
+  and tell that issue its job for the item is **regression, not re-litigation**
+  — otherwise the same clause gets executed twice and the second run is treated
+  as the authority.

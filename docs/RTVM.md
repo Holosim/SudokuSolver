@@ -93,17 +93,17 @@ Blocked / Withdrawn.
 | RTVM-503 | The solve does not pause while a prompt is displayed or while a reply is awaited: the RTVM-204 search-step count strictly increases across every prompt window. | SN-5 | Test (TP-503) | Approved | |
 | RTVM-504 | The application is never silent while working. From launch to exit the user always has either a result, a diagnostic, or a prompt. The longest permitted interval with no output on either stream is bounded by the RTVM-501 first-prompt threshold **before** the first prompt (15 s + 1.0 s tolerance = 16.0 s) and by the RTVM-502 repeat interval **thereafter** (10 s + 1.0 s tolerance = 11.0 s). See §7 I-12. | SN-5 | Test (TP-504) | Approved | |
 | RTVM-505 | No input causes an unhandled exception, an access violation, an assertion dialog, or a non-zero exit code outside the set in RTVM-405. Every run terminates. | SN-4 | Test (TP-505) | Approved | |
-| RTVM-506 | The delivered executable is a self-contained x64 Windows console application that runs on a clean Windows machine with no installed runtime or third-party component beyond what a stock Windows install provides. | SN-6, SN-7 | Test (TP-506) | In Implementation | |
+| RTVM-506 | The delivered executable is a self-contained x64 Windows console application that runs on a clean Windows machine with no installed runtime or third-party component beyond what a stock Windows install provides. | SN-6, SN-7 | Test (TP-506) | In Implementation | `85bab27` |
 | RTVM-507 | The build provides a documented diagnostic means of forcing a solve to run past the prompt thresholds without altering ordinary behaviour, so that RTVM-004…008 and RTVM-501…504 are verifiable end-to-end. It is documented in `docs/SDD.md`, not in the user-facing README, and is inert in normal use. | SN-5 | Test (TP-507) | Approved | |
 | **DELIV — deliverable requirements (§6). Verified by inspection.** | | | | | |
-| RTVM-900 | The repository contains a committed, openable Visual Studio 2022 solution and project file(s) — not source files alone. (D-1) | SN-7 | Inspection (TP-900) | In Test | |
-| RTVM-901 | A client engineer can clone, open, build, and run the solution in VS 2022 with no setup step that is not written down in the README. (D-2) | SN-7 | Inspection (TP-901) | In Implementation | |
-| RTVM-902 | The solution builds with the stock VS 2022 toolchain and the C++ standard library alone. No third-party library, package manager, or downloaded dependency of any kind. (D-3) | SN-7 | Inspection (TP-902) | In Test | |
-| RTVM-903 | The solver core is a separate compilation unit / module from the console I/O layer and has no dependency on stdin, stdout, stderr, or command-line parsing. The grid dimension appears as a single named constant, not as literal `9`s scattered through the code. (D-4) | SN-7 | Inspection (TP-903) | In Test | |
-| RTVM-904 | The repository carries a README covering how to build, how to run, and the puzzle input format. (D-5) | SN-7 | Inspection (TP-904) | In Implementation | |
-| RTVM-905 | Automated tests are part of the delivered solution and are runnable by the client through a documented command or VS action. (D-6) | SN-7 | Inspection (TP-905) | In Implementation | |
-| RTVM-906 | The solution targets C++17 and x64, and is a Visual Studio solution only — the repository contains no CMake or other cross-platform build files. (D-7) | SN-7 | Inspection (TP-906) | In Test | |
-| RTVM-907 | Five sample puzzles ship with the solution and are referenced from the README: easy, hard 17-clue, unsolvable, malformed, and non-unique. (§4.2) | SN-1, SN-7 | Inspection (TP-907) | In Test | |
+| RTVM-900 | The repository contains a committed, openable Visual Studio 2022 solution and project file(s) — not source files alone. (D-1) | SN-7 | Inspection (TP-900) | In Test | `85bab27` |
+| RTVM-901 | A client engineer can clone, open, build, and run the solution in VS 2022 with no setup step that is not written down in the README. (D-2) | SN-7 | Inspection (TP-901) | In Implementation | `85bab27` |
+| RTVM-902 | The solution builds with the stock VS 2022 toolchain and the C++ standard library alone. No third-party library, package manager, or downloaded dependency of any kind. (D-3) | SN-7 | Inspection (TP-902) | Verified | `85bab27` |
+| RTVM-903 | The solver core is a separate compilation unit / module from the console I/O layer and has no dependency on stdin, stdout, stderr, or command-line parsing. The grid dimension appears as a single named constant, not as literal `9`s scattered through the code. (D-4) | SN-7 | Inspection (TP-903) | In Test | `85bab27` |
+| RTVM-904 | The repository carries a README covering how to build, how to run, and the puzzle input format. (D-5) | SN-7 | Inspection (TP-904) | In Implementation | `85bab27` |
+| RTVM-905 | Automated tests are part of the delivered solution and are runnable by the client through a documented command or VS action. (D-6) | SN-7 | Inspection (TP-905) | In Implementation | `85bab27` |
+| RTVM-906 | The solution targets C++17 and x64, and is a Visual Studio solution only — the repository contains no CMake or other cross-platform build files. (D-7) | SN-7 | Inspection (TP-906) | Verified | `85bab27` |
+| RTVM-907 | Five sample puzzles ship with the solution and are referenced from the README: easy, hard 17-clue, unsolvable, malformed, and non-unique. (§4.2) | SN-1, SN-7 | Inspection (TP-907) | In Test | `85bab27` |
 
 ## Test Procedures
 
@@ -806,6 +806,12 @@ against the tree, not read. **This table is the standing shape for any
 partially-executed procedure** (V-6), not a one-off: a procedure with
 unexecuted clauses gets a row here naming them.
 
+Merged to trunk 2026-08-07 as **`85bab27`** (CI/CD, issue #5), which is
+now in the Commit(s) column of all nine rows below. CI/CD re-ran the
+repository-inspection clauses against the merge result and they hold
+there too; the MSVC build, the VS 2022 solution load and Test Explorer
+discovery remain unexecuted, per §9.1.
+
 | Req | Executed here and passed | Still outstanding |
 | --- | --- | --- |
 | RTVM-900 | `.sln` + three `.vcxproj` tracked in git; all six project files parse as XML; every `ClCompile`/`ClInclude` path exists; solution GUIDs match project GUIDs; `WindowsTargetPlatformVersion` = `10.0` in all three | TP-900's second sentence — the solution opening in VS 2022 with no "project unavailable" and no migration prompt |
@@ -818,11 +824,30 @@ unexecuted clauses gets a row here naming them.
 | RTVM-907 | Fixture clause: all five `samples/*.txt` identical to their §6.1 fixtures, 90 bytes each, LF, no trailing blank line | The README clause — all five named with their expected outcome (rides with RTVM-904) |
 | RTVM-506 | `/MT` `/MTd` set on `SudokuSolver` and `SudokuCore`; the test DLL's `/MD` does not touch the delivered exe (§9.3) | All of TP-506 — the clean-machine run |
 
-Requirements whose procedure is fully executed above are **In Test**;
-the rest are **In Implementation** until their own issue delivers the
-missing part. Nothing here is Verified: Verified is set when CI/CD
-reports the commit and the DELIV inspection issues (#21, #22, #14)
-close.
+**When a DELIV item reaches Verified.** Both of these, and nothing
+less:
+
+1. Every clause of its procedure has been executed and passed — on the
+   real toolchain where the clause names one (§9.1, V-1). A clause run
+   on a substitute toolchain is evidence, not execution.
+2. CI/CD has reported the trunk commit and it is in the Commit(s)
+   column.
+
+Applying that to `85bab27`:
+
+- **RTVM-902 and RTVM-906 are Verified.** TP-902 and TP-906 as written
+  are pure repository inspection — every clause is a file or project
+  setting, none of them needs Windows — and both were executed in full
+  and passed, twice (Test Engineer @ `04b0269`, CI/CD on the merge
+  result). Issue #21 should **not** re-litigate these two; its job for
+  them is to confirm no regression, and to report it if there is one.
+- **RTVM-900, RTVM-903 and RTVM-907 stay In Test.** Each has exactly
+  one clause outstanding, named in its row above. RTVM-903's is the
+  narrowest — the link demonstration ran under `g++`, not MSVC — but
+  §9.1 does not make an exception for narrow, so it waits.
+- **RTVM-901, RTVM-904, RTVM-905 and RTVM-506 stay In Implementation.**
+  Part of what their procedure inspects is not built yet; the SHA
+  records the scaffold they now sit on, not their completion.
 
 ### 9.3 Scaffold decisions recorded against requirements
 
