@@ -93,17 +93,17 @@ Blocked / Withdrawn.
 | RTVM-503 | The solve does not pause while a prompt is displayed or while a reply is awaited: the RTVM-204 search-step count strictly increases across every prompt window. | SN-5 | Test (TP-503) | Approved | |
 | RTVM-504 | The application is never silent while working. From launch to exit the user always has either a result, a diagnostic, or a prompt. The longest permitted interval with no output on either stream is bounded by the RTVM-501 first-prompt threshold **before** the first prompt (15 s + 1.0 s tolerance = 16.0 s) and by the RTVM-502 repeat interval **thereafter** (10 s + 1.0 s tolerance = 11.0 s). See §7 I-12. | SN-5 | Test (TP-504) | Approved | |
 | RTVM-505 | No input causes an unhandled exception, an access violation, an assertion dialog, or a non-zero exit code outside the set in RTVM-405. Every run terminates. | SN-4 | Test (TP-505) | Approved | |
-| RTVM-506 | The delivered executable is a self-contained x64 Windows console application that runs on a clean Windows machine with no installed runtime or third-party component beyond what a stock Windows install provides. | SN-6, SN-7 | Test (TP-506) | Approved | |
+| RTVM-506 | The delivered executable is a self-contained x64 Windows console application that runs on a clean Windows machine with no installed runtime or third-party component beyond what a stock Windows install provides. | SN-6, SN-7 | Test (TP-506) | In Implementation | |
 | RTVM-507 | The build provides a documented diagnostic means of forcing a solve to run past the prompt thresholds without altering ordinary behaviour, so that RTVM-004…008 and RTVM-501…504 are verifiable end-to-end. It is documented in `docs/SDD.md`, not in the user-facing README, and is inert in normal use. | SN-5 | Test (TP-507) | Approved | |
 | **DELIV — deliverable requirements (§6). Verified by inspection.** | | | | | |
-| RTVM-900 | The repository contains a committed, openable Visual Studio 2022 solution and project file(s) — not source files alone. (D-1) | SN-7 | Inspection (TP-900) | Approved | |
-| RTVM-901 | A client engineer can clone, open, build, and run the solution in VS 2022 with no setup step that is not written down in the README. (D-2) | SN-7 | Inspection (TP-901) | Approved | |
-| RTVM-902 | The solution builds with the stock VS 2022 toolchain and the C++ standard library alone. No third-party library, package manager, or downloaded dependency of any kind. (D-3) | SN-7 | Inspection (TP-902) | Approved | |
-| RTVM-903 | The solver core is a separate compilation unit / module from the console I/O layer and has no dependency on stdin, stdout, stderr, or command-line parsing. The grid dimension appears as a single named constant, not as literal `9`s scattered through the code. (D-4) | SN-7 | Inspection (TP-903) | Approved | |
-| RTVM-904 | The repository carries a README covering how to build, how to run, and the puzzle input format. (D-5) | SN-7 | Inspection (TP-904) | Approved | |
-| RTVM-905 | Automated tests are part of the delivered solution and are runnable by the client through a documented command or VS action. (D-6) | SN-7 | Inspection (TP-905) | Approved | |
-| RTVM-906 | The solution targets C++17 and x64, and is a Visual Studio solution only — the repository contains no CMake or other cross-platform build files. (D-7) | SN-7 | Inspection (TP-906) | Approved | |
-| RTVM-907 | Five sample puzzles ship with the solution and are referenced from the README: easy, hard 17-clue, unsolvable, malformed, and non-unique. (§4.2) | SN-1, SN-7 | Inspection (TP-907) | Approved | |
+| RTVM-900 | The repository contains a committed, openable Visual Studio 2022 solution and project file(s) — not source files alone. (D-1) | SN-7 | Inspection (TP-900) | In Test | |
+| RTVM-901 | A client engineer can clone, open, build, and run the solution in VS 2022 with no setup step that is not written down in the README. (D-2) | SN-7 | Inspection (TP-901) | In Implementation | |
+| RTVM-902 | The solution builds with the stock VS 2022 toolchain and the C++ standard library alone. No third-party library, package manager, or downloaded dependency of any kind. (D-3) | SN-7 | Inspection (TP-902) | In Test | |
+| RTVM-903 | The solver core is a separate compilation unit / module from the console I/O layer and has no dependency on stdin, stdout, stderr, or command-line parsing. The grid dimension appears as a single named constant, not as literal `9`s scattered through the code. (D-4) | SN-7 | Inspection (TP-903) | In Test | |
+| RTVM-904 | The repository carries a README covering how to build, how to run, and the puzzle input format. (D-5) | SN-7 | Inspection (TP-904) | In Implementation | |
+| RTVM-905 | Automated tests are part of the delivered solution and are runnable by the client through a documented command or VS action. (D-6) | SN-7 | Inspection (TP-905) | In Implementation | |
+| RTVM-906 | The solution targets C++17 and x64, and is a Visual Studio solution only — the repository contains no CMake or other cross-platform build files. (D-7) | SN-7 | Inspection (TP-906) | In Test | |
+| RTVM-907 | Five sample puzzles ship with the solution and are referenced from the README: easy, hard 17-clue, unsolvable, malformed, and non-unique. (§4.2) | SN-1, SN-7 | Inspection (TP-907) | In Test | |
 
 ## Test Procedures
 
@@ -693,3 +693,80 @@ Two RTVM defects were found while writing the SDD and are fixed above:
 §7 **I-12** (RTVM-504 contradicted RTVM-501, making TP-504 unpassable)
 and §7 **I-13** (an unbounded line read behind TP-505). Neither changes
 scope or program behaviour.
+
+## 9. Verification environment, and partial verification of the DELIV set
+
+### 9.1 The constraint
+
+Every agent run in this pipeline executes on an **Ubuntu runner with
+no Visual Studio, no MSVC toolset and no `msbuild`**. Everything in
+this RTVM is specified against Windows and VS 2022, so an inspection
+or test procedure divides into clauses that can be executed here
+(file contents, project settings read as XML, source-level greps,
+behaviour of a `g++ -std=c++17` build of the same sources) and clauses
+that cannot (the solution opening in VS 2022, an MSVC `Debug|x64` /
+`Release|x64` build, Test Explorer / `vstest.console.exe` discovery,
+console-handle behaviour, a clean-machine run).
+
+**This does not weaken any requirement or any procedure.** No test
+procedure is rewritten to fit the runner, and nothing is marked
+Verified on the strength of a substitute toolchain. The constraint is
+recorded here so that:
+
+- a partially-executed procedure is never recorded as if it were
+  fully executed (§9.2 is the ledger of what was actually run), and
+- the remaining Windows-only clauses are visible now rather than
+  discovered at TP-500.
+
+Which environment ultimately executes the Windows-only clauses — a
+`windows-latest` CI runner, a client engineer's machine, or a manual
+acceptance pass — is a **process decision above the requirements
+level** and is raised with the Solutions Architect separately
+(issue #23). §6.3 already names `windows-latest` as the reference
+machine for TP-500, which is the natural candidate.
+
+### 9.2 DELIV coverage after the Generate Code Base scaffold
+
+State at branch `issue-5` @ `04b0269`, inspected by the Test Engineer
+2026-08-07. "Executed" means the procedure's clause was actually run
+against the tree, not read.
+
+| Req | Executed here and passed | Still outstanding |
+| --- | --- | --- |
+| RTVM-900 | `.sln` + three `.vcxproj` tracked in git; all six project files parse as XML; every `ClCompile`/`ClInclude` path exists; solution GUIDs match project GUIDs; `WindowsTargetPlatformVersion` = `10.0` in all three | TP-900's second sentence — the solution opening in VS 2022 with no "project unavailable" and no migration prompt |
+| RTVM-901 | — | All of TP-901: clone, open, Build, on a machine that has never built this. Needs the README (RTVM-904) first |
+| RTVM-902 | **All of TP-902.** No `packages.config` / `vcpkg.json` / `conanfile` / NuGet reference / vendored tree; the only paths outside the repo are `$(VCInstallDir)Auxiliary\VS\UnitTest\{include,lib}` (MSVC toolset) | — |
+| RTVM-903 | **All of TP-903.** Zero console/stream/`argv` references under `src/SudokuCore/`; single bare `9` is `kGridSize`'s own definition; the core links into a test driver with no console-layer object file present | Re-confirm the link clause under MSVC rather than `g++`. Evidence, not verdict, is what changes |
+| RTVM-904 | Seven §3.4 headings present as stubs | All TP-904 content clauses — issue #22 |
+| RTVM-905 | Test project present in the solution; both placeholder methods compile and pass under a `CppUnitTest.h` shim | TP-905's real clause — discovery and execution through Test Explorer / `vstest.console.exe`, plus the README command |
+| RTVM-906 | **All of TP-906.** `stdcpp17` in both configurations of all three projects; `Debug\|x64` and `Release\|x64` are the only configurations anywhere; no `CMakeLists.txt` / `Makefile` / `meson.build` / other cross-platform build file | — |
+| RTVM-907 | Fixture clause: all five `samples/*.txt` identical to their §6.1 fixtures, 90 bytes each, LF, no trailing blank line | The README clause — all five named with their expected outcome (rides with RTVM-904) |
+| RTVM-506 | `/MT` `/MTd` set on `SudokuSolver` and `SudokuCore`; the test DLL's `/MD` does not touch the delivered exe (§9.3) | All of TP-506 — the clean-machine run |
+
+Requirements whose procedure is fully executed above are **In Test**;
+the rest are **In Implementation** until their own issue delivers the
+missing part. Nothing here is Verified: Verified is set when CI/CD
+reports the commit and the DELIV inspection issues (#21, #22, #14)
+close.
+
+### 9.3 Scaffold decisions recorded against requirements
+
+Two decisions taken at Generate Code Base that a later reader would
+otherwise have to reverse-engineer from the project files:
+
+1. **The test DLL alone links the dynamic CRT** (`/MD`, `/MDd`),
+   because `CppUnitTestFramework` ships linked against it. This is the
+   fallback `docs/SDD.md` §3.7 pre-authorised and it leaves RTVM-506
+   untouched — RTVM-506 constrains the delivered executable, and the
+   delivered executable is still `/MT`. Consequence: the test project
+   compiles `SudokuCore`'s `.cpp` files as its own sources rather than
+   linking the `/MT` library. The `ProjectReference` is kept
+   (`LinkLibraryDependencies=false`) so RTVM-903's dependency
+   direction stays structural. Recorded in `docs/SDD.md` §3.7.
+2. **`.gitignore` and `.gitattributes` were requirements in
+   disguise.** The template `.gitignore` excluded `*.sln`, which would
+   have made RTVM-900 fail silently — a repository of source files
+   with no committed solution. `.gitattributes`' `* text=auto` would
+   have checked `samples/*.txt` out as CRLF on Windows and broken
+   TP-907's byte-for-byte diff. Both are now pinned; `docs/SDD.md`
+   §3.1 states the convention so a future edit doesn't undo it.
