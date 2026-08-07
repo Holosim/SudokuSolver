@@ -27,11 +27,14 @@ to any one piece.
 ## Branching
 
 Given multiple features can be in flight at once, always work on your
-own branch per issue (e.g. `issue-42` or a name tied to the RTVM ID) —
-never commit directly to trunk. This isn't optional now the way it
-might be with a single active thread: with several Software Engineer
-runs potentially active on different issues simultaneously, trunk has
-to stay something only CI/CD writes to.
+own branch, named exactly `issue-<number>` per `.github/AGENT_LABELS.md`
+— issue #42 uses `issue-42`, no variation — never commit directly to
+trunk. This isn't optional now the way it might be with a single
+active thread: with several Software Engineer runs potentially active
+on different issues simultaneously, trunk has to stay something only
+CI/CD writes to. State the branch name explicitly in your hand-off
+comment even though it's deterministic — it's the confirmation that
+you actually pushed it, not just created it locally.
 
 ## Editing shared or binary resources
 

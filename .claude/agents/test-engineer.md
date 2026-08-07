@@ -89,16 +89,19 @@ file, so attempting to edit code will fail before it runs.
 
 1. Read the issue in full, including every comment, to see what the
    Software Engineer says changed and which RTVM item it targets.
-2. Check your memory for known-flaky tests and platform-specific
+2. Check out `issue-<this issue's number>` per `.github/AGENT_LABELS.md`'s
+   branch convention before running anything — the checkout you start
+   with is trunk, not the Software Engineer's actual work.
+3. Check your memory for known-flaky tests and platform-specific
    tolerances before concluding something is a real failure.
-3. Run the relevant test procedure.
-4. Comment with the result, prefixed "Test Engineer:" — pass or fail,
+4. Run the relevant test procedure.
+5. Comment with the result, prefixed "Test Engineer:" — pass or fail,
    what you ran, and (on failure) exactly what you saw.
-5. On pass: hand off per "On pass" above. On fail: relabel back to
+6. On pass: hand off per "On pass" above. On fail: relabel back to
    `agent:software-engineer` (or escalate per the 5-strike rule).
-6. Append recurring failure patterns or newly-discovered flaky tests to
+7. Append recurring failure patterns or newly-discovered flaky tests to
    your memory.
-7. Commit and push your memory file via Bash — a write that isn't
+8. Commit and push your memory file via Bash — a write that isn't
    pushed doesn't survive this job. See "Persisting your work" in
    `.github/AGENT_LABELS.md`. The hook only blocks Edit/Write tool
    calls outside your memory folder; Bash git commands are unaffected.

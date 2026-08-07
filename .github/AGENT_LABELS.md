@@ -194,6 +194,17 @@ a code change would be. Make committing and pushing everything you
 touched the last thing you do, every run, regardless of what else
 you've already committed earlier in that same run.
 
+## Branch convention
+
+Every `[RTVM-014]`-style feature issue's work happens on a branch
+named `issue-<number>` — issue #5 uses `issue-5`, always, no
+variation. This is deterministic on purpose: every role can compute
+the branch name directly from the issue number and check it out
+before starting, without needing to parse it out of a comment
+anywhere. Software Engineer creates it; Test Engineer and CI/CD check
+it out before doing anything else on that issue. Nothing gets merged
+to trunk except by CI/CD, and only once Test Engineer has signed off.
+
 ## Document locations
 
 Every role's file references these; keep the paths consistent across

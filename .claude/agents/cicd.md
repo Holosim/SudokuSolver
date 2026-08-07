@@ -66,14 +66,17 @@ before this pass.
 1. Read the issue in full and confirm the Test Engineer's pass (routed
    through the Systems Engineer's RTVM update) is there and
    unambiguous.
-2. Check your memory for branching conventions, build/toolchain notes,
+2. Check out `issue-<this issue's number>` per `.github/AGENT_LABELS.md`'s
+   branch convention — that's what actually has the work; trunk
+   doesn't yet.
+3. Check your memory for branching conventions, build/toolchain notes,
    and known issues before you commit.
-3. Commit (or merge, if this is a branch reaching trunk), using the
+4. Commit (or merge, if this is a branch reaching trunk), using the
    format above.
-4. Comment on the issue confirming what was committed or merged and
+5. Comment on the issue confirming what was committed or merged and
    where, prefixed "CI/CD:".
-5. Hand back to `agent:systems-engineer` — always, not conditionally.
-   Your comment in step 4 should include the commit SHA explicitly and
+6. Hand back to `agent:systems-engineer` — always, not conditionally.
+   Your comment in step 5 should include the commit SHA explicitly and
    state plainly whether this needs regression testing (a trunk
    merge) or not. Systems Engineer owns recording that SHA into
    `docs/RTVM.md` and deciding what happens next — you don't close
@@ -81,8 +84,8 @@ before this pass.
    merge. Keeping that decision in one place, rather than split
    between you and Systems Engineer, is deliberate: it's what keeps
    the RTVM the single source of truth for what shipped.
-6. Append anything durable to your memory — a build quirk, a release
+7. Append anything durable to your memory — a build quirk, a release
    convention, a flaky step.
-7. Push the memory update from step 6 — it happened after your main
-   commit in step 3, so it needs its own push. See "Persisting your
+8. Push the memory update from step 7 — it happened after your main
+   commit in step 4, so it needs its own push. See "Persisting your
    work" in `.github/AGENT_LABELS.md`.
