@@ -46,6 +46,8 @@ entry, keep it terse, and fold near-duplicates together.
   deliverable requirement, captured separately from features.
 - [[architect-owns-what-not-how]] — client *how* questions become documented
   architecture-discovery items for the Systems Engineer, never architect answers.
+- [[verification-environment-policy]] — build platform ≠ verification platform:
+  decide it in writing early, never verify on a substitute toolchain.
 
 ## Open questions log
 
@@ -63,5 +65,6 @@ entry, keep it terse, and fold near-duplicates together.
 - 2026-08-04 — When the client adds a scope clause without numbers ("prompt intermittently so the user can stop it"), I supply the concrete thresholds myself (5s / repeat 5s / exit code 3) rather than starting another interview round. A vague requirement is untestable; a stated number is correctable in one line. Only the *what* though — how the solve becomes interruptible stayed with engineering.
 - 2026-08-04 — Any user-facing prompt on this project must carry a "must not hang a non-interactive/scripted caller" constraint, because ST-4 (scripted caller) is confirmed. Applies to every future interactive addition, not just the solve prompt.
 - 2026-08-07 — Long-solve timings revised by the client: budget **10 s** (was 1 s), first prompt **15 s** (was 5 s), repeat **every 10 s**, and the solve must keep running while a prompt is up. Deliberate 5 s gap between budget and first prompt so a marginal overrun never nags.
+- 2026-08-07 — Verification environment (issue #23): scope unchanged (Windows/VS 2022 stands), but nothing may be marked Verified on a substitute toolchain, Windows-only clauses must actually run on Windows, and "accept the gap" is rejected as a blanket policy — see [[verification-environment-policy]] and `docs/PROJECT_DEFINITION.md` §7.1.
 - 2026-08-07 — Continuing is the *default* answer to any progress prompt on this project, and prompts/diagnostics go to **stderr** while stdout carries only the result. Both follow from ST-4: a non-blocking prompt plus a clean stdout means an unattended run can never hang or need text filtering. Apply to any future prompt, not just the solve one.
 

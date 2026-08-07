@@ -289,11 +289,42 @@ The MVP is complete when, on a clean Windows machine with VS 2022:
    waiting on interactive input.
 8. `docs/RTVM.md` shows every line item at status `Verified`.
 
+### 7.1 Verification environment — **[CONFIRMED]**
+
+Raised by the Systems Engineer on issue #23: the pipeline's agent runners are
+Ubuntu with no Visual Studio, no MSVC and no `msbuild`, so the target platform
+and the verification platform do not currently intersect. §7 above has always
+been written against Windows and VS 2022; this section makes the consequences
+explicit so they are a decision rather than a discovery at the end of the build.
+
+**Scope does not change.** Windows, x64, C++17, VS 2022 solution only stands
+exactly as confirmed (`SN-6`, `SN-7`, `D-1`, `D-3`, `D-7`). Nothing is
+retargeted, softened, or made cross-platform to suit a runner.
+
+| ID | Rule | Rationale |
+|---|---|---|
+| V-1 | **No requirement reaches `Verified` on the strength of a substitute toolchain.** A `g++ -std=c++17` build, an XML read of a `.vcxproj`, or a source-level grep is *evidence*, never a verdict, for a clause specified against MSVC or the Windows console. | The client is accepting a Windows binary built by VS 2022. Anything verified elsewhere is unverified as far as acceptance is concerned. |
+| V-2 | **The Windows-only clauses must actually be executed on Windows with VS 2022 before the MVP is declared complete.** Accepting the gap as a blanket policy is **rejected**. | The clauses in question cover the prompt, the abort, the performance budget and the openable solution — i.e. everything the client described as the point of the project. An MVP that cannot show these ran is not done. |
+| V-3 | **Primary route: Windows verification inside this pipeline** (a `windows-latest` runner). This is the route to pursue first and the one the RTVM was written against — `docs/RTVM.md` §6.3 already names `windows-latest` as the reference machine for TP-500. The repository is public, so hosted Windows runner minutes carry no cost decision for the client. | Keeps verification automated, repeatable, and attached to a commit, which is what `Verified` is supposed to mean here. |
+| V-4 | **Fallback route: a named client-acceptance pass**, permitted only for clauses a hosted Windows runner genuinely cannot execute (e.g. TP-506's clean-machine run, or a clause that turns on a human watching the IDE open). Each such clause is listed individually in `docs/RTVM.md`, with the reason it cannot be automated, and marked verified **by client acceptance** rather than by this pipeline. | A short, justified, itemised list is a decision. "Some of it will have to be done by hand" is not. |
+| V-5 | **The V-4 list is agreed in advance, not at the end.** As soon as it exists it is surfaced to the client by the Solutions Architect, and §7 acceptance is not claimed until every item on it has been signed off. | The failure mode being designed out is the client discovering at handover that the interesting requirements were never run. |
+| V-6 | **Partial execution is recorded as partial.** A procedure with executed and unexecuted clauses stays below `Verified` and its ledger says which clauses ran. | Already the practice in `docs/RTVM.md` §9.2; recorded here so it is a standing rule, not one issue's good behaviour. |
+| V-7 | The non-Windows build may be used freely as a verification aid, provided it **never becomes a delivered target and never constrains the source**. No cross-platform build file is added (`D-7`), and no design decision is taken to keep the Ubuntu build happy. | Verification convenience must not quietly rewrite the deliverable. |
+
+Ownership of the follow-up sits with the Systems Engineer: *how* Windows
+verification is wired up — a separate workflow, a Windows leg of the existing
+relay, or something else — is a build-tooling decision, not a scope one, and is
+recorded in `docs/RTVM.md` §9.1. If wiring it up needs an action no agent can
+take (repository settings, a token scope, anything requiring the repository
+owner), that comes straight back to the Solutions Architect and is put to the
+client as an explicit request rather than absorbed as a delay.
+
 ## 8. Change log
 
 | Date | Change |
 |---|---|
 | 2026-08-04 | Initial draft created from issue #1 and the Systems Engineer's 18-question RFI. Client interview posted to issue #1; all proposals awaiting reply. |
 | 2026-08-07 | **Scope refinement from the client (issue #1).** Performance budget changed from **1 s to 10 s**; first progress prompt moved from 5 s to **15 s**; repeat interval changed from 5 s to **10 s**. New requirement: the solve **continues in the background while a prompt is displayed and while awaiting a reply** — prompting must not pause the solver, and continuing is the default so no answer is required. Consequent decisions by the Solutions Architect: a result found while a prompt is outstanding is reported immediately rather than waiting on a keypress; progress prompts and diagnostics go to **stderr** so stdout stays clean for ST-4. The client's question — whether the interrupt is achievable in a console app and whether it needs multi-threading — is an engineering question and is recorded as an architecture-discovery item for the Systems Engineer in §4.4.1, to be answered in `docs/SDD.md`. Also filled in the previously blank Mission Statement, Value, and MVP platform/stack/output fields from already-confirmed scope (no new scope). Exit codes, grid size, input format, and everything in §4.6 are unchanged. |
+| 2026-08-07 | **Verification environment decision (issue #23), §7.1 added.** The pipeline's Ubuntu runners cannot execute the Windows/MSVC clauses of most remaining procedures. Decision: no scope change — Windows/x64/VS 2022 stands; nothing is verified on a substitute toolchain (V-1); the Windows-only clauses must be executed on Windows before the MVP is complete and a blanket "accept the gap" is rejected (V-2); primary route is a `windows-latest` runner inside the pipeline (V-3), with a small, individually-justified client-acceptance list as the only fallback (V-4/V-5), surfaced to the client in advance. How Windows CI is wired is the Systems Engineer's build-tooling decision, recorded in `docs/RTVM.md` §9.1. No requirement, exit code, timing or deliverable changed. |
 | 2026-08-04 | **Approved.** Client confirmed all proposed defaults by editing this document (commit `a773755`) and answered D-7 (C++17 / x64 / VS-only). New scope from the client on `SN-5`: a long solve must prompt the user and be abortable — specified in §4.4, with the 5-second threshold, repeat interval, exit code `3`, and the non-interactive-caller constraint set by the Solutions Architect. Restructured §4 into confirmed decisions (input, output, long-solve, other, out-of-scope) rather than open questions. All 18 RFI questions in `docs/RTVM.md` §6 are now answered; §6.5 Q15–Q16 are answered by §6 D-1…D-7, and Q8 (algorithm) and Q17 (test framework) are returned to the Systems Engineer as engineering decisions. |
 
