@@ -32,4 +32,33 @@ ours without retraining.
 **How to apply:** Use these when adding any line item. Don't invent a parallel
 scheme per functional area or per product line — extend the blocks instead.
 
-See [[sudoku-solver-project-context]].
+## Added 2026-08-07 (issue #2, RTVM populated — 47 items)
+
+- **TP numbering is strictly 1:1 with the requirement number.** `RTVM-200` is
+  verified by `TP-200`. Only split to `TP-200a` / `TP-200b` if one requirement
+  genuinely needs independent procedures — never open a separate number space.
+- **`docs/RTVM.md` §6 "Test data and reference definitions"** holds every test
+  fixture literally (named `P-<NAME>` for inputs, `S-<NAME>` for expected
+  solutions) plus the normative output format and the pinned reference machine
+  for the performance requirement. Test procedures reference fixtures by name
+  and never inline puzzle text — one place to fix if a fixture is wrong.
+- **`docs/RTVM.md` §7 "Interpretations"** is a standing table: every place
+  confirmed scope had to be sharpened to make a test procedure writable, with
+  the decision, the reasoning, and the RTVM items affected. Eleven entries on
+  this project.
+
+  **Why:** scope is written at the level of "says specifically what is wrong",
+  not "reports one fault, first-found, in this precedence order". Someone has
+  to close that gap. Closing it silently makes it an assumption; closing it in
+  a named table makes it a cheap-to-overrule decision on the record. Blocking
+  the issue to ask about eleven small things would have stalled the whole
+  pipeline.
+
+  **How to apply:** sharpen, log in the table, and flag the table in the
+  handoff comment. Reserve `status:blocked` escalation for gaps that change
+  *what gets built*, not *how precisely it is described*.
+- **`docs/RTVM.md` §8 "Carried forward to the SDD"** holds items that are not
+  line items but must not be lost between the RTVM and SDD issues (architecture
+  discovery questions, engineering decisions scope explicitly returned to me).
+
+See [[sudoku-solver-project-context]], [[requirements-traps]].

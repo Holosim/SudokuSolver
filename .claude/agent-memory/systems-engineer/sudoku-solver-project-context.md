@@ -31,4 +31,24 @@ scope. If it doesn't exist, scope doesn't exist — don't mine the legacy
 docx/xlsx tree for it, and don't let its apparent completeness suggest the
 upstream steps are done.
 
-See [[rtvm-conventions]], [[blocked-without-project-definition]].
+**Update 2026-08-07:** the legacy `docs/00_*`…`05_*` tree and the `.docx`/`.xlsx`
+shells are **gone** from the repo — `docs/` now holds only the five markdown
+documents (`PROJECT_DEFINITION`, `RTVM`, `SDD`, `IMPLEMENTATION_PLAN`,
+`LOCKING`). The warning above is kept because the *lesson* still applies to any
+project built from this template; the specific paths no longer exist, so don't
+go looking for them.
+
+## Scope revision 2026-08-07 (client, issue #1)
+
+Numbers moved and are easy to get wrong from memory: performance budget **10 s**
+(was 1 s), first progress prompt **15 s** (was 5 s), repeat **every 10 s** (was
+5 s). New and load-bearing: **the solve continues while a prompt is displayed
+and while awaiting a reply** — prompting never pauses the solver, and continuing
+is the default so no answer is required. Exit codes `0`/`1`/`2`/`3`. stdout
+carries the result only; prompts and diagnostics go to stderr.
+
+**How to apply:** always re-read `docs/PROJECT_DEFINITION.md` §4.4 and §8 rather
+than quoting these from memory — they have already changed once.
+
+See [[rtvm-conventions]], [[requirements-traps]],
+[[blocked-without-project-definition]].
