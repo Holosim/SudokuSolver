@@ -652,6 +652,7 @@ any of them and the affected RTVM item will be reissued.
 | I-11 | Abort latency | 1.0 s from response to solver return. Unspecified in scope; without a number "the user can stop it" is not verifiable. | RTVM-203 |
 | I-12 | "Never silent" vs. the deliberate 15 s of silence before the first prompt | Two bounds, not one: **16.0 s** from process start to the first output, **11.0 s** between outputs thereafter. Found while writing the SDD — as originally worded, RTVM-504 imposed a single 11.0 s bound measured from process start, which RTVM-501 (first prompt at 15 s) contradicts outright, making TP-504 unpassable by any conforming implementation. Resolved in favour of RTVM-501, because `docs/PROJECT_DEFINITION.md` §4.4 states the 5 s gap between the 10 s budget and the 15 s prompt is *deliberate* — a puzzle that only just overruns must finish without nagging. The alternative fix, a start-up banner on stderr, was rejected for defeating that stated intent. **No scope change: the program's behaviour is unaltered, only the bound RTVM-504 asserts.** | RTVM-504, RTVM-006 |
 | I-13 | Upper bound on bytes read while looking for a 9-character line | A single line is capped at 4096 bytes before being declared malformed. Within the cap, the exact observed length is reported (TP-102 expects that); beyond it, "more than 4096 characters". Needed so TP-505's 1 MB single line and 10 000-line cases produce the same shape fault promptly rather than buffering a megabyte to reach the same answer. Does not change which inputs are accepted — every input over 9 characters is malformed either way. | RTVM-102, RTVM-505 |
+| I-14 | What "Windows 10/11" in §6.3 means for the machine timings are actually taken on | The GitHub-hosted `windows-latest` image (Windows Server 2022, x64, 4 vCPU, 16 GB) **is** an acceptable §6.3 reference machine and is the normative one for TP-500…504. It shares the kernel, the MSVC toolset and the ABI of Windows 11; §6.3's intent was to exclude an underpowered or loaded machine, not to distinguish client from server SKUs. TP-500's existing requirement to report the machine it ran on is what keeps this honest. Raised because §9.1.3 wires the timing set onto exactly that runner, and "we measured on the wrong machine" is a cheap objection to close now and an expensive one to close at acceptance. | RTVM-500…504, §6.3, §9.1.3 |
 
 ## 8. Carried forward to the SDD — **CLOSED 2026-08-07 (issue #3)**
 
@@ -693,3 +694,179 @@ Two RTVM defects were found while writing the SDD and are fixed above:
 §7 **I-12** (RTVM-504 contradicted RTVM-501, making TP-504 unpassable)
 and §7 **I-13** (an unbounded line read behind TP-505). Neither changes
 scope or program behaviour.
+
+## 9. Verification environment, and partial verification of the DELIV set
+
+### 9.1 The constraint, the policy, and how Windows verification is wired
+
+#### 9.1.1 The constraint
+
+Every agent run in this pipeline executes on an **Ubuntu runner with
+no Visual Studio, no MSVC toolset and no `msbuild`**. Everything in
+this RTVM is specified against Windows and VS 2022, so an inspection
+or test procedure divides into clauses that can be executed here
+(file contents, project settings read as XML, source-level greps,
+behaviour of a `g++ -std=c++17` build of the same sources) and clauses
+that cannot (the solution opening in VS 2022, an MSVC `Debug|x64` /
+`Release|x64` build, Test Explorer / `vstest.console.exe` discovery,
+console-handle behaviour, a clean-machine run).
+
+**This does not weaken any requirement or any procedure.** No test
+procedure is rewritten to fit the runner, and nothing is marked
+Verified on the strength of a substitute toolchain. The constraint is
+recorded here so that:
+
+- a partially-executed procedure is never recorded as if it were
+  fully executed (§9.2 is the ledger of what was actually run), and
+- the remaining Windows-only clauses are visible now rather than
+  discovered at TP-500.
+
+#### 9.1.2 The policy (issue #23, Solutions Architect)
+
+Settled in `docs/PROJECT_DEFINITION.md` **§7.1**, rules **V-1…V-7**,
+which is authoritative; summarised here only so this section reads
+without a second document open. No scope change: Windows / x64 /
+C++17 / VS 2022 stands.
+
+- **V-1** substitute-toolchain results are *evidence, never a verdict*.
+- **V-2** the Windows-only clauses must actually run on Windows before
+  the MVP is complete; a blanket "accept the gap" is rejected.
+- **V-3** primary route is Windows verification **inside this
+  pipeline** (`windows-latest`). §6.3 already names that runner as the
+  reference machine, so nothing in this RTVM is reissued.
+- **V-4/V-5** a client-acceptance pass is a narrow fallback only, one
+  itemised justified clause at a time, agreed **in advance** — §9.4.
+- **V-6** partial execution is recorded as partial — §9.2 is the shape.
+- **V-7** the Ubuntu build may be used as an aid but must never become
+  a delivered target and must never constrain the source.
+
+#### 9.1.3 Wiring decision — W-1…W-8
+
+*How* Windows verification is wired is a build-tooling decision, taken
+here per §7.1's assignment of it to the Systems Engineer.
+
+| ID | Decision | Reason |
+| --- | --- | --- |
+| **W-1** | Windows verification is a **separate workflow**, `.github/workflows/windows-verification.yml`, `runs-on: windows-latest`. It is *not* a Windows leg of `agent-relay.yml`. | The agents don't need Windows; the *build and the executable* do. Moving the relay to Windows would change the toolchain under all five roles and slow every run, to fix one role's problem. |
+| **W-2** | It **executes and publishes evidence; it never issues a verdict** and never sets a `status:*` or `agent:*` label. The Test Engineer reads its output and rules. | V-1 draws the line between evidence and verdict, and that line has to exist in the tooling, not just in prose. A green Windows job is an input to TP-9xx, not a pass. |
+| **W-3** | Trigger: `push` on `issue-*` and `main`, plus `workflow_dispatch` for humans. **No trigger requires an agent to call the Actions API.** | The agent token has `actions: read` only (§9.1.4). A push-triggered design means the Windows evidence already exists, attached to the exact SHA, by the time the Test Engineer looks — no dispatch, no polling, no extra permission. |
+| **W-4** | Jobs, in order, each step named for the procedure it feeds: `msbuild` restore + `Debug\|x64` + `Release\|x64` (TP-900/901/906); `vstest.console.exe` against the test DLL (TP-905); a runtime matrix of the CLI/output/exit-code procedures against the Release build (TP-001…009, TP-4xx, TP-505); the timing set on Release only (TP-500…504 via the RTVM-507 hook); `dumpbin /dependents` on the delivered exe (TP-506, automatable clause). | One job per phase would multiply checkout and build cost for no isolation benefit; one *step* per procedure keeps the log greppable by TP id, which is what the Test Engineer actually reads. |
+| **W-5** | Evidence is published three ways: a `$GITHUB_STEP_SUMMARY` table keyed by **TP id** with `PASS` / `FAIL` / `NOT-RUN`; an artifact `windows-evidence-<sha>` containing build logs, the `.trx`, raw stdout/stderr captures and timing samples, retention 90 days; and the machine's specs printed into the summary. | The Test Engineer runs on Ubuntu and reaches all of this read-only through `gh run list --branch issue-<n>`, `gh run view --log` and the artifacts API — all within `actions: read`. The machine line is not decoration: TP-500 requires the run to report the machine it ran on. |
+| **W-6** | The workflow **fails the job on a build or test failure** rather than swallowing it, but a failed job is still evidence, not a defect report. | A red job that no one is obliged to interpret is how a Windows gap becomes decorative. The Test Engineer raises the defect; the workflow just refuses to look green while broken. |
+| **W-7** | The timing set is run on the Release build only, three times, with all samples reported. A tolerance breach is reported with all three samples rather than retried until green. | `windows-latest` is shared-tenant and jittery; §7 I-6's ±1.0 s is the tolerance, and hiding variance behind a retry-until-pass would make TP-501/502 meaningless. Three samples make jitter visible as jitter. |
+| **W-8** | The workflow must not add, and must not require, any cross-platform build file, and must build the committed `.sln` **exactly as the client would** — no injected properties, no `/p:` overrides beyond `Configuration` and `Platform`. | V-7, `D-7`, RTVM-901/906. A build that only succeeds with CI-only switches has verified a project the client doesn't have. |
+
+The full workflow is written and committed at
+**`docs/ci/windows-verification.yml`**, ready to copy to
+`.github/workflows/`. It is parked outside `.github/workflows/` for the
+reason in §9.1.4, not by preference.
+
+#### 9.1.4 What no agent in this pipeline can do — measured, not assumed
+
+Both of the following were probed on this runner on 2026-08-07 with the
+live relay token, not inferred:
+
+1. **No agent can create or update a workflow file.** Pushing a branch
+   containing `.github/workflows/probe-delete-me.yml` is rejected by the
+   remote: `refusing to allow a GitHub App to create or update workflow
+   '.github/workflows/probe-delete-me.yml' without 'workflows'
+   permission`. The probe branch was deleted; nothing remains.
+2. **No agent can dispatch a workflow either.** `gh workflow run
+   dependency-check.yml` returns `HTTP 403: Resource not accessible by
+   integration`. The installation has `actions: read` — listing
+   workflows and runs works — but not `actions: write`.
+
+So V-3 cannot be completed by any agent. It needs **exactly one action
+from the repository owner**, either of:
+
+- **(a)** grant the relay GitHub App installation **Workflows:
+  read & write**, after which CI/CD adds and maintains
+  `.github/workflows/windows-verification.yml` itself and the pipeline
+  stays self-maintaining; **or**
+- **(b)** copy `docs/ci/windows-verification.yml` to
+  `.github/workflows/windows-verification.yml` and commit it once. No
+  permission change; the cost is that every later edit to that file
+  needs a human again.
+
+`actions: write` is **not** required by the W-3 design and is not part
+of the ask — it would only be needed for on-demand dispatch, which the
+push trigger makes unnecessary. Keeping the ask to one permission is
+deliberate.
+
+Until either lands, every Windows-only clause in §9.2 and §9.4 stays
+outstanding and the affected requirements stay below Verified. This is
+recorded rather than absorbed: per §7.1's closing paragraph it went
+straight back to the Solutions Architect on issue #23.
+
+### 9.2 DELIV coverage after the Generate Code Base scaffold
+
+State at branch `issue-5` @ `04b0269`, inspected by the Test Engineer
+2026-08-07. "Executed" means the procedure's clause was actually run
+against the tree, not read. **This table is the standing shape for any
+partially-executed procedure** (V-6), not a one-off: a procedure with
+unexecuted clauses gets a row here naming them.
+
+| Req | Executed here and passed | Still outstanding |
+| --- | --- | --- |
+| RTVM-900 | `.sln` + three `.vcxproj` tracked in git; all six project files parse as XML; every `ClCompile`/`ClInclude` path exists; solution GUIDs match project GUIDs; `WindowsTargetPlatformVersion` = `10.0` in all three | TP-900's second sentence — the solution opening in VS 2022 with no "project unavailable" and no migration prompt |
+| RTVM-901 | — | All of TP-901: clone, open, Build, on a machine that has never built this. Needs the README (RTVM-904) first |
+| RTVM-902 | **All of TP-902.** No `packages.config` / `vcpkg.json` / `conanfile` / NuGet reference / vendored tree; the only paths outside the repo are `$(VCInstallDir)Auxiliary\VS\UnitTest\{include,lib}` (MSVC toolset) | — |
+| RTVM-903 | **All of TP-903.** Zero console/stream/`argv` references under `src/SudokuCore/`; single bare `9` is `kGridSize`'s own definition; the core links into a test driver with no console-layer object file present | Re-confirm the link clause under MSVC rather than `g++`. Evidence, not verdict, is what changes |
+| RTVM-904 | Seven §3.4 headings present as stubs | All TP-904 content clauses — issue #22 |
+| RTVM-905 | Test project present in the solution; both placeholder methods compile and pass under a `CppUnitTest.h` shim | TP-905's real clause — discovery and execution through Test Explorer / `vstest.console.exe`, plus the README command |
+| RTVM-906 | **All of TP-906.** `stdcpp17` in both configurations of all three projects; `Debug\|x64` and `Release\|x64` are the only configurations anywhere; no `CMakeLists.txt` / `Makefile` / `meson.build` / other cross-platform build file | — |
+| RTVM-907 | Fixture clause: all five `samples/*.txt` identical to their §6.1 fixtures, 90 bytes each, LF, no trailing blank line | The README clause — all five named with their expected outcome (rides with RTVM-904) |
+| RTVM-506 | `/MT` `/MTd` set on `SudokuSolver` and `SudokuCore`; the test DLL's `/MD` does not touch the delivered exe (§9.3) | All of TP-506 — the clean-machine run |
+
+Requirements whose procedure is fully executed above are **In Test**;
+the rest are **In Implementation** until their own issue delivers the
+missing part. Nothing here is Verified: Verified is set when CI/CD
+reports the commit and the DELIV inspection issues (#21, #22, #14)
+close.
+
+### 9.3 Scaffold decisions recorded against requirements
+
+Two decisions taken at Generate Code Base that a later reader would
+otherwise have to reverse-engineer from the project files:
+
+1. **The test DLL alone links the dynamic CRT** (`/MD`, `/MDd`),
+   because `CppUnitTestFramework` ships linked against it. This is the
+   fallback `docs/SDD.md` §3.7 pre-authorised and it leaves RTVM-506
+   untouched — RTVM-506 constrains the delivered executable, and the
+   delivered executable is still `/MT`. Consequence: the test project
+   compiles `SudokuCore`'s `.cpp` files as its own sources rather than
+   linking the `/MT` library. The `ProjectReference` is kept
+   (`LinkLibraryDependencies=false`) so RTVM-903's dependency
+   direction stays structural. Recorded in `docs/SDD.md` §3.7.
+2. **`.gitignore` and `.gitattributes` were requirements in
+   disguise.** The template `.gitignore` excluded `*.sln`, which would
+   have made RTVM-900 fail silently — a repository of source files
+   with no committed solution. `.gitattributes`' `* text=auto` would
+   have checked `samples/*.txt` out as CRLF on Windows and broken
+   TP-907's byte-for-byte diff. Both are now pinned; `docs/SDD.md`
+   §3.1 states the convention so a future edit doesn't undo it.
+
+### 9.4 V-4 candidates — clauses a `windows-latest` runner still cannot execute
+
+**Status: draft, not agreed.** V-4 permits a client-acceptance pass
+only for clauses a hosted Windows runner *genuinely* cannot execute,
+and V-5 requires the list to be agreed in advance. This is my
+first-pass candidate list; each row states the automation route I
+believe closes it, because the honest version of this list is short.
+It is confirmed with the Test Engineer against a real Windows job —
+several rows are expected to *leave* the list at that point, and no
+row leaves this table for the client until it has survived that.
+
+| # | Clause | Why a hosted runner may not reach it | Proposed automation route before conceding it | Recommendation |
+| --- | --- | --- | --- | --- |
+| A-1 | **TP-506** — run the exe on a clean Windows machine with no VS, no redistributable, no build tools | Every hosted Windows image ships the full VS toolchain and the VC++ runtimes, so "runs where the runtime was never installed" cannot be demonstrated there — the negative is unobservable on the only machine we have | `dumpbin /dependents` asserting the import list is stock system DLLs only (`KERNEL32`, `USER32`, …) with no `MSVCP140.dll` / `VCRUNTIME140*.dll` — TP-506's own last sentence, and it is strong evidence | **Genuine V-4 item.** Automate the `dumpbin` clause; the launch-on-a-clean-machine clause goes to client acceptance |
+| A-2 | **TP-900** — the solution *opening* in VS 2022 with no "project unavailable" and no migration prompt | The prompt is modal GUI behaviour; a headless runner never renders it | `devenv.exe SudokuSolver.sln /Build "Debug\|x64"` uses the same solution loader as the IDE and fails or hangs where the IDE would prompt; combined with a toolset/`ToolsVersion` inspection this covers the substance | **Probably not a V-4 item.** Try `devenv /Build` first; concede only if it proves not to reproduce the loader path |
+| A-3 | **TP-905** — tests appearing in **Test Explorer** | Test Explorer is a GUI surface | `vstest.console.exe` is the discovery and execution engine Test Explorer drives; if it discovers and runs both methods, the substantive claim holds | **Not a V-4 item** on current evidence. Expect to close by automation |
+| A-4 | **TP-004…008** — the console-handle behaviour (`PeekConsoleInput`, `GetFileType` = console, an interactive-equivalent stdin held open) | A runner step has no interactive console attached: stdin is a pipe or `NUL`, so `GetFileType` never reports a console and the console path is never entered. TP-008's redirected half runs fine; TP-004/005/006's do not | Drive the exe under a **ConPTY pseudoconsole** (`CreatePseudoConsole`, available on Windows Server 2022) from a small harness, so the child genuinely sees a console handle. This is the same mechanism Windows Terminal uses and it is not exotic | **Undecided — needs a feasibility spike on #17** before it goes anywhere near the client. If ConPTY works this whole row disappears, and it is the largest row on the list |
+| A-5 | **TP-500…504** — the timing set | Shared-tenant runner jitter against a ±1.0 s tolerance (§7 I-6) | W-7: three samples, Release build, all reported | **Not a V-4 item.** Run it; if the tolerance proves unholdable *with data in hand*, that is a requirements question for me, not a client-acceptance one |
+| A-6 | **TP-901** — build "on a machine that has never built this project" | — none; a fresh hosted runner satisfies this clause **better** than a client engineer's machine, which has VS configured and a warm state | n/a | **Not a V-4 item.** Recorded only to stop it being added later by association |
+
+Nothing on this list is surfaced to the client until it is down to the
+rows that survive A-2, A-3 and A-4's automation attempts — per V-5 that
+is the Solutions Architect's step, and a two-row list is a decision
+where a six-row one is a shrug.
