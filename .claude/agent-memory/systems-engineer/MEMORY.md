@@ -8,6 +8,7 @@
 
 - [Requirements traps](requirements-traps.md) — untestable thresholds, a performance budget that defeats its own safety-net requirement, fixtures with overlapping faults.
 - [Blocked without a Project Definition](blocked-without-project-definition.md) — don't write requirements before scope is confirmed; escalate instead.
+- [Implementation plan decomposition](implementation-plan-decomposition.md) — vertical-slice ordering, when to group RTVM items into one issue, and why no-work requirements still need one.
 
 ## Project context
 
