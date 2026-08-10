@@ -28,8 +28,8 @@ Open `SudokuSolver.sln`, select `Release|x64`, and Build Solution.
 
 ## Input format
 
-Nine lines of nine characters. `1`–`9` are givens; **`0` and `.` both mean
-an empty cell** and may be mixed in the same puzzle.
+Nine lines of nine characters. `1`–`9` are givens;
+Both **`0` and `.` mean an empty cell** and may be mixed in the same puzzle.
 
 <!-- TODO(RTVM-904): line endings, trailing newline, whitespace handling,
      and content after the ninth line. -->
