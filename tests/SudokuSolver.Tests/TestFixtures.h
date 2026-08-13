@@ -42,6 +42,31 @@ inline constexpr std::string_view kPuzzleEasy =
     "000419005"
     "000080079";
 
+// P-HARD17 (docs/RTVM.md 6.1) — 17 givens, the minimum for a unique 9x9
+// puzzle, and the RTVM-500 performance reference.
+inline constexpr std::string_view kPuzzleHard17 =
+    "000000010"
+    "400000000"
+    "020000000"
+    "000050407"
+    "008000300"
+    "001090000"
+    "300400200"
+    "050100000"
+    "000806000";
+
+// S-HARD17 (docs/RTVM.md 6.1) — the unique solution of P-HARD17.
+inline constexpr std::string_view kSolvedHard17 =
+    "693784512"
+    "487512936"
+    "125963874"
+    "932651487"
+    "568247391"
+    "741398625"
+    "319475268"
+    "856129743"
+    "274836159";
+
 // Builds a Grid from the compact row-major form above: '0' and '.' are empty,
 // and any character from '1' up to the kGridSize'th digit is a given. Anything
 // else is treated as empty, and a short string leaves the remaining cells
