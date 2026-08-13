@@ -1,0 +1,7 @@
+{
+  "path": "docs/RTVM.md",
+  "holder": "systems-engineer",
+  "issue": 6,
+  "acquired_at": "2026-08-13T04:36:25Z",
+  "reason": "record trunk regression PASS for RTVM-100/101/106 in 9.5"
+}
