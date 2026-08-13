@@ -43,3 +43,30 @@ the resolution rule before it hits the conflict.
 
 **Only do this when their text is final.** If their issue is still with an
 agent, you'd be freezing a draft onto your branch.
+
+### …and the superset rule expires the moment anything else merges (2026-08-13, issue #7)
+
+The "take my branch's docs, it's a strict superset" note above was true against
+`issue-6`'s *branch*. By the time CI/CD merged `issue-7`, #6 had landed and
+trunk had gained the `3bc1b22` SHAs in the Commit(s) column plus §9.5's merge
+paragraphs — none of which existed on my branch. Taking it wholesale would have
+silently reverted the trunk SHAs the matrix exists to record. CI/CD caught it
+and resolved per hunk.
+
+**Why:** the superset claim is a fact about two *branches* at one instant, but
+it gets read at merge time as an instruction about branch-vs-*trunk*. Trunk
+moves in between, and it moves precisely by absorbing the other branch.
+
+**How to apply:** write the merge note as a **reason**, not a verdict — "my
+copy adds §7 I-16, §9.6 and the DATA-OUT status changes; keep anything trunk
+gained since the merge base, especially Commit(s) values" — so whoever merges
+can re-derive it against the trunk actually in front of them. Never phrase it
+as "take mine wholesale". Same failure mode as any snapshot memory.
+
+### Lock scripts push, so they lose races with concurrent workflow commits
+
+`scripts/lock-release.sh` reported "Could not push the unlock — resolve
+manually" because the relay workflow had pushed to `main` mid-run. The local
+unlock commit existed and was fine; only the push was rejected. `git pull
+--rebase origin main` then pushing my own doc commit carried it up with no
+manual work. Don't treat that message as a stuck lock.
