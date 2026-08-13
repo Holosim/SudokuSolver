@@ -28,6 +28,7 @@
 ## Recurring failure patterns
 
 - [Stub wording vs exit codes](stub-wording-vs-exit-codes.md) — right exit code with an empty stream is expected state on this project, not a defect; which issue owns which wording.
+- [False PASS from unchecked exit codes](false-pass-from-unchecked-exit-codes.md) — a timing/content check that never looks at the child's exit code can PASS on a run that never executed; always cross-check the exit code, and check whether a captured error field actually reached the artifact.
 
 <!-- Bugs or regressions that have shown up more than once, and what
      actually fixed them, so they're recognized faster next time. -->
