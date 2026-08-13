@@ -9,7 +9,11 @@
 
 - [Compile-time invariant testing](compile-time-invariant-testing.md) — `static_assert`/`-Wswitch` "tests" prove nothing unless mutated; how, plus the private-ctor false negative.
 
+- [Reading Windows evidence](windows-evidence-reading.md) — how to reach `windows-verification` artifacts from Ubuntu, and the three surfaces that render a failed step green.
+
 ## How to scope work
+
+- [I don't author repo files](test-engineer-cannot-author-repo-files.md) — the write guard covers test-harness scripts too; spec them and hand to Software Engineer.
 
 - [Trunk regression scope](trunk-regression-scope.md) — diff product content against the passed branch tip first; what to re-run regardless; don't re-litigate Verified items.
 - [Doc drift is not a failure](doc-drift-is-not-a-failure.md) — stale source comments contradicting a new §7 ruling go to the Systems Engineer as an observation, not a handback.
