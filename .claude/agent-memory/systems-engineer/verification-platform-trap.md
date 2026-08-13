@@ -74,5 +74,26 @@ clause reachable. Vertically-sliced RTVM items get verified in two passes; plan
 for the second one in writing, because nothing else in the pipeline will
 remember it.
 
+## Scope a post-merge regression pass with a `compare` call, not a guess (2026-08-13)
+
+On the CI/CD commit confirmation for a feature branch, ask the API what
+actually moved before routing the Test Engineer:
+`gh api repos/OWNER/REPO/compare/<merge-sha>...main --jq '[.files[].filename]'`.
+On issue #6 the answer was `.claude/**` only — `src/` and `samples/` on trunk
+were byte-identical to the branch commit the 95-assertion pass was taken on.
+
+**Why:** "needs regression testing" from CI/CD is a routing flag, not a scope.
+Handed on unqualified it invites a full re-execution of a procedure that was
+just executed, and the shallow clone (`git rev-list --count HEAD` = 2) means
+local `git diff` against the merge SHA silently fails rather than answering.
+
+**How to apply:** write the measured file list into the §9.x ledger and state
+the regression question in one sentence ("did the merge disturb anything", not
+"does the feature work"), naming the specific clauses to re-run. Also: when
+recording the SHA, resist the earlier hand-off comment's own optimism — mine
+said RTVM-100 "can then move to Verified subject only to the MSVC gap", which
+is self-contradictory under §9.2. An outstanding clause is an outstanding
+clause; the SHA populates the column, it does not promote the status.
+
 See [[requirements-traps]], [[sudoku-solver-project-context]],
 [[doc-state-across-branches]].
