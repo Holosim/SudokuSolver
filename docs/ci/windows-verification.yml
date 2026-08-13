@@ -2,13 +2,25 @@
 # Ubuntu agent runners cannot.
 #
 # ---------------------------------------------------------------------------
-# THIS FILE IS NOT ACTIVE WHERE IT SITS. Copy it to
+# THIS FILE IS THE MAINTAINED SOURCE. The ACTIVE copy is
 #   .github/workflows/windows-verification.yml
-# It lives under docs/ci/ only because the relay GitHub App installation lacks
-# the `workflows` permission, so no agent in this pipeline can push a file
-# under .github/workflows/ (measured, not assumed — see docs/RTVM.md §9.1.4).
-# Either grant that permission, after which CI/CD maintains this file
-# directly, or copy it across once by hand.
+# installed by the repository owner at fc23901 (2026-08-13). No agent in this
+# pipeline can push under .github/workflows/ — the GitHub App does not declare
+# the `workflows` permission, so this is permanent, not a settings toggle
+# (docs/PROJECT_DEFINITION.md §7.1.1 V-10, docs/RTVM.md §9.1.4). A diff between
+# this file and the installed one IS the pending-install queue (W-11).
+#
+# *** PENDING — NOT YET INSTALLED (staged 2026-08-13, docs/RTVM.md §9.1.5) ***
+#   DW-1  the TP-905 step has never worked: `/ListTests:<arg>` takes the test
+#         CONTAINER, not an output path, so vstest treated the output filename
+#         as a second test source and exited 1. Split into two invocations.
+#   DW-2  the summary could not say FAIL — rows keyed only on "did an output
+#         file appear", so a step that ran and errored read as NOT-RUN. Now
+#         keyed on each step's own outcome as well.
+# Neither is urgent: TP-905 evidence can be produced today from
+# tests/windows/run-procedures.ps1, which needs no permission (W-10). Batch
+# these with any later change into ONE copy-and-commit rather than asking
+# the owner twice (W-11).
 # ---------------------------------------------------------------------------
 #
 # Design decisions W-1…W-8 and their reasons: docs/RTVM.md §9.1.3.
@@ -103,18 +115,38 @@ jobs:
           if ($dll) { "testdll=$($dll.FullName)" | Out-File -Append $env:GITHUB_OUTPUT }
 
       - name: TP-905 — unit tests discovered and executed by vstest.console
+        id: vstest
         shell: pwsh
         continue-on-error: true # W-6: a failure is evidence; later steps still run.
         run: |
           # vstest.console.exe is the engine Test Explorer drives; discovery
           # here is the substantive half of TP-905 (docs/RTVM.md §9.4 A-3).
+          #
+          # DW-1: /ListTests:<arg> takes the TEST CONTAINER as its argument, not
+          # an output path, and cannot be combined with an execution run. Two
+          # invocations, discovery first, each redirected to its own evidence
+          # file. The original one-line form exited 1 on every run since
+          # fc23901 and produced no evidence at all.
           $vswhere = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe"
           $vs = & $vswhere -latest -products * -requires Microsoft.VisualStudio.Workload.NativeDesktop -property installationPath
           $vstest = Join-Path $vs "Common7\IDE\CommonExtensions\Microsoft\TestWindow\vstest.console.exe"
-          & $vstest "${{ steps.outputs.outputs.testdll }}" /Platform:x64 /Logger:"trx;LogFileName=tests.trx" `
-            /ResultsDirectory:"$PWD\evidence" /ListTests:"$PWD\evidence\discovered-tests.txt"
+          $dll = "${{ steps.outputs.outputs.testdll }}"
+
+          & $vstest /ListTests:"$dll" /Platform:x64 |
+            Tee-Object evidence/discovered-tests.txt
+          $listExit = $LASTEXITCODE
+
+          & $vstest "$dll" /Platform:x64 /Logger:"trx;LogFileName=tests.trx" `
+            /ResultsDirectory:"$PWD\evidence" |
+            Tee-Object evidence/vstest-run.txt
+          $runExit = $LASTEXITCODE
+
+          "discovery exit $listExit / execution exit $runExit" |
+            Tee-Object -Append evidence/vstest-run.txt
+          if ($listExit -ne 0 -or $runExit -ne 0) { exit 1 }
 
       - name: TP-506 — import table of the delivered executable (dumpbin clause)
+        id: dumpbin
         shell: pwsh
         continue-on-error: true
         run: |
@@ -130,6 +162,7 @@ jobs:
             Tee-Object evidence/dumpbin-dependents.txt
 
       - name: TP-001…TP-009, TP-3xx, TP-4xx, TP-505 — runtime procedures
+        id: runtime
         shell: pwsh
         continue-on-error: true
         run: |
@@ -147,6 +180,7 @@ jobs:
           }
 
       - name: TP-500…TP-504 — timing set, Release only, three samples (W-7)
+        id: timing
         shell: pwsh
         continue-on-error: true
         run: |
@@ -168,23 +202,32 @@ jobs:
         if: always()
         shell: pwsh
         run: |
-          # Deliberately mechanical: PASS/FAIL/NOT-RUN per procedure, keyed by
-          # TP id so the log is greppable (W-4, W-5). It states what ran. It
-          # does not state that a requirement is verified - that is the Test
-          # Engineer's call (W-2).
+          # Deliberately mechanical: EXECUTED/FAILED/NOT-RUN per procedure,
+          # keyed by TP id so the log is greppable (W-4, W-5). It states what
+          # ran. It does not state that a requirement is verified - that is the
+          # Test Engineer's call (W-2).
+          #
+          # DW-2: a row must distinguish "the step ran and errored" from "the
+          # step never ran". Keying only on whether an output file appeared
+          # collapsed those two into NOT-RUN, which is how a broken vstest step
+          # read as a tidy absence for two runs. Each row now carries the
+          # step's own outcome as well as its evidence file.
           $rows = @(
-            @{ tp = "TP-900/901 (build)"; ok = (Test-Path evidence/build-release.log) },
-            @{ tp = "TP-905 (vstest)";    ok = (Test-Path evidence/discovered-tests.txt) },
-            @{ tp = "TP-506 (dumpbin)";   ok = (Test-Path evidence/dumpbin-dependents.txt) },
-            @{ tp = "TP-0xx/4xx/505";     ok = (Test-Path evidence/runtime-procedures.json) },
-            @{ tp = "TP-500..504";        ok = (Test-Path evidence/timing.json) }
+            @{ tp = "TP-900/901 (build)"; file = "evidence/build-release.log";      outcome = "success" },
+            @{ tp = "TP-905 (vstest)";    file = "evidence/discovered-tests.txt";   outcome = "${{ steps.vstest.outcome }}" },
+            @{ tp = "TP-506 (dumpbin)";   file = "evidence/dumpbin-dependents.txt"; outcome = "${{ steps.dumpbin.outcome }}" },
+            @{ tp = "TP-0xx/4xx/505";     file = "evidence/runtime-procedures.json"; outcome = "${{ steps.runtime.outcome }}" },
+            @{ tp = "TP-500..504";        file = "evidence/timing.json";            outcome = "${{ steps.timing.outcome }}" }
           )
           "## Clause coverage this run`n" | Out-File -Append $env:GITHUB_STEP_SUMMARY
-          "| Procedure | Executed here |" | Out-File -Append $env:GITHUB_STEP_SUMMARY
-          "| --- | --- |"                 | Out-File -Append $env:GITHUB_STEP_SUMMARY
+          "| Procedure | State | Step outcome |" | Out-File -Append $env:GITHUB_STEP_SUMMARY
+          "| --- | --- | --- |"                  | Out-File -Append $env:GITHUB_STEP_SUMMARY
           foreach ($r in $rows) {
-            $state = if ($r.ok) { "executed - see artifact" } else { "NOT-RUN" }
-            "| $($r.tp) | $state |" | Out-File -Append $env:GITHUB_STEP_SUMMARY
+            $state =
+              if ($r.outcome -eq "failure")  { "**FAILED - step errored, read the log**" }
+              elseif (Test-Path $r.file)     { "executed - see artifact" }
+              else                           { "NOT-RUN" }
+            "| $($r.tp) | $state | $($r.outcome) |" | Out-File -Append $env:GITHUB_STEP_SUMMARY
           }
           "`n_Evidence only. Verdicts are the Test Engineer's (docs/RTVM.md §9.1.3 W-2)._" |
             Out-File -Append $env:GITHUB_STEP_SUMMARY

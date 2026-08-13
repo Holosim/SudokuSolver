@@ -708,9 +708,10 @@ any of them and the affected RTVM item will be reissued.
 | I-11 | Abort latency | 1.0 s from response to solver return. Unspecified in scope; without a number "the user can stop it" is not verifiable. | RTVM-203 |
 | I-12 | "Never silent" vs. the deliberate 15 s of silence before the first prompt | Two bounds, not one: **16.0 s** from process start to the first output, **11.0 s** between outputs thereafter. Found while writing the SDD — as originally worded, RTVM-504 imposed a single 11.0 s bound measured from process start, which RTVM-501 (first prompt at 15 s) contradicts outright, making TP-504 unpassable by any conforming implementation. Resolved in favour of RTVM-501, because `docs/PROJECT_DEFINITION.md` §4.4 states the 5 s gap between the 10 s budget and the 15 s prompt is *deliberate* — a puzzle that only just overruns must finish without nagging. The alternative fix, a start-up banner on stderr, was rejected for defeating that stated intent. **No scope change: the program's behaviour is unaltered, only the bound RTVM-504 asserts.** | RTVM-504, RTVM-006 |
 | I-13 | Upper bound on bytes read while looking for a 9-character line | A single line is capped at 4096 bytes before being declared malformed. Within the cap, the exact observed length is reported (TP-102 expects that); beyond it, "more than 4096 characters". Needed so TP-505's 1 MB single line and 10 000-line cases produce the same shape fault promptly rather than buffering a megabyte to reach the same answer. Does not change which inputs are accepted — every input over 9 characters is malformed either way. | RTVM-102, RTVM-505 |
-| I-14 | What "Windows 10/11" in §6.3 means for the machine timings are actually taken on | The GitHub-hosted `windows-latest` image (Windows Server 2022, x64, 4 vCPU, 16 GB) **is** an acceptable §6.3 reference machine and is the normative one for TP-500…504. It shares the kernel, the MSVC toolset and the ABI of Windows 11; §6.3's intent was to exclude an underpowered or loaded machine, not to distinguish client from server SKUs. TP-500's existing requirement to report the machine it ran on is what keeps this honest. Raised because §9.1.3 wires the timing set onto exactly that runner, and "we measured on the wrong machine" is a cheap objection to close now and an expensive one to close at acceptance. | RTVM-500…504, §6.3, §9.1.3 |
+| I-14 | What "Windows 10/11" in §6.3 means for the machine timings are actually taken on | **Amended 2026-08-13 — the parenthetical below was factually wrong and the label, not the image, is what is normative.** The reference machine is *whatever image the `windows-latest` label resolves to on the day of the run*, and the run's own machine block is the record of it (W-9). On 2026-08-13 that was **`win25-vs2026`: Windows Server 2025 10.0.26100, AMD EPYC 9V74, 2 cores / 4 logical, 16 GB** — not the Windows Server 2022 image this interpretation originally named. The ruling below is unchanged and the reasoning survives intact; only the machine identity was wrong, and it was wrong because it was assumed rather than read. Original text follows. ~~The GitHub-hosted `windows-latest` image (Windows Server 2022, x64, 4 vCPU, 16 GB)~~ The GitHub-hosted `windows-latest` image **is** an acceptable §6.3 reference machine and is the normative one for TP-500…504. It shares the kernel, the MSVC toolset and the ABI of Windows 11; §6.3's intent was to exclude an underpowered or loaded machine, not to distinguish client from server SKUs. TP-500's existing requirement to report the machine it ran on is what keeps this honest. Raised because §9.1.3 wires the timing set onto exactly that runner, and "we measured on the wrong machine" is a cheap objection to close now and an expensive one to close at acceptance. | RTVM-500…504, §6.3, §9.1.3 |
 | I-15 | Which fault a line carrying **interior whitespace** reports, when that whitespace also makes the line the wrong length | **The illegal character**, at its `r<row>c<col>` position, in preference to a length fault on that same line. The exception is exactly that narrow: it applies only to horizontal whitespace, and only against the length check of the line the whitespace is on. RTVM-105's order is otherwise untouched — fewer than 9 lines still outranks any character fault anywhere, and a non-whitespace illegal character still loses to a length fault on its own line. Reasons: (a) RTVM-106 declares interior whitespace an illegal character, and under strict shape-first precedence that clause is nearly unreachable, since a line carrying an extra space is by construction not 9 characters; (b) TP-106's negative fixture `098 000060` is 10 characters and asserts the illegal-character message, so the two documents contradicted each other as written; (c) "illegal character ' ' at r3c4" locates the fault, "line 3 has 10 characters" does not, and RTVM-102/103 exist to say *what* is wrong. Column position is counted after leading/trailing whitespace is stripped. Raised on issue #6 by the Software Engineer (implemented this reading) and the Test Engineer (tested it, declined to rule); ruled 2026-08-13. No scope change and no behaviour change against the delivered parser — this records the reading it was built and passed under. | RTVM-102, RTVM-103, RTVM-105, RTVM-106 |
 | I-16 | **Where** the 0-based → 1-based cell conversion happens, given that `docs/SDD.md` §2.3 said "in exactly one place, in `Messages`" while §2.5 declared `CellRef` already **1-based** | **At fault construction, not at rendering.** An `InputFault` carries 1-based cells; `Messages` renders `r<row>c<col>` straight from the fault and performs no arithmetic. The two SDD clauses could not both hold — if the fault already carries 1-based cells, the `+1` must have happened before `Messages` ever sees it. Resolved in favour of §2.5 because (a) the parser delivered at [RTVM-100] (#6) already stores 1-based cells and passed TP-100/TP-106 that way, (b) TP-302 as written inspects the *fault object* for `r1c1`/`r1c7` with no output layer in the picture, so the fault is where the 1-based form has to exist, and (c) `Messages` is the one place English lives (§2.5, §2.7) — giving it arithmetic as well makes it two responsibilities. §2.3's "exactly one place" intent is preserved literally: the `+1` is spelled once, in `cellRefFromZeroBased()` in `InputFault.h`, and every fault-producing path calls it rather than adding one itself. An out-of-grid coordinate yields a *not applicable* `CellRef` rather than a wrapped one (RTVM-505). `docs/SDD.md` §2.3 and §2.5 both reworded to say this. Raised on issue #7 by the Software Engineer and seconded by the Test Engineer; ruled 2026-08-13. No scope change and no behaviour change against the delivered code — this records the reading it was built and passed under. | RTVM-103, RTVM-104, RTVM-105, RTVM-302 |
+| I-17 | What "VS 2022" in `D-1`/`D-3` constrains: the **artifact**, or the **machine that builds it** | **The artifact.** RTVM-900/901/906 are satisfied by a solution and project files that Visual Studio 2022 opens and builds with the `v143` toolset and ISO C++17 — the *delivered thing* is what carries the constraint. It does not follow that every build taken as evidence must be performed by a VS 2022 installation. Consequences, and they cut both ways: (a) the `Debug\|x64` / `Release\|x64` builds on the `win25-vs2026` runner **are** valid evidence for RTVM-901's "builds clean" and RTVM-906's language-standard clause, because the compiler actually invoked is `PlatformToolset=v143` / MSVC 14.44 — the VS 2022 toolset, shipped side-by-side in the newer install; (b) they are **not** evidence for TP-900's *"opens in VS 2022 with no migration prompt"*, which is a claim about the VS 2022 solution loader and can only be discharged by a VS 2022 loader — a newer IDE opening the solution demonstrates forward compatibility, and the requirement runs the other way. The committed artifacts remain pinned to VS 2022 form (`.sln` `Format Version 12.00` / `# Visual Studio Version 17` / `VisualStudioVersion = 17.0.31903.59`; `PlatformToolset=v143`; `WindowsTargetPlatformVersion=10.0`), and **no project file may be retargeted to satisfy a runner** — that is V-7 applied to MSVC exactly as it already applies to `g++`. Raised by the Systems Engineer on issue #23 after reading the first Windows run (§9.1.5); it is scope-adjacent, so it is **flagged to the Solutions Architect for confirmation** as I-14 was. No scope change and no change to any delivered file. | RTVM-900, RTVM-901, RTVM-906, §9.4 A-2 |
 
 ## 8. Carried forward to the SDD — **CLOSED 2026-08-07 (issue #3)**
 
@@ -814,12 +815,24 @@ here per §7.1's assignment of it to the Systems Engineer.
 | **W-7** | The timing set is run on the Release build only, three times, with all samples reported. A tolerance breach is reported with all three samples rather than retried until green. | `windows-latest` is shared-tenant and jittery; §7 I-6's ±1.0 s is the tolerance, and hiding variance behind a retry-until-pass would make TP-501/502 meaningless. Three samples make jitter visible as jitter. |
 | **W-8** | The workflow must not add, and must not require, any cross-platform build file, and must build the committed `.sln` **exactly as the client would** — no injected properties, no `/p:` overrides beyond `Configuration` and `Platform`. | V-7, `D-7`, RTVM-901/906. A build that only succeeds with CI-only switches has verified a project the client doesn't have. |
 
-The full workflow is written and committed at
-**`docs/ci/windows-verification.yml`**, ready to copy to
-`.github/workflows/`. It is parked outside `.github/workflows/` for the
-reason in §9.1.4, not by preference.
+**Installed 2026-08-13 via route (b)** (§9.1.4): the repository owner
+copied `docs/ci/windows-verification.yml` to
+`.github/workflows/windows-verification.yml` and committed it as
+**`fc23901`**. The two files were byte-identical at that commit. W-1…W-8
+are in force as written; the first two runs are assessed in §9.1.5.
 
-#### 9.1.4 What no agent in this pipeline can do — measured, not assumed
+Three further decisions taken 2026-08-13, after reading what the first
+runs actually produced. W-9 and W-11 are consequences of V-10 (a
+workflow file can only be changed by the repository owner); W-10 is the
+lesson from a defect that would otherwise have cost a round trip to fix.
+
+| ID | Decision | Reason |
+| --- | --- | --- |
+| **W-9** | **`windows-latest` is a moving image, and no machine fact about it may be quoted from a previous run.** Every run prints its own machine block; any timing figure, toolset version or "the runner has X installed" claim is read from the machine block of *the same run*. §6.3 / §7 I-14 name the *label*, never a specific image. | Measured, not theoretical: the image on 2026-08-13 was `win25-vs2026` — Windows Server 2025 and Visual Studio 2026 — where I-14 as originally written said Windows Server 2022 and everyone in this thread, me included, had been assuming VS 2022 was present (§9.1.5, and I-14 as amended). An image assumption that is right today is a silently wrong acceptance record in three months. |
+| **W-10** | **Anything that can live in `tests/windows/*.ps1` lives there and not in the workflow.** The workflow's job is: build, locate outputs, invoke the script hooks, summarise, publish. Procedure logic, probes and one-off spikes go in the agent-writable scripts. | V-10 makes every line inside `.github/workflows/` a repository-owner commit; every line inside `tests/windows/` is a normal agent push. The TP-905 defect in §9.1.5 is fixable *today* from `run-procedures.ps1` and would otherwise have waited on a human. Design for the permission boundary rather than around it. |
+| **W-11** | **`docs/ci/windows-verification.yml` is the maintained source; `.github/workflows/windows-verification.yml` is the installed copy.** A `diff` between the two *is* the pending-install queue. Pending edits are **batched into one owner commit**, never trickled, and the head of `docs/ci/…` carries a dated `PENDING — NOT YET INSTALLED` block listing them. | Each install is a human interruption. Asking three times for three one-line fixes spends the client's goodwill on our own sequencing, and a silent divergence between the two files is worse than either. |
+
+#### 9.1.4 What no agent in this pipeline can do — **RESOLVED 2026-08-13 via route (b); the constraint itself is permanent (V-10)**
 
 Both of the following were probed on this runner on 2026-08-07 with the
 live relay token, not inferred:
@@ -851,10 +864,144 @@ of the ask — it would only be needed for on-demand dispatch, which the
 push trigger makes unnecessary. Keeping the ask to one permission is
 deliberate.
 
-Until either lands, every Windows-only clause in §9.2 and §9.4 stays
-outstanding and the affected requirements stay below Verified. This is
-recorded rather than absorbed: per §7.1's closing paragraph it went
-straight back to the Solutions Architect on issue #23.
+##### Outcome, 2026-08-13 — and a correction to the two-option framing
+
+The repository owner took **route (b)**: the file was copied to
+`.github/workflows/windows-verification.yml` and committed as
+`fc23901`, and the workflow ran on that push (run `31723230235`, green,
+artifact published). V-3 is live.
+
+**Route (a) was never actually available**, and that is the more
+important half of the answer. The GitHub App this pipeline runs under
+requests only *Contents*, *Pull Requests* and *Issues* — it does not
+declare a `workflows` permission at all, and an installer cannot grant
+a permission an app has not declared. So (b) was not the
+lower-maintenance option chosen over the cheaper one; it was the only
+route. Recorded here so it is never reopened as though a trade-off
+existed. Also recorded as *my* framing error: I offered two options
+having checked that (a) was sensible, not that it was **available**.
+
+This generalises into a standing constraint, held in
+`docs/PROJECT_DEFINITION.md` §7.1.1 as **V-10**:
+
+> `.github/workflows/**` is permanently outside this pipeline's reach.
+> Every creation or edit of a workflow file is a repository-owner
+> commit. The obligation on the agents is to prepare the exact file
+> content under `docs/ci/` first, so the owner's step is always
+> copy-and-commit and never design.
+
+W-11 above is how this project honours that obligation day to day, and
+W-10 is how it avoids having to invoke it at all.
+
+#### 9.1.5 First Windows runs — what actually executed, and what the evidence says
+
+Assessed 2026-08-13 by the Systems Engineer against run **`31723230235`**
+(`fc23901`, the install commit) and run **`31724367652`** (`4a849b7`),
+reading the job log and the published artifact rather than the job's
+green tick. Runs are identical in shape; figures below are from
+`4a849b7`, whose artifact is `windows-evidence-4a849b7…` (9190651619).
+
+**The machine, as the run reported it (W-9 — read from this run, not
+assumed):**
+
+| Property | Value |
+| --- | --- |
+| Image | `win25-vs2026` 20260803.193.1 |
+| OS | Microsoft Windows Server 2025 Datacenter 10.0.26100 |
+| CPU | AMD EPYC 9V74, 2 cores / 4 logical, 2596 MHz max |
+| RAM | 16 GB |
+| Visual Studio | **2026** (v18.8 Enterprise) — **not VS 2022** |
+| Compiler actually invoked | `MSVC 14.44.35207`, `PlatformToolset=v143`, `/std:c++17` |
+
+**Per-step outcome:**
+
+| Step (TP it feeds) | Job step result | What the evidence actually supports |
+| --- | --- | --- |
+| Build `Debug\|x64` (TP-900/901) | success | Solution and all three projects build clean, 0 warnings, 0 errors, under `v143` / MSVC 14.44 with no `/p:` beyond `Configuration` and `Platform` (W-8 held). |
+| Build `Release\|x64` (TP-900/901/906) | success | As above; `x64\Release\SudokuSolver.exe` and `SudokuSolver.Tests.dll` produced; `CopySamples` copied all five fixtures beside the exe. |
+| `vstest.console.exe` (TP-905) | **failed, exit 1** | **Nothing.** See defect **DW-1** below — no discovery list and no `.trx` were produced. |
+| `dumpbin /dependents` (TP-506) | success | Import table of the delivered exe is **`KERNEL32.dll` and nothing else** — no `MSVCP140.dll`, no `VCRUNTIME140*.dll`. This is TP-506's own automatable clause, executed and clean. |
+| Runtime procedures (TP-0xx/3xx/4xx/505) | NOT-RUN | `tests/windows/run-procedures.ps1` absent. Correct behaviour, not a pass (V-6). |
+| Timing set (TP-500…504) | NOT-RUN | `tests/windows/run-timing.ps1` absent. Same. |
+
+**W-2 held, and this is the check that mattered on day one.** The job
+concluded `success` while one step had failed and two had not run, and
+nothing anywhere in its output claimed a pass, a status or a
+verification: the summary is a coverage table, it marked TP-905 and the
+two script-driven sets as not executed, and it carries the line
+*"Evidence only. Verdicts are the Test Engineer's."* No `status:*` or
+`agent:*` label was touched by the workflow. A green tick on this
+workflow means "the job ran", and the artifact is the thing to read.
+
+##### Two defects in the workflow itself
+
+- **DW-1 — the TP-905 step has never worked.** It passes both the test
+  DLL *and* `/ListTests:"…\evidence\discovered-tests.txt"`. In
+  `vstest.console.exe`, `/ListTests:<arg>` takes the **test container**
+  as its argument, not an output path, so vstest treated
+  `discovered-tests.txt` as a second test source and exited 1 with *"The
+  test source file … was not found"*. Consequence: **no TP-905 evidence
+  exists at any commit**, and §9.4 A-3 is *not* closed — contrary to the
+  reasonable reading that the first green run had exercised it. Mine to
+  own: it is my workflow text. Fix is two invocations — one
+  `/ListTests:<dll>` for discovery, one plain run with `/Logger:trx` for
+  execution.
+- **DW-2 — the summary cannot say `FAIL`.** Each row is keyed only on
+  whether an output file exists, so a step that ran and *errored* renders
+  identically to one never attempted. W-5 specifies PASS / FAIL /
+  NOT-RUN; the implementation emits two of the three. That is how DW-1
+  read as a tidy `NOT-RUN` rather than as a broken step. It did not
+  overstate anything — but understating a failure as an absence is the
+  mirror image of the failure mode W-2 exists to prevent, and it is the
+  row a reader is least likely to chase.
+
+Neither is urgent and **neither is being sent to the owner on its own**
+(W-11). DW-1's *evidence* can be produced today from
+`tests/windows/run-procedures.ps1`, which the workflow already invokes
+and which needs no permission (W-10); the workflow-side fixes are staged
+in `docs/ci/windows-verification.yml` and batched for one install.
+
+##### The finding that changes a requirement's reading: there is no VS 2022 on the runner
+
+The image is `win25-vs2026`. `vswhere -latest` resolved to
+`…\Microsoft Visual Studio\18\Enterprise`, and the build banner reads
+*"Visual Studio 2026 Developer PowerShell v18.8.2"*. So the runner that
+§9.1.3 wires the whole of Windows verification onto **does not have the
+IDE named in `D-1`/`D-3` installed at all**.
+
+Separating what that does and does not cost, because the two halves are
+very different sizes:
+
+- **The toolset half is intact.** The compiler actually invoked was
+  `MSVC 14.44.35207` under `PlatformToolset=v143` — that is the *VS
+  2022* toolset, shipped side-by-side inside the VS 2026 install. The
+  binary the runner produces is a v143 binary, so the `Release|x64`
+  build, the `/std:c++17` conformance and the TP-506 import table are
+  evidence about the same artifact a client's VS 2022 would emit.
+- **The IDE-load half is not.** "Opens in VS 2022 with no migration
+  prompt" (TP-900) and "clone, open, press Build" (TP-901) are claims
+  about the *VS 2022 solution loader*, and no run on this image can
+  exercise it. `devenv.exe /Build` — the automation route §9.4 A-2
+  proposed — is available, but it is VS **2026**'s `devenv`, so it tests
+  the wrong loader. A-2 therefore does **not** fall out of the V-4 list;
+  it narrows to exactly the loader clause, and needs a probe first.
+
+The committed artifacts are still pinned to VS 2022 form and this is
+already asserted by the Ubuntu-side clause of TP-900:
+`SudokuSolver.sln` carries `Format Version 12.00` /
+`# Visual Studio Version 17` / `VisualStudioVersion = 17.0.31903.59`,
+and all three `.vcxproj` carry `PlatformToolset=v143` and
+`WindowsTargetPlatformVersion=10.0`. Necessary, not sufficient: a VS
+2026 build succeeding is *forward* compatibility, and the requirement
+runs the other way.
+
+**Next step on this, and it costs nothing:** the probe belongs in
+`tests/windows/run-procedures.ps1` per W-10 — `vswhere -legacy -all
+-products *` enumerating every VS instance on the image, printed into
+the evidence. If a `17.x` instance turns out to be present, A-2 closes
+by automation. If not, the finding is recorded and A-2 goes to the
+Solutions Architect as a V-4 row with a measured reason. Either way it
+is data, not an assumption, and it needs no owner action.
 
 ### 9.2 DELIV coverage after the Generate Code Base scaffold
 
@@ -885,6 +1032,21 @@ touched by the merge, and all five samples are still 90 bytes with zero
 CR bytes; TP-900's executable clauses all hold. The outstanding column
 below is unchanged — none of those clauses became reachable, and none
 is a defect against `4edbc6c`.
+
+**Windows evidence now exists for part of the "Still outstanding"
+column — no status moves here on the strength of it.** Run
+`31724367652` (`4a849b7`, §9.1.5) executed an MSVC `Debug|x64` and
+`Release|x64` build of the committed solution, and `dumpbin
+/dependents` on the delivered exe. That bears directly on RTVM-900,
+RTVM-901, RTVM-906 and RTVM-506. Deliberately **not** actioned in this
+table, for three separate reasons, each of which would be enough on its
+own: the workflow issues evidence and never a verdict (W-2), the
+verdict is the Test Engineer's and belongs to issues #21, #22 and #14,
+and two of the four clauses are not in fact closed by that run — TP-900
+and TP-901's outstanding clauses are about the *VS 2022 loader*, which
+that image does not have (§9.1.5). RTVM-506's row is the one genuinely
+moved forward: its `dumpbin` clause is executed and clean, leaving only
+the clean-machine launch (§9.4 A-1).
 
 | Req | Executed here and passed | Still outstanding |
 | --- | --- | --- |
@@ -947,28 +1109,66 @@ otherwise have to reverse-engineer from the project files:
 
 ### 9.4 V-4 candidates — clauses a `windows-latest` runner still cannot execute
 
-**Status: draft, not agreed.** V-4 permits a client-acceptance pass
-only for clauses a hosted Windows runner *genuinely* cannot execute,
-and V-5 requires the list to be agreed in advance. This is my
-first-pass candidate list; each row states the automation route I
-believe closes it, because the honest version of this list is short.
-It is confirmed with the Test Engineer against a real Windows job —
-several rows are expected to *leave* the list at that point, and no
-row leaves this table for the client until it has survived that.
+**Status: draft, not agreed, and still not to be surfaced.** V-4
+permits a client-acceptance pass only for clauses a hosted Windows
+runner *genuinely* cannot execute, and V-5 requires the list to be
+agreed in advance. This is my first-pass candidate list; each row
+states the automation route I believe closes it, because the honest
+version of this list is short. It is confirmed with the Test Engineer
+against a real Windows job — several rows are expected to *leave* the
+list at that point, and no row leaves this table for the client until
+it has survived that.
+
+**Second pass, 2026-08-13, against the first real Windows runs
+(§9.1.5).** The list is still six rows and still goes nowhere. The
+honest scorecard of the three rows that were expected to fall out:
+
+- **A-3 did not close.** The reasonable expectation after a green first
+  run was that `vstest.console.exe` had already exercised it. It had
+  not — the step has never worked (defect DW-1), so there is no TP-905
+  evidence at any commit. Closable without any owner action once
+  `run-procedures.ps1` performs the discovery (W-10), but *not closed*
+  until that evidence exists.
+- **A-2 got bigger, not smaller.** The runner image has **no VS 2022 on
+  it at all**; its `devenv.exe` is VS 2026's. The row narrows to the
+  loader clause alone — the toolset half is genuinely covered, since the
+  compiler invoked is the v143 / MSVC 14.44 toolset — but it now has a
+  measured reason it cannot be automated on this image, which is exactly
+  what a V-4 row is.
+- **A-1 half-closed, as predicted and in the direction predicted.** Its
+  `dumpbin` clause ran clean at `4a849b7`. The two halves are kept
+  separate below because they are different sizes of ask.
+
+Net: one row shrank, one row grew, one row that was expected to
+disappear is still open. That is why the list waits for evidence rather
+than for a plan.
 
 | # | Clause | Why a hosted runner may not reach it | Proposed automation route before conceding it | Recommendation |
 | --- | --- | --- | --- | --- |
-| A-1 | **TP-506** — run the exe on a clean Windows machine with no VS, no redistributable, no build tools | Every hosted Windows image ships the full VS toolchain and the VC++ runtimes, so "runs where the runtime was never installed" cannot be demonstrated there — the negative is unobservable on the only machine we have | `dumpbin /dependents` asserting the import list is stock system DLLs only (`KERNEL32`, `USER32`, …) with no `MSVCP140.dll` / `VCRUNTIME140*.dll` — TP-506's own last sentence, and it is strong evidence | **Genuine V-4 item.** Automate the `dumpbin` clause; the launch-on-a-clean-machine clause goes to client acceptance |
-| A-2 | **TP-900** — the solution *opening* in VS 2022 with no "project unavailable" and no migration prompt | The prompt is modal GUI behaviour; a headless runner never renders it | `devenv.exe SudokuSolver.sln /Build "Debug\|x64"` uses the same solution loader as the IDE and fails or hangs where the IDE would prompt; combined with a toolset/`ToolsVersion` inspection this covers the substance | **Probably not a V-4 item.** Try `devenv /Build` first; concede only if it proves not to reproduce the loader path |
-| A-3 | **TP-905** — tests appearing in **Test Explorer** | Test Explorer is a GUI surface | `vstest.console.exe` is the discovery and execution engine Test Explorer drives; if it discovers and runs both methods, the substantive claim holds | **Not a V-4 item** on current evidence. Expect to close by automation |
-| A-4 | **TP-004…008** — the console-handle behaviour (`PeekConsoleInput`, `GetFileType` = console, an interactive-equivalent stdin held open) | A runner step has no interactive console attached: stdin is a pipe or `NUL`, so `GetFileType` never reports a console and the console path is never entered. TP-008's redirected half runs fine; TP-004/005/006's do not | Drive the exe under a **ConPTY pseudoconsole** (`CreatePseudoConsole`, available on Windows Server 2022) from a small harness, so the child genuinely sees a console handle. This is the same mechanism Windows Terminal uses and it is not exotic | **Undecided — needs a feasibility spike on #17** before it goes anywhere near the client. If ConPTY works this whole row disappears, and it is the largest row on the list |
-| A-5 | **TP-500…504** — the timing set | Shared-tenant runner jitter against a ±1.0 s tolerance (§7 I-6) | W-7: three samples, Release build, all reported | **Not a V-4 item.** Run it; if the tolerance proves unholdable *with data in hand*, that is a requirements question for me, not a client-acceptance one |
+| A-1 | **TP-506** — run the exe on a clean Windows machine with no VS, no redistributable, no build tools | Every hosted Windows image ships the full VS toolchain and the VC++ runtimes, so "runs where the runtime was never installed" cannot be demonstrated there — the negative is unobservable on the only machine we have | `dumpbin /dependents` asserting the import list is stock system DLLs only (`KERNEL32`, `USER32`, …) with no `MSVCP140.dll` / `VCRUNTIME140*.dll` — TP-506's own last sentence, and it is strong evidence | **Genuine V-4 item — confirmed 2026-08-13, and now down to one sentence.** The `dumpbin` clause is **executed and clean** at `4a849b7`: the delivered exe imports `KERNEL32.dll` and nothing else, with no `MSVCP140.dll` / `VCRUNTIME140*.dll`. That is near-conclusive and needs nothing from the client. The residue going to acceptance is only *"the exe launches on a machine where the VC++ runtime was never installed"* — the one thing no machine we can rent will ever demonstrate, because they all have it |
+| A-2 | **TP-900** — the solution *opening* in VS 2022 with no "project unavailable" and no migration prompt | The prompt is modal GUI behaviour; a headless runner never renders it | `devenv.exe SudokuSolver.sln /Build "Debug\|x64"` uses the same solution loader as the IDE and fails or hangs where the IDE would prompt; combined with a toolset/`ToolsVersion` inspection this covers the substance | **Reopened and reshaped 2026-08-13 — the proposed route is dead as written.** The image is `win25-vs2026`: there is no VS 2022 installed, so `devenv.exe` is VS **2026**'s and drives the wrong loader. What *is* covered is the toolset half — the build ran on `PlatformToolset=v143` / MSVC 14.44, the VS 2022 toolset shipped side-by-side — so this row narrows to the IDE-load clause alone. **Next: the `vswhere -legacy -all` probe from `run-procedures.ps1`** (W-10, no owner action). If a `17.x` instance is on the image, this closes by automation; if not, it goes to the Solutions Architect as a V-4 row with a measured reason rather than a suspicion |
+| A-3 | **TP-905** — tests appearing in **Test Explorer** | Test Explorer is a GUI surface | `vstest.console.exe` is the discovery and execution engine Test Explorer drives; if it discovers and runs both methods, the substantive claim holds | **Still not a V-4 item — but still open, 2026-08-13.** The first runs did *not* exercise it: the workflow's vstest invocation has never worked (defect DW-1, §9.1.5), so no discovery list and no `.trx` exist at any commit. Closes as soon as `run-procedures.ps1` runs `vstest.console.exe /ListTests:<dll>` plus a `/Logger:trx` execution and drops both in the evidence directory — agent-writable, no owner action, no permission (W-10). Do not record this row as closed until that artifact is in hand |
+| A-4 | **TP-004…008** — the console-handle behaviour (`PeekConsoleInput`, `GetFileType` = console, an interactive-equivalent stdin held open) | A runner step has no interactive console attached: stdin is a pipe or `NUL`, so `GetFileType` never reports a console and the console path is never entered. TP-008's redirected half runs fine; TP-004/005/006's do not | Drive the exe under a **ConPTY pseudoconsole** (`CreatePseudoConsole`, available on Windows Server 2022) from a small harness, so the child genuinely sees a console handle. This is the same mechanism Windows Terminal uses and it is not exotic | **Undecided — needs a feasibility spike on #17** before it goes anywhere near the client. If ConPTY works this whole row disappears, and it is the largest row on the list. **2026-08-13: the spike is now actually possible** — there is a live Windows job to try it against, and the image is Windows Server 2025, where `CreatePseudoConsole` is long-established. The spike belongs in `tests/windows/run-procedures.ps1` (W-10). Worth doing on its own terms even if it fails: *"we drove the exe under a pseudo-console and here is precisely what it still could not observe"* is a far stronger thing to put to a client than *"consoles are hard"* |
+| A-5 | **TP-500…504** — the timing set | Shared-tenant runner jitter against a ±1.0 s tolerance (§7 I-6) | W-7: three samples, Release build, all reported | **Not a V-4 item.** Run it; if the tolerance proves unholdable *with data in hand*, that is a requirements question for me, not a client-acceptance one. **2026-08-13: still NOT-RUN** — `tests/windows/run-timing.ps1` does not exist yet, and its absence is correctly recorded as NOT-RUN rather than as a pass. The machine it will run on is now known and modest — 2 physical cores / 4 logical, 2596 MHz, 16 GB (§9.1.5) — which is a reason to expect jitter, not a reason to pre-emptively widen §7 I-6 |
 | A-6 | **TP-901** — build "on a machine that has never built this project" | — none; a fresh hosted runner satisfies this clause **better** than a client engineer's machine, which has VS configured and a warm state | n/a | **Not a V-4 item.** Recorded only to stop it being added later by association |
 
 Nothing on this list is surfaced to the client until it is down to the
 rows that survive A-2, A-3 and A-4's automation attempts — per V-5 that
 is the Solutions Architect's step, and a two-row list is a decision
 where a six-row one is a shrug.
+
+**What has to happen before this list is sent (2026-08-13).** All three
+are agent-side, all three live in `tests/windows/run-procedures.ps1`,
+and none needs an owner action or a permission:
+
+1. `vstest.console.exe` discovery + execution evidence → closes **A-3**.
+2. `vswhere -legacy -all -products *` instance enumeration → closes or
+   confirms **A-2**.
+3. The ConPTY spike → closes or confirms **A-4**, the largest row.
+
+On the evidence so far I expect the list that reaches the client to be
+**A-1's launch clause, and possibly A-4**. Everything else should die by
+automation.
 
 ### 9.5 DATA-IN coverage after the parser ([RTVM-100], issue #6)
 

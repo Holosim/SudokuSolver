@@ -52,6 +52,54 @@ pushable (`docs/ci/<name>.yml`) so the human's task is one copy, not a design
 job. Reduce the ask to the single smallest permission that unblocks it and say
 which permissions are explicitly *not* being asked for.
 
+### Update 2026-08-13: the permission wall is permanent, and it should shape the design
+
+The client resolved it by copying the file in by hand. The load-bearing
+correction, from the owner: **the "grant the App `workflows`" option was never
+available** — the App declares only Contents, Pull Requests and Issues, and an
+installer cannot grant a permission an app has not *declared*. So `.github/`
+is permanently out of reach, not one settings toggle away.
+
+**How to apply.** Check what an app *declares*, not just what a permission
+would do, before offering it as an option — offering an unavailable option
+costs a round trip and misrepresents the trade-off. Then design for the wall:
+put every line that can move into agent-writable script hooks the workflow
+merely *invokes* (`tests/windows/*.ps1` here, project rule W-10), so the
+workflow is only build → locate → invoke → summarise → publish. And **batch**
+workflow edits into one copy-and-commit with a dated `PENDING — NOT YET
+INSTALLED` block at the head of the source file (W-11); the maintained source
+and the installed copy will diverge, and that diff is the queue.
+
+## A green CI job proves the job ran, nothing else — read the steps
+
+The first Windows run was green with a step that had failed (`continue-on-error`)
+and two that never ran. Two things fell out of actually reading the log and
+artifact instead of the tick:
+
+- **A CI summary must be able to say FAIL, not just PASS/NOT-RUN.** Mine keyed
+  each row on "did an output file appear", so a step that ran and *errored*
+  rendered identically to one never attempted — a broken `vstest.console.exe`
+  invocation read as a tidy `NOT-RUN` for two runs and would have been recorded
+  as "automation route confirmed". Understating a failure as an absence is the
+  mirror image of overstating a pass, and it is the row nobody chases. Key rows
+  on the step's own `outcome` as well as its evidence file.
+- **Never quote a hosted image's specs from an earlier run, or from your own
+  assumption.** `windows-latest` on 2026-08-13 was `win25-vs2026` — Windows
+  Server 2025 with **Visual Studio 2026**, no VS 2022 anywhere on it — where
+  the RTVM interpretation I'd written said Server 2022 and the whole team had
+  assumed VS 2022 was present. Have every run print its own machine block and
+  read figures only from the same run (W-9); name the runner *label* in a
+  requirement, never an image.
+
+**The requirements consequence is worth generalising:** when a deliverable
+names an IDE, split the requirement into the *artifact* claim and the *IDE
+load* claim before deciding what CI can discharge. A newer IDE building the
+project is real evidence for the toolset (the v143 / MSVC 14.44 toolset ships
+side-by-side inside VS 2026, so the binary is the same one the client's build
+would emit) and **no** evidence for "opens without a migration prompt" — that
+is forward compatibility, and the requirement runs backward. Recorded as
+`docs/RTVM.md` §7 I-17.
+
 ## The `status:ready-for-rtvm-update` fast path is not "mark it Verified"
 
 Two things gate Verified here (`docs/RTVM.md` §9.2's rule): every clause of the
