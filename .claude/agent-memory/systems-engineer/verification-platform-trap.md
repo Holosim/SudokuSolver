@@ -290,3 +290,49 @@ moving a status — compile evidence does not promote a `Test`-method requiremen
 because its procedure asserts assertions running, not code compiling. And read
 the raw log: a step whose job concluded `success` can carry `##[error] … exit
 code 1` in its own log, which is how a broken discovery step survives three runs.
+
+## A `status:ready-for-rtvm-update` can land on a process issue, not just a feature issue (2026-08-13, #23)
+
+The fast path's wording ("this is not a new requirement to define — the Test
+Engineer's test passed") assumes an `[RTVM-014]`-style issue. #23 is the
+standing "verification environment" process issue, and the label still showed
+up there once the Test Engineer's harness-script fix passed — because the
+harness itself (`tests/windows/*.ps1`) has RTVM consequences (§9.4 rows,
+DW-numbered defects) even though it traces to no single requirement.
+
+**How to apply:** don't discard the fast path just because the issue title
+isn't `[RTVM-nnn]`. Find the §9.x rows the passing evidence actually bears on
+(here: DW-1's closure, §9.4 A-2/A-3/A-5) and update those, same discipline as a
+feature row — evidence in, verdict from Test Engineer, no status promoted on my
+own authority beyond what's explicitly named.
+
+## A harness fix can surface false-PASS defects worse than the bug it fixes
+
+Fixing a launch-failure bug (`Invoke-Sudoku`'s stdin default throwing) on #23
+uncovered two downstream defects that had been silently reporting **PASS**
+against the client's own headline requirement (the 10-second performance
+budget) using the *crash latency* of a process that never launched, because
+`$withinBudget` checked only the ceiling and never the exit code. A
+"contains-none-of-these-substrings" style check has the same trap: an empty
+string from a dead run trivially passes it.
+
+**Why:** any PASS/FAIL check built on "the absence of the bad thing" rather
+than "the presence of the expected thing, from a run that actually reached the
+state being asserted" reads as evidence for exactly nothing while looking
+identical to a real pass. This is a sharper version of DW-2 (FAIL rendering as
+NOT-RUN) — here a FAIL rendered as PASS, which is strictly worse under W-2/V-1.
+
+**How to apply:** when reviewing (or specifying) any evidence-harness check,
+ask "what does this check read as if the thing under test never ran at all?"
+before trusting a PASS. Require every timing/behavioural check to also assert
+the run reached its expected exit code, not just the metric in question.
+
+## DW/A/I/V/W numbers: allocate from trunk, and check for the collision pattern
+
+Confirmed again on #23 that new evidence defects continue the *trunk* DW
+sequence (DW-1, DW-2 already on `main` → new ones are DW-3, DW-4), per the
+numbering rule §7 records after the #9/#23 `I-17` collision (see
+`rtvm-conventions.md`). Applies identically to every prefixed series in
+`docs/RTVM.md` — check trunk's own table before allocating, not a branch's
+copy, even when (as here) the branch's `docs/RTVM.md` happens to be identical
+to trunk's.

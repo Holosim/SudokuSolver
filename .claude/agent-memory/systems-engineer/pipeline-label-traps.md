@@ -53,3 +53,18 @@ and untestable without the solver. Transitive chains count: #9→#8→{#6,#7}→
 means #9 only has to declare #5 and #8.
 
 See [[implementation-plan-decomposition]], [[verification-platform-trap]].
+
+## Open decision, not yet made: should Test Engineer be allow-listed to write `tests/windows/*.ps1`?
+
+Raised on #23 (2026-08-13, relayed by Software Engineer on Test Engineer's
+behalf). W-10 put Windows procedure scripts under `tests/windows/` on the
+premise that whoever owns "what does this procedure check" (Test Engineer)
+could revise them without a permission round trip through Software Engineer.
+`scripts/guard-test-engineer-writes.sh` blocks every Test Engineer `Edit`/
+`Write` outside `.claude/agent-memory/test-engineer/`, with no carve-out for
+`tests/windows/` — so in practice every revision is still a Software Engineer
+round trip, which is the cost W-10 was written to avoid. Not resolved yet:
+whether to add a `tests/windows/` allow-list entry, and if so whether that
+guard file itself is something an agent can edit or needs the same
+owner-gated treatment as `.github/workflows/`. Pick this up before the next
+Windows-procedure revision makes the round trip visible again.
