@@ -133,6 +133,35 @@ procedure compares bytes, name `.gitignore`/`.gitattributes` explicitly in the
 SDD build-conventions section. Both were caught by the Software Engineer at
 scaffold time here; that was luck, not process.
 
+## A classification rule inside one requirement can silently outrank a global precedence requirement (2026-08-13)
+
+RTVM-106 said "interior whitespace is an illegal character". RTVM-105 fixed a
+global precedence: shape → character → contradiction. Together they made
+TP-106's own negative fixture (`098 000060`, 10 characters) assert the *wrong*
+fault: strict precedence makes it a length fault, because the extra space is
+what breaks the length. The clause "interior whitespace is an illegal
+character" was then nearly unreachable — a line carrying an extra space is by
+construction not 9 characters. Both the Software Engineer and the Test Engineer
+found it, and both correctly declined to rule; I ruled it as §7 I-15
+(whitespace outranks *its own line's* length check, nothing wider).
+
+**Why:** a *classification* rule ("X counts as fault kind K") and an *ordering*
+rule ("kind K1 is reported before K2") are written in different requirements
+and read as independent, but classification decides which bucket the ordering
+then sorts — so one silently determines the other's outcome.
+
+**How to apply:** whenever a requirement declares that something "is a <fault
+kind>", check it against the precedence requirement immediately, and check the
+literal test fixture: if the input that triggers the classification *also*
+triggers a higher-precedence kind by construction, the clause is dead letter
+and the fixture is contradictory. Rule with the diagnostic that locates the
+fault for the user ("illegal character ' ' at r3c4" beats "line 3 has 10
+characters"), and state the exception's scope in one sentence — mine is "only
+whitespace, only against the same line's length" — or it will be read as
+loosening the whole precedence order. Also: when an implementer has already
+shipped and tested one reading, ratify *that* reading unless it is wrong; the
+alternative costs a rebuild and a retest for nothing.
+
 ## An interface section can name a type it never defines
 
 `docs/SDD.md` §2.6 used `ParseResult` as a function's return type and never
