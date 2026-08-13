@@ -51,9 +51,9 @@ Blocked / Withdrawn.
 | Req ID | Requirement | Stakeholder Need(s) | Verification Method | Status | Commit(s) |
 | --- | --- | --- | --- | --- | --- |
 | **UI — user interface (§4.1, §4.4)** | | | | | |
-| RTVM-001 | On launch the application begins solving immediately. It presents no menu, no mode selection, and asks the user nothing before reading the puzzle. | SN-1, SN-6 | Test (TP-001) | Approved | |
-| RTVM-002 | If a first command-line argument is present it is treated as a path to a puzzle file, and the puzzle is read from that file. Any further arguments are ignored. | SN-1, SN-8 | Test (TP-002) | Approved | |
-| RTVM-003 | If no command-line argument is present the puzzle is read from standard input. | SN-1, SN-8 | Test (TP-003) | Approved | |
+| RTVM-001 | On launch the application begins solving immediately. It presents no menu, no mode selection, and asks the user nothing before reading the puzzle. | SN-1, SN-6 | Test (TP-001) | In Test | |
+| RTVM-002 | If a first command-line argument is present it is treated as a path to a puzzle file, and the puzzle is read from that file. Any further arguments are ignored. | SN-1, SN-8 | Test (TP-002) | In Test | |
+| RTVM-003 | If no command-line argument is present the puzzle is read from standard input. | SN-1, SN-8 | Test (TP-003) | In Test | |
 | RTVM-004 | While a solve is still running at a prompt point (RTVM-501/502) the application writes a progress prompt to stderr stating (a) that it is still working, (b) the whole seconds elapsed, (c) how to stop, and (d) that no response is required. | SN-5 | Test (TP-004) | Approved | |
 | RTVM-005 | If the user gives the documented stop response at any prompt, the application stops the solve, reports that it was abandoned at the user's request, and exits with code `3`. | SN-5 | Test (TP-005) | Approved | |
 | RTVM-006 | No prompt requires a response. The application never blocks on reading a prompt reply: continuing is the default and an unanswered prompt simply lapses at the next prompt point. | SN-5, SN-8 | Test (TP-006) | Approved | |
@@ -79,7 +79,7 @@ Blocked / Withdrawn.
 | RTVM-301 | The `Solved` and `SolvedNotUnique` outcomes carry a complete 9×9 grid of digits 1–9 with no empty cell. | SN-3 | Test (TP-301) | In Test | `668f9a4` |
 | RTVM-302 | The `InvalidInput` outcome carries structured fault detail (fault kind, line/row/column, digit or character involved) rather than a pre-formatted message, so that all wording lives in the output layer. | SN-4, SN-7 | Test (TP-302) | In Test | `668f9a4` |
 | **OUT — presentation (§4.1, §4.3)** | | | | | |
-| RTVM-400 | A solved grid is written to stdout pretty-printed with box separators, in exactly the 13-line ASCII format given in §6.2. | SN-3 | Test (TP-400) | Approved | |
+| RTVM-400 | A solved grid is written to stdout pretty-printed with box separators, in exactly the 13-line ASCII format given in §6.2. | SN-3 | Test (TP-400) | In Test | |
 | RTVM-401 | For the `SolvedNotUnique` outcome the grid is followed on stdout by a statement that the solution shown is not unique. | SN-3 | Test (TP-401) | Approved | |
 | RTVM-402 | For the `NoSolution` outcome a plain statement that the puzzle has no solution is written to stdout, and no grid is written. | SN-3, SN-4 | Test (TP-402) | Approved | |
 | RTVM-403 | For the `InvalidInput` outcome a specific human-readable diagnostic naming the fault is written to **stderr**, and nothing is written to stdout. | SN-4 | Test (TP-403) | Approved | |
@@ -658,6 +658,26 @@ ASCII only — no box-drawing characters. A Windows console under a
 non-UTF-8 code page will render U+2500-range characters as mojibake,
 which would break both legibility (SN-3) and byte-comparable testing.
 
+**Every one of the 13 lines is terminated, the last one included** —
+13 line terminators, so the block ends with a newline and anything
+written after it starts on its own line. Added 2026-08-13 (issue #9):
+this was the one format decision §6.2 did not state, the Software
+Engineer implemented it this way, and the delivered output was measured
+at 338 bytes on LF (13 × 25 + 13) and passed TP-400 twice. Pinning it
+matters to **RTVM-401** more than to RTVM-400: TP-401 expects "the
+13-line grid *followed by* a line" stating non-uniqueness, and if the
+grid did not terminate its last line that note would be appended to
+`| 3 4 5 | 2 8 6 | 1 7 9 |`. `Reporter` therefore writes the block and
+adds nothing. Byte comparisons normalise CRLF to LF first (the Release
+build writes text mode, so Windows stdout carries CRLF and the fixture
+carries LF); the terminator *count* is what is normative, not its
+spelling.
+
+§6.2 is normative for a **solved** grid only, which is the only grid any
+requirement prints. How an unsolved or partial grid would render is
+deliberately unspecified — see §9.8 for the surviving mutant that makes
+this explicit rather than accidental.
+
 Reference wordings (an implementation may reword; the test procedures
 assert the required *elements*, not the exact sentence, except for the
 grid itself which is byte-normative):
@@ -711,6 +731,8 @@ any of them and the affected RTVM item will be reissued.
 | I-14 | What "Windows 10/11" in §6.3 means for the machine timings are actually taken on | The GitHub-hosted `windows-latest` image (Windows Server 2022, x64, 4 vCPU, 16 GB) **is** an acceptable §6.3 reference machine and is the normative one for TP-500…504. It shares the kernel, the MSVC toolset and the ABI of Windows 11; §6.3's intent was to exclude an underpowered or loaded machine, not to distinguish client from server SKUs. TP-500's existing requirement to report the machine it ran on is what keeps this honest. Raised because §9.1.3 wires the timing set onto exactly that runner, and "we measured on the wrong machine" is a cheap objection to close now and an expensive one to close at acceptance. | RTVM-500…504, §6.3, §9.1.3 |
 | I-15 | Which fault a line carrying **interior whitespace** reports, when that whitespace also makes the line the wrong length | **The illegal character**, at its `r<row>c<col>` position, in preference to a length fault on that same line. The exception is exactly that narrow: it applies only to horizontal whitespace, and only against the length check of the line the whitespace is on. RTVM-105's order is otherwise untouched — fewer than 9 lines still outranks any character fault anywhere, and a non-whitespace illegal character still loses to a length fault on its own line. Reasons: (a) RTVM-106 declares interior whitespace an illegal character, and under strict shape-first precedence that clause is nearly unreachable, since a line carrying an extra space is by construction not 9 characters; (b) TP-106's negative fixture `098 000060` is 10 characters and asserts the illegal-character message, so the two documents contradicted each other as written; (c) "illegal character ' ' at r3c4" locates the fault, "line 3 has 10 characters" does not, and RTVM-102/103 exist to say *what* is wrong. Column position is counted after leading/trailing whitespace is stripped. Raised on issue #6 by the Software Engineer (implemented this reading) and the Test Engineer (tested it, declined to rule); ruled 2026-08-13. No scope change and no behaviour change against the delivered parser — this records the reading it was built and passed under. | RTVM-102, RTVM-103, RTVM-105, RTVM-106 |
 | I-16 | **Where** the 0-based → 1-based cell conversion happens, given that `docs/SDD.md` §2.3 said "in exactly one place, in `Messages`" while §2.5 declared `CellRef` already **1-based** | **At fault construction, not at rendering.** An `InputFault` carries 1-based cells; `Messages` renders `r<row>c<col>` straight from the fault and performs no arithmetic. The two SDD clauses could not both hold — if the fault already carries 1-based cells, the `+1` must have happened before `Messages` ever sees it. Resolved in favour of §2.5 because (a) the parser delivered at [RTVM-100] (#6) already stores 1-based cells and passed TP-100/TP-106 that way, (b) TP-302 as written inspects the *fault object* for `r1c1`/`r1c7` with no output layer in the picture, so the fault is where the 1-based form has to exist, and (c) `Messages` is the one place English lives (§2.5, §2.7) — giving it arithmetic as well makes it two responsibilities. §2.3's "exactly one place" intent is preserved literally: the `+1` is spelled once, in `cellRefFromZeroBased()` in `InputFault.h`, and every fault-producing path calls it rather than adding one itself. An out-of-grid coordinate yields a *not applicable* `CellRef` rather than a wrapped one (RTVM-505). `docs/SDD.md` §2.3 and §2.5 both reworded to say this. Raised on issue #7 by the Software Engineer and seconded by the Test Engineer; ruled 2026-08-13. No scope change and no behaviour change against the delivered code — this records the reading it was built and passed under. | RTVM-103, RTVM-104, RTVM-105, RTVM-302 |
+| I-17 | Whether a **blocking** read of standard input is ever permissible, given that `docs/SDD.md` §3.7 bans "any call that can block … under any circumstance" while RTVM-003 requires reading a puzzle a user may still be typing | **The ban binds the solve path, not puzzle acquisition.** From the moment the solver is entered until it returns, nothing may block — that is what RTVM-006 and RTVM-008 actually assert, and §3.7's absolute wording was written about the *prompt* read. Before the solve starts there is no prompt, no elapsed-time bound and no result to deliver, and a program that refused to wait for line 4 of an interactively typed puzzle would fail RTVM-003 outright. A bounded blocking read is therefore permitted **only** during acquisition, and only through `StdinChannel` (§1.3's single-owner rule is unaffected — the same buffer continues into the control channel). "Bounded" is the existing bounds, not new ones: acquisition stops at 9 logical lines (I-2) and never scans past 4096 bytes on one line (I-13), so no input can hold the process open without producing either a puzzle or a fault. Redirected or closed stdin reaches EOF, which ends the read — so RTVM-008's non-interactive guarantee is untouched. An interactive user who types four lines and walks away does leave the process waiting, indefinitely and by design: no requirement bounds that, and it is what every stdin-reading tool does. Raised on issue #9 by the Software Engineer (who implemented this reading as a `readLineBlocking` used pre-solve only) and seconded by the Test Engineer; ruled 2026-08-13. No scope change and no behaviour change against the delivered build. `docs/SDD.md` §1.3 and §3.7 both reworded to say this. | RTVM-003, RTVM-006, RTVM-008 |
+| I-18 | Which error domain `InputFault::systemError` carries, given `docs/SDD.md` §2.5 documented it as a `GetLastError` code while the delivered `InputSource` opens files with `std::ifstream` and populates it from `errno` | **`errno`, on every platform — one domain, no tag.** The MSVC CRT sets `errno` on a failed `std::ifstream` open just as glibc does, while `GetLastError` after a CRT call is incidental rather than specified; carrying whichever of the two the calling path happened to set would make the number uninterpretable without a provenance flag, and a flag is cost for no requirement. Nothing asserts the field numerically — TP-009 asks only that stderr *names the path* and *states it could not be opened* — so the field exists solely to let `Messages` render a reason. Two consequences that are binding on **#10**: (a) the reason text is produced by one helper in `Messages` over the `strerror` family, and CRT/locale-supplied text does not breach RTVM-302's "no English outside `Messages`" (it is not a literal in the fault) — accordingly TP-009 and TP-403 must not pin an exact CRT phrase; (b) `SourceUnreadable` covers a failed **read** as well as a failed **open**, because TP-009's second case is an existing *directory*, which fails at open on Windows but opens and then fails to read on a POSIX runner. Raised on issue #9 by the Software Engineer; ruled 2026-08-13 before #10 starts, while it is still cheap. No scope change; `docs/SDD.md` §2.5 and §2.7 reworded. | RTVM-009, RTVM-302, RTVM-403 |
 
 ## 8. Carried forward to the SDD — **CLOSED 2026-08-07 (issue #3)**
 
@@ -1471,3 +1493,139 @@ inspection and this does not stand in for it.
 **Issue #8 closes here.** RTVM-200's remaining path to Verified runs
 through #11 (the `P-SEARCH` clause) and #23 (V-1 / MSVC), in that
 order; neither is reopened as work on this issue.
+
+### 9.8 UI and OUT coverage after the console entry point ([RTVM-001], issue #9)
+
+State at branch `issue-9` @ `8fb6cc5` (product commit `19eda79`),
+tested by the Test Engineer 2026-08-13 — **PASS**. Two kinds of
+evidence, both executed: the unit suite at **25 discovered / 25 passed
+/ 0 failed** (19 from #8 plus exactly the 6 new `GridFormatTests`),
+under `g++ 13.3.0 -std=c++17 -Wall -Wextra -pedantic -O2` with zero
+warnings; and the four procedures below run against a **real spawned
+binary**, which is the first time in this project that has been
+possible. Same table shape and same V-6 rule as §9.2, §9.5, §9.6 and
+§9.7: a procedure with unexecuted clauses gets a row naming them, and
+no row here is Verified.
+
+Everything compared against §6.2 or §6.1 in this pass used a copy
+**extracted programmatically from `docs/RTVM.md`**, by the Software
+Engineer and again independently by the Test Engineer — not transcribed
+from either agent's reading of it. The block is 338 bytes on LF and
+both measurements agree.
+
+| Req | Executed here and passed | Still outstanding |
+| --- | --- | --- |
+| RTVM-001 | TP-001 **in full, both input forms**. stdout is the `S-EASY` block and nothing else; stderr is 0 bytes in every run, so there is no menu, no question and no "press any key" text; exit `0`. The stdin form and the file form produce **byte-identical** stdout (`cmp`), which is TP-001's "not input-source dependent" clause stated directly rather than inferred | **No committed automated harness** — see §9.8.1. The pass is real but its re-execution is manual until **#24** lands. Plus the standing **MSVC / VS test-project re-execution** (V-1, #23) |
+| RTVM-002 | TP-002 **all three parts**. `easy.txt` with stdin closed (`0<&-`) → grid, exit `0`; `easy.txt ignored extra args` → identical bytes and exit code, so trailing arguments are ignored; `easy.txt < unsolvable.txt` → the **file wins**, grid and exit `0`. The mechanism was confirmed as well as the result: with a path present, stdin is never read at all | As RTVM-001 — #24 for the harness, V-1 for MSVC |
+| RTVM-003 | TP-003 in full: no arguments, `P-EASY` piped in → grid byte-identical to §6.2, exit `0`, stderr empty. Beyond the procedure, and load-bearing for §1.3's single-owner rule: a pipe drip-fed at 50 ms/line still yields the identical grid, proving the read accumulates across partial reads rather than assuming one arrival per line. `< /dev/null` and empty stdin both exit `1` without hanging | As RTVM-001 — #24 for the harness, V-1 for MSVC. Note the **acquisition read may block** by design (§7 **I-17**); that is ruled, not outstanding |
+| RTVM-400 | TP-400 **in full, twice over** — as six `GridFormatTests` unit methods *and* against real process stdout. Every assertion the procedure names: 13 lines; lines 1/5/9/13 exactly `+-------+-------+-------+`; all 13 lines exactly 25 characters; every row line matching `^\| \d \d \d \| \d \d \d \| \d \d \d \|$`; **zero bytes ≥ 0x80**. Falsifiable rather than merely green — five mutations killed (rule `-`→`=`; wall `|`→CP437 `0xB3`, caught specifically by the pure-ASCII assertion; final newline dropped; inter-cell space removed; box boundary moved to every 4th column) | The **MSVC re-execution and Test Explorer discovery** (V-1, #23). The six methods ran under a `/tmp` `CppUnitTest.h` shim, which executes the assertions for real but proves nothing about discovery. One surviving mutant, deliberately not a defect — see §9.8.3 |
+
+Three implementation-level questions were raised on this issue and all
+three are now **closed by ruling rather than carried**: the blocking-read
+contradiction as §7 **I-17**, the `systemError` error domain as §7
+**I-18**, and the missing end-to-end harness as **#24**. §9.8.1 covers
+the third because it changes what "passed" means for three of the rows
+above.
+
+#### 9.8.1 The harness gap — why three passing rows are still fragile
+
+`docs/SDD.md` §3.3 assigns TP-001…009, TP-401…406 and TP-500…507 to
+end-to-end tests spawning the exe through a `sudoku::test::ProcessRunner`
+helper. **That helper does not exist.** #9 did not build it, and the
+reason given was a good one: it is Windows-only `CreateProcess` code
+nobody here can compile, and blind pipe plumbing deadlocks in ways a
+Test Engineer who cannot edit files could not fix.
+
+So TP-001, TP-002 and TP-003 were executed by an ad-hoc script and are
+**not regression-tested by anything committed to the repository**. That
+is a different situation from every other passing row in §9.2–§9.7,
+each of which is backed by a test method that will re-run on the next
+build. It is recorded here rather than smoothed over, because "passed
+once, by hand, on a runner that is not the target platform" is the
+honest description.
+
+**Ruling: §3.3 stands and the harness gets built** — as **#24**, with a
+Finish-Start dependency on this issue, and with the same three-function
+platform seam `StdinChannel.cpp` used at #9 so that the POSIX branch
+makes these procedures executable in this pipeline while the `_WIN32`
+branch is what ships. #24 ports TP-001/002/003 onto it first,
+deliberately, so the harness is validated against a known-good expected
+value instead of being debugged against a new feature.
+
+Later process-level issues (#10, #11, #12, #17, #18, #19, #20) are **not
+gated on #24** — gating seven issues on one would serialise most of what
+is left, and #9 has just demonstrated that hand-running a process-level
+procedure produces real evidence. Each should adopt the harness once it
+exists and state in its own §9.x row whether it did. What must not
+happen is a UI or OUT row reaching **Verified** on hand-run evidence
+alone once #24 exists.
+
+#### 9.8.2 §9.5's re-run trigger — advance evidence, and what it will take on the merge
+
+§9.5's trigger names "once #8 and #9 are both merged" for RTVM-101's and
+RTVM-106's end-to-end clauses. #8 is merged; #9 is not yet. The Test
+Engineer ran those clauses anyway on this branch, correctly labelling it
+advance evidence rather than a verdict, and all of it passes:
+
+| Clause | Result on `issue-9` @ `8fb6cc5` |
+| --- | --- |
+| **TP-101 end-to-end** — `P-EASY` (all `0`), `P-EASY-DOTS`, `P-EASY-MIXED` | 3/3 exit `0` with byte-identical `S-EASY` grids. The clause's whole point is that the three input spellings are indistinguishable at the output, and they are |
+| **TP-106 end-to-end, five positives** — CRLF; LF; no trailing newline on line 9; two trailing blank lines plus a 10th line `garbage`; three leading and two trailing spaces on line 3 | 5/5 exit `0`, byte-identical grid |
+| **TP-106 negative** — line 3 = `098 000060` | exit `1`, stdout empty, **stderr still empty**. The §7 I-15 wording belongs to **#10**, exactly as §9.5 predicted. Still outstanding |
+
+**These clauses are credited on the post-merge regression pass, not
+here**, and that is a scoping decision rather than scepticism: the
+trigger is worded against trunk, the regression pass on trunk is the
+very next step in this chain, and re-running three commands there costs
+almost nothing. **RTVM-101 and RTVM-106 therefore stay In Test** —
+RTVM-106 additionally on #10's wording, both on V-1. §9.5's trigger is
+**not** discharged by this section; it is discharged in §9.8.4 if the
+regression pass reproduces the table above on the merged tree.
+
+#### 9.8.3 One surviving mutant, and why it is not a defect
+
+Rendering an empty cell as `' '` instead of `'.'` survives all six
+`GridFormatTests`. It is recorded because a coverage claim that hides
+its one survivor is worth less than one that names it — but it is **not
+a hole in the tests**, because there is nothing for them to assert:
+RTVM-400 and §6.2 are normative for a **solved** grid, and no
+requirement anywhere prints an unsolved or partial one. RTVM-401 prints
+a solved grid plus a note; RTVM-402 and RTVM-403 print no grid at all.
+§6.2 now says this explicitly, so the gap is documented rather than
+latent. If a future tier ever prints a partial grid (a hint mode, a
+step-through), §6.2 gains an empty-cell glyph *before* that code is
+written, and this mutant becomes a real failure at that point.
+
+Two other observations from the same pass, neither crediting anything:
+a `static_assert` in `GridFormat.cpp` bounds the format at single-digit
+grids, derived from `'9' - '0'` rather than a literal `9` so TP-903's
+grep stays clean — a 16×16 tier needs a §6.2 format decision before it
+needs code. And the unit driver still links `src/SudokuCore/*.cpp`
+**only**, with no console object file, which demonstrates the RTVM-903
+split rather than grepping for it — now more meaningfully than at #8,
+since `formatGrid` is real core code as of this issue.
+
+#### 9.8.4 Stub state, carried items, and what this issue does not credit
+
+Confirmed on the tested tree rather than inferred, and **not defects** —
+each is a later issue's wording, with the exit code already correct
+because `Reporter` carries the whole RTVM-405 mapping:
+
+| Input | Observed | Owns the wording |
+| --- | --- | --- |
+| `samples\unsolvable.txt` | exit `2`, **stdout empty** | RTVM-402 → #11 |
+| `samples\malformed.txt`, missing file | exit `1`, **stderr empty** | RTVM-403 / RTVM-009 → #10 |
+| `samples\nonunique.txt` | exit `0`, grid, **no note line** | RTVM-401 → #12 |
+
+**RTVM-401, RTVM-402, RTVM-403, RTVM-405 and RTVM-406 are therefore not
+credited by this issue at all**, despite three of their exit codes being
+observably right here. Exit code and wording are separate clauses of
+separate procedures, and #18 owns TP-405 as a whole.
+
+`src/SudokuCore/Grid.h`'s comment that the 1-based `r<row>c<col>` form
+"is produced only in the output layer" — superseded by §7 **I-16** —
+**is still adrift**, carried from §9.7 and not fixed here either: #9
+touched `GridFormat.*`, not `Grid.h`, and editing product code after the
+tested tree was frozen would have invalidated the `8fb6cc5` pass for a
+comment. Carried to **#10 or #11**, whichever opens `Grid.h` first.
+Behaviour is unaffected and no test hangs off it.
