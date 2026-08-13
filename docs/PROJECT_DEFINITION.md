@@ -319,29 +319,42 @@ take (repository settings, a token scope, anything requiring the repository
 owner), that comes straight back to the Solutions Architect and is put to the
 client as an explicit request rather than absorbed as a delay.
 
-#### 7.1.1 Outstanding client action — **[AWAITING CLIENT]**
+#### 7.1.1 Outstanding client action — **[RESOLVED 2026-08-13 — route (b) taken]**
 
-That last sentence has been invoked. The Systems Engineer took the wiring
-decision (`docs/RTVM.md` §9.1.3, W-1…W-8), wrote the workflow, and then measured
-— did not infer — that **no agent in this pipeline can install it**. Two probes
-on 2026-08-07 with the live relay token (`docs/RTVM.md` §9.1.4): pushing any file
+That last sentence was invoked. The Systems Engineer took the wiring decision
+(`docs/RTVM.md` §9.1.3, W-1…W-8), wrote the workflow, and then measured — did not
+infer — that **no agent in this pipeline can install it**. Two probes on
+2026-08-07 with the live relay token (`docs/RTVM.md` §9.1.4): pushing any file
 under `.github/workflows/` is refused by the remote for want of the `workflows`
 permission, and `gh workflow run` returns `403` for want of `actions: write`.
 
-V-3 is therefore reachable, but **not by any agent on this project**. It needs
-exactly one action from the repository owner, and either one is sufficient.
+V-3 was therefore reachable, but **not by any agent on this project**. It needed
+exactly one action from the repository owner, and either one was sufficient.
+
+| ID | Rule | Rationale | Status |
+|---|---|---|---|
+| V-8 | **One repository-owner action is required to unblock V-3, either: (a) grant the relay GitHub App installation `Workflows: read & write`, after which CI/CD installs and maintains `.github/workflows/windows-verification.yml` itself; or (b) copy the prepared file `docs/ci/windows-verification.yml` to `.github/workflows/windows-verification.yml` and commit it once.** (a) is recommended. `actions: write` is **not** being requested and is not needed — the workflow is push-triggered by design. | Both routes end in the same workflow running on the same runner. (a) costs one permission grant and leaves the pipeline self-maintaining; (b) costs nothing now and a human round-trip for every later edit to that one file. The choice is the client's; the difference is maintenance, not capability. | **CLOSED 2026-08-13 — route (b).** Client committed `.github/workflows/windows-verification.yml` (byte-identical to `docs/ci/windows-verification.yml`) as `fc23901`. First Windows job ran on that push and published artifact `windows-evidence-fc23901…`. |
+| V-9 | **Declining both is not a neutral outcome and is not a decision the pipeline can absorb.** With neither route available, V-3 is unreachable, and the only remaining path to §7 acceptance is a **manual client-acceptance pass over most of the interesting requirements** — the prompt, the abort, the performance budget, the console-handle behaviour, the MSVC build and the test-run. That is the outcome V-2 exists to prevent, and it materially changes how the MVP is accepted rather than how it is built, so it requires the client's explicit sign-off — not silence. | The failure mode being designed out is Windows verification quietly becoming "accept the gap" by attrition, one deferral at a time. | **MOOT 2026-08-13** — never exercised; V-3 is live. Retained because the rule (an "accept the gap" drift needs explicit client sign-off, not silence) stands for any future recurrence. |
+
+**Correction of the record — route (a) was never actually available.** The client
+established (issue #23, 2026-08-13) that the GitHub App this pipeline runs under
+requests only **Contents, Pull Requests and Issues**; it does not *declare*
+`workflows` access at all, and an installer cannot grant a permission an app has
+not declared. So V-8's framing — two options differing only in maintenance cost —
+was wrong: (b) was the sole viable route, not the cheaper-looking half of a
+trade-off. Recorded here so it is not reopened later as though a choice had been
+made between equivalents.
 
 | ID | Rule | Rationale |
 |---|---|---|
-| V-8 | **One repository-owner action is required to unblock V-3, either: (a) grant the relay GitHub App installation `Workflows: read & write`, after which CI/CD installs and maintains `.github/workflows/windows-verification.yml` itself; or (b) copy the prepared file `docs/ci/windows-verification.yml` to `.github/workflows/windows-verification.yml` and commit it once.** (a) is recommended. `actions: write` is **not** being requested and is not needed — the workflow is push-triggered by design. | Both routes end in the same workflow running on the same runner. (a) costs one permission grant and leaves the pipeline self-maintaining; (b) costs nothing now and a human round-trip for every later edit to that one file. The choice is the client's; the difference is maintenance, not capability. |
-| V-9 | **Declining both is not a neutral outcome and is not a decision the pipeline can absorb.** With neither route available, V-3 is unreachable, and the only remaining path to §7 acceptance is a **manual client-acceptance pass over most of the interesting requirements** — the prompt, the abort, the performance budget, the console-handle behaviour, the MSVC build and the test-run. That is the outcome V-2 exists to prevent, and it materially changes how the MVP is accepted rather than how it is built, so it requires the client's explicit sign-off — not silence. | The failure mode being designed out is Windows verification quietly becoming "accept the gap" by attrition, one deferral at a time. |
+| V-10 | **`.github/workflows/**` is permanently outside this pipeline's reach.** Every creation of or change to a workflow file — including any later revision of `windows-verification.yml` — requires a commit by the repository owner. No agent may plan work, schedule a fix, or write a procedure that depends on editing a workflow itself; such a change is raised to the Solutions Architect as a client action, with the exact file content prepared under `docs/ci/` so the owner's step is copy-and-commit and never design. | This is an undeclared App permission, not a settings toggle, so it cannot be resolved from inside the project at all. Treating it as a standing constraint stops it being rediscovered as a blocker each time. |
 
-**What this does and does not stop.** Nothing here blocks the code base (#5) or
-work on the executable clauses of any requirement under V-6. What it blocks is
-*completion*: §7 item 8 ("every line item at `Verified`") cannot be reached, the
-DELIV inspections (#21, #22, #14) cannot finish, and #17's console-handle
-requirement cannot be tested at all. The cost of a late answer is rework at the
-end, not idleness now.
+**What this no longer stops.** With V-3 live, §7 item 8 ("every line item at
+`Verified`") is reachable, the DELIV inspections (#21, #22, #14) can finish, and
+#17's console-handle requirement can be tested on a real Windows runner. The
+V-4/V-5 candidate list (`docs/RTVM.md` §9.4) is still a draft and is **not** yet
+surfaced to the client: the automation attempts on its rows are made first, and
+only what survives them is put forward for client acceptance.
 
 ## 8. Change log
 
@@ -351,5 +364,6 @@ end, not idleness now.
 | 2026-08-07 | **Scope refinement from the client (issue #1).** Performance budget changed from **1 s to 10 s**; first progress prompt moved from 5 s to **15 s**; repeat interval changed from 5 s to **10 s**. New requirement: the solve **continues in the background while a prompt is displayed and while awaiting a reply** — prompting must not pause the solver, and continuing is the default so no answer is required. Consequent decisions by the Solutions Architect: a result found while a prompt is outstanding is reported immediately rather than waiting on a keypress; progress prompts and diagnostics go to **stderr** so stdout stays clean for ST-4. The client's question — whether the interrupt is achievable in a console app and whether it needs multi-threading — is an engineering question and is recorded as an architecture-discovery item for the Systems Engineer in §4.4.1, to be answered in `docs/SDD.md`. Also filled in the previously blank Mission Statement, Value, and MVP platform/stack/output fields from already-confirmed scope (no new scope). Exit codes, grid size, input format, and everything in §4.6 are unchanged. |
 | 2026-08-07 | **Verification environment decision (issue #23), §7.1 added.** The pipeline's Ubuntu runners cannot execute the Windows/MSVC clauses of most remaining procedures. Decision: no scope change — Windows/x64/VS 2022 stands; nothing is verified on a substitute toolchain (V-1); the Windows-only clauses must be executed on Windows before the MVP is complete and a blanket "accept the gap" is rejected (V-2); primary route is a `windows-latest` runner inside the pipeline (V-3), with a small, individually-justified client-acceptance list as the only fallback (V-4/V-5), surfaced to the client in advance. How Windows CI is wired is the Systems Engineer's build-tooling decision, recorded in `docs/RTVM.md` §9.1. No requirement, exit code, timing or deliverable changed. |
 | 2026-08-07 | **§7.1.1 added — one client/repository-owner action now outstanding (issue #23).** The Systems Engineer's wiring decision is taken and the Windows workflow is written (`docs/ci/windows-verification.yml`, `docs/RTVM.md` §9.1.3), but no agent can install or dispatch a workflow — measured, not assumed (§9.1.4). V-8 puts the two sufficient owner actions to the client, recommending the permission grant; V-9 records that declining both converts most of §7 into a manual client-acceptance pass and so needs explicit sign-off rather than silence. No requirement, exit code, timing or deliverable changed. |
+| 2026-08-13 | **§7.1.1 resolved — client took route (b) (issue #23).** `.github/workflows/windows-verification.yml` is committed and live on `main` (`fc23901`), byte-identical to the prepared `docs/ci/windows-verification.yml`; the first Windows job ran on that push. V-8 is closed, V-9 is moot (never exercised). Correction of record from the client: **route (a) was never available** — the relay GitHub App declares only Contents, Pull Requests and Issues, and an undeclared permission cannot be granted, so (b) was the only viable route rather than the cheaper side of a trade-off. New standing rule **V-10**: `.github/workflows/**` is permanently outside the pipeline's reach, so any future workflow change is a prepared-file-plus-owner-commit client action, never agent work. No requirement, exit code, timing or deliverable changed. |
 | 2026-08-04 | **Approved.** Client confirmed all proposed defaults by editing this document (commit `a773755`) and answered D-7 (C++17 / x64 / VS-only). New scope from the client on `SN-5`: a long solve must prompt the user and be abortable — specified in §4.4, with the 5-second threshold, repeat interval, exit code `3`, and the non-interactive-caller constraint set by the Solutions Architect. Restructured §4 into confirmed decisions (input, output, long-solve, other, out-of-scope) rather than open questions. All 18 RFI questions in `docs/RTVM.md` §6 are now answered; §6.5 Q15–Q16 are answered by §6 D-1…D-7, and Q8 (algorithm) and Q17 (test framework) are returned to the Systems Engineer as engineering decisions. |
 

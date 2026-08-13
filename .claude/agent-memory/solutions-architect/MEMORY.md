@@ -39,6 +39,12 @@ entry, keep it terse, and fold near-duplicates together.
 - 2026-08-07 — The client asks engineering questions directly of the architect
   (multi-threading vs. simpler interrupt). Don't answer them —
   see [[architect-owns-what-not-how]].
+- 2026-08-13 — When this client answers an escalation they also **correct the
+  framing of the question**: on #23 they took option (b) *and* established that
+  option (a) had never been available (undeclared App permission), asking for
+  that on record so it isn't revisited as a trade-off. Lesson: verify that each
+  option I offer is actually *available*, not merely sensible — and when they
+  supply a correction like this, write it into the doc as a rule, not a footnote.
 
 ## Patterns worth reusing
 
@@ -67,5 +73,6 @@ entry, keep it terse, and fold near-duplicates together.
 - 2026-08-07 — Long-solve timings revised by the client: budget **10 s** (was 1 s), first prompt **15 s** (was 5 s), repeat **every 10 s**, and the solve must keep running while a prompt is up. Deliberate 5 s gap between budget and first prompt so a marginal overrun never nags.
 - 2026-08-07 — Verification environment (issue #23): scope unchanged (Windows/VS 2022 stands), but nothing may be marked Verified on a substitute toolchain, Windows-only clauses must actually run on Windows, and "accept the gap" is rejected as a blanket policy — see [[verification-environment-policy]] and `docs/PROJECT_DEFINITION.md` §7.1.
 - 2026-08-07 — Issue #23 came back blocked on a **repository-owner action no agent can perform** (workflow file / dispatch permissions). Put it to the client as V-8 (two sufficient options, recommending the permission grant) plus V-9 (declining both is itself a scope decision needing sign-off, not silence) — see [[verification-environment-policy]] and `docs/PROJECT_DEFINITION.md` §7.1.1. Pattern: when a blocker needs a human capability, name the exact action, give ≥1 zero-permission fallback, and price the do-nothing option.
+- 2026-08-13 — #23 unblocked: client committed `.github/workflows/windows-verification.yml` themselves (V-8 route b). V-8 closed, V-9 moot, new **V-10** — `.github/workflows/**` is permanently beyond this pipeline (undeclared App permission, not a toggle), so every future workflow change is a prepared-file-plus-owner-commit client action. See [[verification-environment-policy]] and `docs/PROJECT_DEFINITION.md` §7.1.1.
 - 2026-08-07 — Continuing is the *default* answer to any progress prompt on this project, and prompts/diagnostics go to **stderr** while stdout carries only the result. Both follow from ST-4: a non-blocking prompt plus a clean stdout means an unattended run can never hang or need text filtering. Apply to any future prompt, not just the solve one.
 
