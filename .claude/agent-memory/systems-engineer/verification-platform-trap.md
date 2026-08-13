@@ -52,5 +52,27 @@ pushable (`docs/ci/<name>.yml`) so the human's task is one copy, not a design
 job. Reduce the ask to the single smallest permission that unblocks it and say
 which permissions are explicitly *not* being asked for.
 
+## The `status:ready-for-rtvm-update` fast path is not "mark it Verified"
+
+Two things gate Verified here (`docs/RTVM.md` §9.2's rule): every clause of the
+procedure executed on the *real* toolchain, **and** CI/CD's trunk SHA in the
+Commit(s) column. A passing Test Engineer run on the Ubuntu runner satisfies
+neither on its own. So the fast path moves the item to **In Test**, and Verified
+waits for the CI/CD hand-back — and even then stays In Test if a clause is
+still unexecuted.
+
+**Why:** a feature's procedure routinely contains end-to-end clauses that need
+components built by *later* issues (TP-101/TP-106 here are worded "runs
+end-to-end to `S-EASY` with exit 0", which needs the solver and the reporter).
+The unit half passing is a real pass and should not be downgraded, but calling
+it Verified means nobody ever re-runs the other half.
+
+**How to apply:** on every fast-path update, add a clause-level row (§9.2's
+shape; §9.5 for the parser) saying what ran and what did not, and write an
+explicit **re-run trigger** naming the issue whose merge makes the missing
+clause reachable. Vertically-sliced RTVM items get verified in two passes; plan
+for the second one in writing, because nothing else in the pipeline will
+remember it.
+
 See [[requirements-traps]], [[sudoku-solver-project-context]],
 [[doc-state-across-branches]].
