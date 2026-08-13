@@ -1,7 +1,0 @@
-{
-  "path": "docs/RTVM.md",
-  "holder": "systems-engineer",
-  "issue": 6,
-  "acquired_at": "2026-08-13T03:53:18Z",
-  "reason": "Record CI/CD trunk SHA 3bc1b22 against RTVM-100/101/106 and update the 9.5 ledger"
-}
