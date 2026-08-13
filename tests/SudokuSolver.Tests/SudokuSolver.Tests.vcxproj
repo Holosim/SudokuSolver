@@ -98,7 +98,12 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="InputFaultTests.cpp" />
     <ClCompile Include="ScaffoldTests.cpp" />
+    <ClCompile Include="SolveReportTests.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="TestFixtures.h" />
   </ItemGroup>
   <ItemGroup>
     <!-- Core translation units under test, compiled with this project's CRT

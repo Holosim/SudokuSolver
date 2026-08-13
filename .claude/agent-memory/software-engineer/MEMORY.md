@@ -12,9 +12,11 @@
 ## Reusable solutions
 
 - [Parser fault precedence](parser-precedence-reading.md) — why `parseGrid` is two passes, and the one RTVM self-conflict (TP-106's interior space) awaiting a ruling.
+- [Making invariants compile-time](making-invariants-compile-time.md) — the enum/static_assert/exhaustive-switch tricks this project uses instead of runtime checks.
 
-<!-- Algorithms or components already solved well enough to reuse rather
-     than re-derive — what it does, where it lives, what it assumes. -->
+## Process
+
+- [Unit tests are the Software Engineer's to write](unit-tests-are-the-software-engineers-to-write.md) — Test Engineer is hook-blocked from writing files; ship TEST_METHODs with the feature.
 
 ## Coding standards
 

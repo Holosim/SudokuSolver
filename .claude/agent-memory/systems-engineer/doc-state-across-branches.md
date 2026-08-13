@@ -25,3 +25,21 @@ cloned shallow (`git rev-list --count HEAD` = 1): `git log` tells you nothing
 about history here, so don't reason from it.
 
 See [[rtvm-conventions]], [[verification-platform-trap]].
+
+## Superset technique for two branches editing the same doc (2026-08-13, issue #7)
+
+When another issue's branch has pending edits to `docs/RTVM.md` /
+`docs/SDD.md` that are already final (its issue is at CI/CD with
+`status:ready-for-commit`), don't just add your section at EOF and hope —
+both branches appending after the last line, or both adding a §7 row after
+the same one, conflicts at merge.
+
+Instead: `git checkout origin/issue-<theirs> -- docs/RTVM.md docs/SDD.md`
+**before** editing, then add your own changes on top. Your branch's copy is
+then a strict superset of theirs, and every docs conflict resolves to
+"take mine" with nothing lost, whichever branch CI/CD merges first. Say so
+explicitly in the commit message *and* in the handoff comment so CI/CD has
+the resolution rule before it hits the conflict.
+
+**Only do this when their text is final.** If their issue is still with an
+agent, you'd be freezing a draft onto your branch.

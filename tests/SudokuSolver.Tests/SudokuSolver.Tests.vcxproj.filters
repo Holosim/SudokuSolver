@@ -10,7 +10,13 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="InputFaultTests.cpp">
+      <Filter>Test Files</Filter>
+    </ClCompile>
     <ClCompile Include="ScaffoldTests.cpp">
+      <Filter>Test Files</Filter>
+    </ClCompile>
+    <ClCompile Include="SolveReportTests.cpp">
       <Filter>Test Files</Filter>
     </ClCompile>
     <ClCompile Include="..\..\src\SudokuCore\Grid.cpp">
@@ -31,5 +37,10 @@
     <ClCompile Include="..\..\src\SudokuCore\Solver.cpp">
       <Filter>Core Under Test</Filter>
     </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="TestFixtures.h">
+      <Filter>Test Files</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>
