@@ -186,3 +186,29 @@ then have produced a *third* regression round trip over a change containing no
 
 See [[requirements-traps]], [[sudoku-solver-project-context]],
 [[doc-state-across-branches]].
+
+## An SDD-specified test harness can go unbuilt while every feature still passes (2026-08-13, #9)
+
+`docs/SDD.md` §3.3 assigned TP-001…009, TP-401…406 and TP-500…507 to end-to-end
+tests spawning the exe through a `sudoku::test::ProcessRunner` helper. At the
+first issue that actually needed it, the helper **did not exist** — the Software
+Engineer declined to build it (Windows-only `CreateProcess`, undebuggable pipe
+deadlocks for a Test Engineer who cannot edit files) and hand-ran the three
+procedures instead. They genuinely passed. Nothing in the pipeline flags this:
+the RTVM says "In Test", the thread says PASS, and no committed test will ever
+re-run it.
+
+**Why:** the §9.x ledger asks "which clauses executed?", not "will they execute
+again?". A hand-run procedure and a procedure backed by a test method look
+identical in that column, and the difference only bites at the first regression
+pass, when the evidence turns out to be unrepeatable.
+
+**How to apply:** whenever an infrastructure component named in the SDD (a test
+harness, a fixture loader, a mock) is a prerequisite for a whole *class* of
+procedures, give it its own issue rather than letting each feature issue
+re-decide it, and require the same platform seam the product code uses so the
+procedures execute in-pipeline. In the ledger, distinguish **executed and
+automated** from **executed by hand** explicitly, and write the rule that a
+requirement must not reach Verified on hand-run evidence once the harness exists.
+Don't gate the whole remaining feature set on the harness issue — that serialises
+the pipeline, and hand-run evidence is real evidence. #24 here, deps on #9 only.
