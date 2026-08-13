@@ -14,6 +14,11 @@ namespace sudoku {
 // Keeping this a pure function is what lets TP-400 assert it byte for byte
 // as a unit test rather than a process capture, and keeps the core free of
 // streams for TP-903.
+//
+// Every line is terminated, the last one included, so the returned string is
+// a complete unit of output: a caller writes it and adds nothing. An empty
+// cell renders as `.`, which RTVM-400 never asks for (it describes a solved
+// grid) but which keeps a partial grid legible rather than malformed.
 [[nodiscard]] std::string formatGrid(const Grid& grid);
 
 // Returns the kCellCount-character form: every cell in row-major order,

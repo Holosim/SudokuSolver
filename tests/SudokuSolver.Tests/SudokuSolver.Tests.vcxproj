@@ -98,6 +98,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="GridFormatTests.cpp" />
     <ClCompile Include="InputFaultTests.cpp" />
     <ClCompile Include="ScaffoldTests.cpp" />
     <ClCompile Include="SolveReportTests.cpp" />

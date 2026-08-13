@@ -16,6 +16,7 @@
 
 #pragma once
 
+#include <cstddef>
 #include <cstdint>
 #include <string>
 
@@ -46,6 +47,24 @@ public:
     // returns true, or returns false immediately when no complete line is
     // available right now. Never waits, on any handle kind.
     [[nodiscard]] bool tryReadLine(std::string& line);
+
+    // Waits for one line. This is the puzzle-acquisition read of RTVM-003 and
+    // it is the *only* read in the program that is allowed to wait, because
+    // it happens before the solve starts and therefore before any prompt
+    // exists: RTVM-006 and RTVM-008 constrain the prompt mechanism, and
+    // reading a puzzle a user is still typing cannot be done without waiting
+    // for it. Calling this once the solve is under way would break both, so
+    // the solve path uses tryReadLine and nothing else.
+    //
+    // Assigns one line without its terminator and returns true; returns false
+    // when the channel is closed and no bytes remain. At most 'maxBytes' are
+    // buffered while looking for a terminator — a longer line is delivered
+    // truncated to that length, which is enough for the caller to see it is
+    // malformed without buffering the rest (docs/RTVM.md 7 I-13).
+    //
+    // Bytes read past the line are kept, so the control channel continues
+    // from the same buffer afterwards (docs/SDD.md 1.3).
+    [[nodiscard]] bool readLineBlocking(std::string& line, std::size_t maxBytes);
 
 private:
     void*      m_handle = nullptr;      // HANDLE, kept opaque to callers

@@ -134,3 +134,26 @@ what releases the downstream `status:on-hold` issues via
   The RTVM-904 row said "seven §3.4 headings" against a README with eight
   `#` headings — correct (the eighth is the title) but ambiguous to #22.
   Prefer naming the items over stating a count.
+
+## Close the implementation-level rulings at the fast-path update (2026-08-13, #9)
+
+The Software Engineer's hand-off comment routinely ends with two or three
+"decisions that are yours, not mine", and the Test Engineer seconds them. Rule
+them **on the fast-path RTVM update**, as §7 `I-` rows, not later:
+
+- The ones raised at #9 were an SDD self-contradiction (an absolute "never
+  block" vs a requirement that must wait for typed input → I-17) and an
+  interface-field domain (`GetLastError` vs `errno` → I-18). Both were "cheap
+  now, expensive after #10 starts", and both were already *implemented* one way
+  in code that had just passed — so ruling matched the delivered build and cost
+  nothing, while deferring would have made #10 guess.
+- Where a ruling touches an interface field, also state what the *renderer* may
+  and may not do with it (here: never assert the number, never pin the CRT's
+  phrase, and one helper renders it) — otherwise the next issue re-opens it.
+- Write the outcome into **both** documents: the §7 row is the decision record,
+  the SDD section is what the Software Engineer actually reads. An SDD paragraph
+  that still contradicts the ruling is how the same question comes back.
+
+**Why:** these questions arrive attached to a *passing* test, which makes them
+feel non-urgent. They are the opposite: the code that embodies the answer already
+exists, so ruling is free, and the next issue is about to build against it.

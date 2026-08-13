@@ -246,3 +246,25 @@ an ambiguity whose resolution needs a code change; a coverage clause that needs
 only a test fixture is additive. Record it as an outstanding clause with a
 re-run trigger naming the next issue that already opens the same test file
 (#11 here), and say in the ledger that the code is not suspected.
+
+## The format decision the normative block doesn't state (2026-08-13, #9)
+
+A byte-normative output block pinned as an ASCII picture in the RTVM (`§6.2`'s
+13-line grid) silently omits **whether the last line is terminated**. Nobody
+notices at the requirement it belongs to — TP-400 normalises line endings and
+counts lines, so either choice passes — and it surfaces one issue later, at the
+requirement that appends something *after* the block (RTVM-401's non-uniqueness
+note, which lands on its own line only if the grid terminated its last one).
+
+**Why:** a picture in a fenced code block communicates glyphs and alignment
+perfectly and terminators not at all. The Software Engineer has to choose, and
+did choose correctly here, but it was an unrecorded choice until they flagged it.
+
+**How to apply:** when pinning any byte-normative block, state the terminator
+count explicitly, and say which spelling is normalised away (CRLF vs LF) versus
+which property is normative (the count). Then find the *later* requirement that
+concatenates onto it and make sure the two agree. Same class of omission to look
+for: trailing whitespace, whether an empty/unset field has a glyph at all
+(§6.2's empty-cell rendering is deliberately unspecified because no requirement
+prints an unsolved grid — a surviving mutant proved that gap exists, and it is
+documented rather than latent).

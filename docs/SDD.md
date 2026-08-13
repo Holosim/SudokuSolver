@@ -125,6 +125,21 @@ be got wrong. `std::getline(std::cin, line)` **blocks**, and using it would
 fail RTVM-006 and RTVM-008 outright — the two requirements that exist precisely
 to stop this happening. It must not appear anywhere in the solve path.
 
+**"The solve path" is meant literally, and the boundary is the solve.** From the
+moment the solver is entered until it returns, no call may block — that is the
+subject of RTVM-006 and RTVM-008, and §3.7's more absolute phrasing was written
+about the *prompt* read. **Acquiring the puzzle happens strictly before the
+solve starts, and there a bounded blocking read is permitted**, because RTVM-003
+requires reading a puzzle the user may still be typing and no non-blocking
+formulation of "wait for line 4" exists. Bounded means the bounds that already
+apply — acquisition stops at 9 logical lines (`docs/RTVM.md` §7 I-2) and never
+scans past 4096 bytes on one line (I-13) — and it still goes through
+`StdinChannel`, never `std::cin`. Redirected or closed stdin reaches EOF, which
+ends the read, so RTVM-008's non-interactive guarantee is untouched. See
+`docs/RTVM.md` §7 **I-17**, which rules the contradiction between this section
+and §3.7 as they were originally worded, and records the interactive case that
+does legitimately wait forever (a user who types four lines and walks away).
+
 There is no single Win32 call that non-blockingly tests any standard-input
 handle for available data. The handle type must be established first and
 dispatched on. `StdinChannel` does this **once, at startup**, from
@@ -149,6 +164,12 @@ Rules that make this safe:
   either role. Two readers with independent buffering over one handle is the
   classic way to lose bytes to a look-ahead, and this rules it out by
   construction.
+- **Two reads, one buffer.** The channel therefore exposes both a
+  non-blocking `tryReadLine()` (the only form the solve path may call) and a
+  blocking, byte-capped `readLineBlocking()` (callable **only** during
+  acquisition, before the solve starts — I-17). They share the one accumulated
+  buffer and the one EOF latch, so bytes typed ahead of the puzzle's ninth line
+  are still there for the control channel afterwards.
 - **Line-oriented, byte-safe.** The channel yields complete lines only. Bytes
   are accumulated in a `std::string` with explicit lengths; NUL bytes are data,
   never terminators (this is what makes the TP-505 NUL-byte case behave).
@@ -522,9 +543,26 @@ struct InputFault {
     CellRef       first;                 // IllegalCharacter, *Duplicate
     CellRef       second;                // *Duplicate only
     std::string   path;                  // SourceUnreadable only
-    std::uint32_t systemError = 0;       // SourceUnreadable only (GetLastError)
+    std::uint32_t systemError = 0;       // SourceUnreadable only; an errno value
+                                         // on every platform (§7 I-18), 0 == n/a
 };
 ```
+
+**`systemError` carries an `errno` value, on every platform** — not a
+`GetLastError` code, which is what this section originally said. `InputSource`
+opens files with `std::ifstream`; the MSVC CRT sets `errno` on a failed open
+just as glibc does, while `GetLastError` after a CRT call is incidental rather
+than specified, so carrying whichever domain the calling path happened to set
+would make the number uninterpretable without a provenance tag. One domain, no
+tag. Nothing asserts the field numerically — TP-009 asks only that stderr names
+the path and states it could not be opened — so it exists purely to let
+`Messages` render a reason, through one `strerror`-family helper there and
+nowhere else. CRT/locale-supplied text is not a literal in the fault and so does
+not breach RTVM-302; correspondingly, TP-009 and TP-403 must not pin an exact
+CRT phrase. `SourceUnreadable` also covers a failed **read**, not just a failed
+open: TP-009's second case is an existing *directory*, which fails at open on
+Windows but opens and then fails to read on a POSIX host. Ruled on issue #9 —
+`docs/RTVM.md` §7 **I-18**; binding on **#10**, which owns the wording.
 
 `CellRef` is **1-based**, and it becomes 1-based at construction: every
 fault-producing path builds its cells through `cellRefFromZeroBased()` and
@@ -649,6 +687,16 @@ and writes to nothing. TP-400 asserts it byte for byte; keeping it a pure
 function is what makes that a unit test rather than a process capture, and
 keeps the core free of streams for TP-903.
 
+**Every line it returns is terminated, the last one included** — 13 terminators,
+so the returned string is a complete unit of output and `Reporter` writes it and
+adds nothing. Delivered that way at #9 and now pinned normatively in
+`docs/RTVM.md` §6.2, because RTVM-401's note line has to land on its *own* line
+rather than being appended to the final row. Line count and width are derived
+from `kGridSize` / `kBoxSize` rather than written as literals, so a future grid
+size cannot silently produce a misaligned block; a `static_assert` bounds the
+format at single-digit grids, since a 16×16 tier needs a §6.2 format decision
+before it needs code.
+
 `toCompactString` returns the `kCellCount`-character form: every cell in
 row-major order, `0` for an empty cell, no separators and no newline. **Adopted
 2026-08-13 as specified** — TP-100 requires a round trip back to the
@@ -666,8 +714,8 @@ formatting.
 | Type | Responsibility |
 | --- | --- |
 | `CommandLine` | First argument is a path; further arguments ignored (RTVM-002). |
-| `InputSource` | Supplies puzzle text from a file, or from `StdinChannel` when there is no argument (RTVM-003). Produces a `SourceUnreadable` fault on failure (RTVM-009). |
-| `StdinChannel` | The single owner of the stdin byte stream. Handle-type dispatch and non-blocking line reads per §1.3. |
+| `InputSource` | Supplies puzzle text from a file, or from `StdinChannel` when there is no argument (RTVM-003). Produces a `SourceUnreadable` fault on failure to **open or read** — `systemError` is an `errno` value (§2.5, §7 I-18). Files are opened in **binary** so a CR is data the parser rules on (RTVM-106), not something the CRT silently removed. With a path present, stdin is never read at all: that is why the file wins in TP-002's third case. |
+| `StdinChannel` | The single owner of the stdin byte stream. Handle-type dispatch per §1.3; non-blocking reads on the solve path, and a byte-capped blocking read during puzzle acquisition only (§7 I-17). |
 | `SolveSession` | Implements `SolveControl`. Owns the `steady_clock` start point, the next-prompt deadline, and the stop-response check. |
 | `Reporter` | Stream assignment and exit code per the RTVM-405 / §7 I-4 / I-5 table. The only code that touches `stdout`. |
 | `Messages` | Every user-visible English string, in one file. Nothing elsewhere contains a sentence. |
@@ -830,6 +878,23 @@ in VS 2022).
   cover TP-001…009, TP-401…406 and TP-500…507, which are all about process
   behaviour, streams and exit codes and cannot be unit tests.
 
+**`ProcessRunner` does not exist yet, and has its own issue — #24.** #9
+delivered the first process-level behaviour (TP-001/002/003) and ran those three
+procedures by hand rather than building the harness, on the reasonable ground
+that it is Windows-only `CreateProcess` code nobody in this pipeline can compile
+and that blind pipe plumbing deadlocks in ways a Test Engineer who cannot edit
+files could not fix. This paragraph is here so the gap is visible from the SDD
+and not only from `docs/RTVM.md` §9.8.1, which records the ruling: **§3.3 stands
+unchanged**, #24 builds the helper with the same `_WIN32`/POSIX seam
+`StdinChannel.cpp` uses so these procedures execute in this pipeline as well as
+under MSVC, and it ports TP-001/002/003 onto it first as a known-good baseline.
+Until then, a process-level procedure may be hand-run — but a UI or OUT
+requirement must not reach **Verified** on hand-run evidence once #24 exists.
+Two harness details that are design, not taste: pump stdout and stderr
+concurrently (draining one to EOF first deadlocks whenever the child fills the
+other pipe's buffer), and close the child's stdin write end, because TP-003 and
+TP-008 depend on the child seeing EOF.
+
 **Slow tests are categorised.** TP-501, TP-502, TP-504 and TP-507 run to 60 s
 by design. They carry
 `TEST_METHOD_ATTRIBUTE(L"TestCategory", L"Slow")` so the default
@@ -975,6 +1040,15 @@ console case only, keeping the pipe and file cases as specified. What is **not**
 acceptable under any circumstance is any call that can block —
 `std::getline(std::cin, …)`, a bare `ReadFile` on a console handle, or
 `std::cin >>`. RTVM-006 and RTVM-008 exist to catch exactly that.
+
+**Amended 2026-08-13 (issue #9), and this is the binding wording:** "under any
+circumstance" is binding on the **solve path** — the prompt read, which is what
+this point is about — and **not** on acquiring the puzzle before the solve
+starts, where RTVM-003 requires a wait that no non-blocking formulation can
+express. See §1.3 and `docs/RTVM.md` §7 **I-17** for the ruling and its bounds.
+`std::cin` remains banned in both roles for the separate reason in §1.3 (one
+owner of the byte stream). The prohibition on blocking anywhere the solver is
+running is unchanged and remains absolute.
 
 **Outcome.** Nothing decided and nothing foreclosed, which is the right state
 at scaffold time: the choice can only be made against a real console host.

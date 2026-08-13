@@ -67,6 +67,30 @@ inline constexpr std::string_view kSolvedHard17 =
     "856129743"
     "274836159";
 
+// The normative rendering of S-EASY (docs/RTVM.md 6.2) — 13 lines of 25 ASCII
+// characters, every line terminated, the last one included. Transcribed from
+// the document and nowhere else: this literal *is* the requirement, so TP-400
+// comparing formatGrid against it is a comparison against RTVM-400 rather than
+// against the implementation's own idea of the format.
+inline constexpr std::string_view kSolvedEasyFormatted =
+    "+-------+-------+-------+\n"
+    "| 5 3 4 | 6 7 8 | 9 1 2 |\n"
+    "| 6 7 2 | 1 9 5 | 3 4 8 |\n"
+    "| 1 9 8 | 3 4 2 | 5 6 7 |\n"
+    "+-------+-------+-------+\n"
+    "| 8 5 9 | 7 6 1 | 4 2 3 |\n"
+    "| 4 2 6 | 8 5 3 | 7 9 1 |\n"
+    "| 7 1 3 | 9 2 4 | 8 5 6 |\n"
+    "+-------+-------+-------+\n"
+    "| 9 6 1 | 5 3 7 | 2 8 4 |\n"
+    "| 2 8 7 | 4 1 9 | 6 3 5 |\n"
+    "| 3 4 5 | 2 8 6 | 1 7 9 |\n"
+    "+-------+-------+-------+\n";
+
+// The separator of docs/RTVM.md 6.2, named once so a test asserting lines 1,
+// 5, 9 and 13 does not retype it four times.
+inline constexpr std::string_view kFormatSeparatorLine = "+-------+-------+-------+";
+
 // Builds a Grid from the compact row-major form above: '0' and '.' are empty,
 // and any character from '1' up to the kGridSize'th digit is a given. Anything
 // else is treated as empty, and a short string leaves the remaining cells
