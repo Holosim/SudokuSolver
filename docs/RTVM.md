@@ -986,6 +986,64 @@ past `3bc1b22` and both are agent-memory/lock files only
 re-run TP-100/101/106's parse clauses plus the `ScaffoldTests`
 (RTVM-903/905) set on a clean trunk checkout and that is the whole job.
 
+**Regression result, 2026-08-13 — PASS. The merge disturbed nothing.**
+Executed by the Test Engineer on a clean `main` checkout at `0996255`
+(merge `3bc1b22`): 65 driver assertions plus the 2 `ScaffoldTests`
+methods, 0 failures, `g++ -std=c++17 -Wall -Wextra -Wconversion
+-Wpedantic` over `src/SudokuCore/*.cpp` only. Recorded here because "no
+change required" is a result, not an absence of one:
+
+- **The product-path diff across the merge is one README hunk.**
+  `GET /compare/6d718e6...main` returns 13 files: ten under
+  `.claude/agent-memory/**`, `docs/RTVM.md`, `docs/SDD.md` and
+  `README.md`. `src/`, `tests/`, `samples/`, the `.sln`, both
+  `.vcxproj`, `.gitattributes` and `.gitignore` on trunk are
+  byte-identical to the `6d718e6` the 95-assertion pass was taken on.
+  The README hunk is the trunk-side wording re-flow (`3497383`) that
+  predates the branch — the same claim, re-wrapped, and TP-904's
+  `0`/`.` clause still holds. RTVM-904 stays **In Implementation** and
+  #22 owns it; the re-flow left a semicolon ending a clause the next
+  line restarts with a capital, which is cosmetic, has no test hanging
+  off it, and is #22's to tidy when it writes the section.
+- **TP-100 — pass in full**, re-derived from §6.1 rather than carried
+  over: 30 givens, the four spot-checked cells, `isComplete()` false,
+  and an 81-character `toCompactString` round trip.
+- **TP-101 parse clause and all five TP-106 positives — pass**, plus
+  the Test Engineer's two additions (CRLF with no trailing newline;
+  tabs at both ends of line 6).
+- **TP-106's negative case — pass against the §7 I-15 wording as
+  ruled**: `IllegalCharacter`, `' '`, `first == {3,4}`, `line == 3`,
+  not `LineTooLong`. TP-105's narrowness confirmation re-run with it —
+  `P-LONGLINE` still `LineTooLong` line 5 length 11, `P-MULTIFAULT`
+  still the missing line. The exception is as narrow on trunk as it was
+  on the branch.
+- Standing checks re-run green: `ScaffoldTests` (RTVM-903/905) through
+  the CppUnitTest shim, core-only link with no console object file (a
+  live demonstration of the RTVM-903 split, not a grep of it), the
+  TP-903 greps, the whole-program build, TP-907's five 90-byte LF
+  fixtures and the `.gitattributes` pins, and RTVM-900's
+  `git check-ignore`.
+- **The TP-505-shaped adversarial set re-run unchanged**: empty input,
+  1 MB single line (instant, `kLengthExceedsCap`), exactly 4096 bytes
+  (exact length, boundary still off-by-one clean), 10 000 lines,
+  embedded NUL, UTF-8 BOM, whitespace-only line, `\v`, `:`, all-dots,
+  and the `S-EASY` round trip.
+- **The end-to-end clauses of TP-101 and TP-106 were deliberately not
+  re-litigated** — untouched by the merge and correctly outstanding
+  under the re-run trigger above. **MSVC / Test Explorer remain
+  unexecuted** (V-1, #23), as standing.
+
+**Issue #6 closes at this point, and the three rows stay In Test.**
+Issue state and requirement status are separate questions. §9.2's rule
+takes two things for Verified — the trunk SHA *and* every clause of the
+procedure executed — and `3bc1b22` supplies only the first: RTVM-100
+still owes its MSVC / VS-test-project execution, and RTVM-101 and
+RTVM-106 additionally owe their end-to-end clauses (#8, #9) and, for
+RTVM-106's negative, #10's wording. Those are re-run triggers keyed to
+*those* issues, not to this one, so closing #6 loses nothing; promoting
+the rows to make the close-out look tidy would delete the only record
+that half of two procedures never ran.
+
 **Fault data already correct, ahead of [RTVM-102].** Detection of shape
 and illegal-character faults is inseparable from accepting a valid
 grid, so the parser already produces populated `InputFault` objects on
