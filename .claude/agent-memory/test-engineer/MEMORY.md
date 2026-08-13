@@ -9,7 +9,7 @@
 
 - [Compile-time invariant testing](compile-time-invariant-testing.md) — `static_assert`/`-Wswitch` "tests" prove nothing unless mutated; how, plus the private-ctor false negative.
 
-- [Reading Windows evidence](windows-evidence-reading.md) — how to reach `windows-verification` artifacts from Ubuntu, and the three surfaces that render a failed step green.
+- [Reading Windows evidence](windows-evidence-reading.md) — reaching `windows-verification` artifacts from Ubuntu, the three surfaces that render a failed step green, and the compile-vs-execute split.
 
 ## How to scope work
 

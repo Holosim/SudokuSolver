@@ -48,9 +48,27 @@ in scope because #6's SHA rows were in the conflicted hunks.
 **Re-run the compare yourself even when the hand-off states the scope.** On
 #8's regression (2026-08-13) the Systems Engineer's comment named three changed
 files; by the time I ran it the answer was five, because their *own* RTVM
-commit landed after they wrote the comment. Nothing product-bearing differed
-either way, but a stated scope is a snapshot of the trunk at writing time, not
-of the trunk you test.
+commit landed after they wrote the comment. Same again on #9's (twelve files
+stated, fifteen measured, 19 commits ahead) — and the Systems Engineer now
+writes "re-derive this on receipt" into the §9.x section itself, so it is an
+expectation, not just prudence. A stated scope is a snapshot of the trunk at
+writing time, not of the trunk you test. The same staleness applies to any
+*run id* a hand-off names; see [[windows-evidence-reading]].
+
+**A regression pass can carry deferred clauses that are new ground.** §9.x
+sections sometimes park a clause deliberately — #9's §9.8.2 held TP-101 and
+TP-106's end-to-end halves back because their re-run trigger is worded against
+*trunk*, and advance evidence taken on a branch does not satisfy that wording.
+Read the §9.x section for the merged issue before assuming "re-run what you
+already ran": part of the ask may be a first execution, and it is the part that
+makes the pass non-trivial. Distinguish it in the comment from the
+re-confirmation half.
+
+**Watch out for a `.vcxproj` `Include=` that is a macro or glob, not a path.**
+`$(SolutionDir)samples\*.txt` (the `CopySamples` step) does not resolve on disk
+and a naive existence check flags it as missing — which is why earlier passes
+reported 38/38 and 76/76 while a fresh script says 78/79. Skip entries
+containing `$(` or `*`, and say so, rather than reporting a phantom defect.
 
 **Two things the Systems Engineer has now twice asked be left out of a
 regression pass, and I should not volunteer:** mutation evidence over code that

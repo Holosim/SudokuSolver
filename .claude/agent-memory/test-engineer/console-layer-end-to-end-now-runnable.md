@@ -13,8 +13,11 @@ produces a binary that really reads a puzzle, solves it and prints the grid.
 
 **Why:** this reverses the assumption in [[no-windows-runner]] that everything
 process-level was inspection-only. TP-001/002/003 and the end-to-end halves of
-TP-101/TP-106 all executed for real. What is still *not* executable is the
-`_WIN32` branch itself — it ships, and is inspection evidence only.
+TP-101/TP-106 all executed for real. What is still not *executable* anywhere in
+this pipeline is the `_WIN32` branch — though as of #9's post-merge regression
+it is at least **compiled**, clean under MSVC by the Windows workflow; see
+[[windows-evidence-reading]] for the compile-vs-execute split and how to state
+it without overclaiming.
 
 **How to apply:**
 
