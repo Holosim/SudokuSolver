@@ -1048,6 +1048,82 @@ by automation. If not, the finding is recorded and A-2 goes to the
 Solutions Architect as a V-4 row with a measured reason. Either way it
 is data, not an assumption, and it needs no owner action.
 
+#### 9.1.6 `tests/windows/*.ps1` land — DW-1 closes, two harness defects found and fixed, §9.4 A-2/A-3 measured (issue #23, 2026-08-13)
+
+`tests/windows/run-procedures.ps1` and `tests/windows/run-timing.ps1`
+(the "Specification — the two scripts" comment on issue #23, C1-C7,
+P1-P5) were implemented by the Software Engineer (`9f36ad3`) and
+verified against real Windows runs by the Test Engineer — not against a
+substitute toolchain (V-1).
+
+**DW-1 (§9.1.5) — CLOSED.** P1 splits the single broken vstest call into
+a discovery pass (`/ListTests:<dll>`, output captured from stdout) and a
+separate execution pass (`/Logger:trx`), fixing the argument-order bug
+that made the step fail before it reached the test DLL. Confirmed on
+Windows run `31738276141` (SHA `4ea422c`): `discovered-tests.txt` lists
+all 25 tests; `tests.trx` reports `total="25" passed="25" failed="0"`.
+
+**Two further defects were found in the same implementation pass, on
+first Test Engineer review, and fixed before landing — both in the new
+harness scripts, neither a product defect:**
+
+- **DW-3 — `Invoke-Sudoku`'s default stdin redirect (the literal string
+  `'NUL'`) throws inside `Start-Process` on the real runner.** Caught
+  correctly per C1 (never throws, evidence still written), but the
+  thrown reason was never carried into any check's `Reason` field, so
+  every case that omits `-StdinFile` — TP-002 (2 of 3 cases), TP-009
+  (both cases), TP-400…403, and all 27 TP-505 entries, 39 rows in total
+  — failed with an uninformative `exit=-1` instead of a diagnosable
+  cause.
+- **DW-4 — two false-PASS defects downstream of DW-3, the more serious
+  finding.** TP-406 evaluated "stdout contains none of the forbidden
+  substrings" against a run that never launched — an empty string
+  trivially passes that check, so a crashed run read as PASS. Separately,
+  `run-timing.ps1`'s `$withinBudget` checked only the 10 s ceiling and
+  never the runs' exit codes, so ten launch failures (elapsed 0.4–0.9 ms,
+  the crash latency, not the solver's) reported **PASS against the
+  10-second performance budget** — evidence reading stronger than what
+  was actually measured, which is exactly the failure mode W-2/V-1 exist
+  to prevent, and on the client's own stated headline requirement.
+
+**Fixed by the Software Engineer (`b4dfe0f`):** stdin now redirects from
+a freshly-created empty temp file instead of `'NUL'`; a new
+`Get-FailureReason` helper carries `LaunchError` into every FAIL row's
+`Reason`; TP-406 now gates on the run reaching its expected exit code
+before evaluating content, and records `NOT-RUN` otherwise; `run-timing.ps1`'s
+`$withinBudget` now additionally requires every one of the 10 samples per
+fixture to exit with that fixture's documented code (RTVM-400/402: `0`
+for `easy`/`hard17`, `2` for `unsolvable`).
+
+**Re-verified by the Test Engineer** against Windows run `31739274812`
+(SHA `3658728`): all three defects (DW-1, DW-3, DW-4) confirmed fixed
+from the raw evidence files, not step ticks. `timing.json` now shows
+real solve latencies (`easy`/`hard17` max 20–30 ms, `unsolvable` max
+~12 ms, all 30 runs at the correct exit code) — genuine evidence for the
+10 s budget for the first time. Seven remaining FAIL rows (TP-009,
+TP-401, TP-402, TP-403) now show correct exit codes with empty/absent
+message wording — the stub-wording gap tracked against #10/#11, not a
+harness or product regression, and out of scope for this issue.
+
+**Consequence for §9.4:**
+
+- **A-3 closes.** Real TP-905 evidence now exists (25/25 discovered and
+  executed) with no further Windows-only obstruction. No longer a V-4
+  candidate.
+- **A-2 is now measured, not undecided, and the answer is negative on
+  this image.** P2's `vswhere -legacy -all -products *` found no VS
+  `17.x` instance on `win25-vs2026`, confirmed on both the pre-fix and
+  post-fix runs. The toolset half stays covered per §9.1.5; the IDE-load
+  clause has no automation route on this runner image. It moves from
+  "undecided, needs a probe" to a genuine, measured V-4 candidate.
+- **A-4 (ConPTY) is untouched by this issue** and remains the Test
+  Engineer's to drive on #17, per the standing instruction.
+
+Table rows below updated accordingly. The list still has an open row
+(A-4) and per V-5 is still not surfaced to the client until that attempt
+is made — recorded here so the next reader sees it went from three open
+automation attempts to one.
+
 ### 9.2 DELIV coverage after the Generate Code Base scaffold
 
 State at branch `issue-5` @ `04b0269`, inspected by the Test Engineer
@@ -1092,6 +1168,15 @@ and TP-901's outstanding clauses are about the *VS 2022 loader*, which
 that image does not have (§9.1.5). RTVM-506's row is the one genuinely
 moved forward: its `dumpbin` clause is executed and clean, leaving only
 the clean-machine launch (§9.4 A-1).
+
+**Second tranche of Windows evidence, 2026-08-13 (§9.1.6) — same rule,
+same non-action.** `tests/windows/run-procedures.ps1` landed and, once
+its own defects (DW-1/DW-3/DW-4) were fixed, produced real TP-905
+evidence at SHA `3658728` (Windows run `31739274812`): `vstest.console.exe`
+discovers and executes both test methods, 25/25 passed. RTVM-905's
+outstanding clause is closed by that evidence, but the status move
+belongs to the Test Engineer on #21, same as RTVM-506's `dumpbin`
+clause above — not asserted here.
 
 | Req | Executed here and passed | Still outstanding |
 | --- | --- | --- |
@@ -1191,10 +1276,10 @@ than for a plan.
 | # | Clause | Why a hosted runner may not reach it | Proposed automation route before conceding it | Recommendation |
 | --- | --- | --- | --- | --- |
 | A-1 | **TP-506** — run the exe on a clean Windows machine with no VS, no redistributable, no build tools | Every hosted Windows image ships the full VS toolchain and the VC++ runtimes, so "runs where the runtime was never installed" cannot be demonstrated there — the negative is unobservable on the only machine we have | `dumpbin /dependents` asserting the import list is stock system DLLs only (`KERNEL32`, `USER32`, …) with no `MSVCP140.dll` / `VCRUNTIME140*.dll` — TP-506's own last sentence, and it is strong evidence | **Genuine V-4 item — confirmed 2026-08-13, and now down to one sentence.** The `dumpbin` clause is **executed and clean** at `4a849b7`: the delivered exe imports `KERNEL32.dll` and nothing else, with no `MSVCP140.dll` / `VCRUNTIME140*.dll`. That is near-conclusive and needs nothing from the client. The residue going to acceptance is only *"the exe launches on a machine where the VC++ runtime was never installed"* — the one thing no machine we can rent will ever demonstrate, because they all have it |
-| A-2 | **TP-900** — the solution *opening* in VS 2022 with no "project unavailable" and no migration prompt | The prompt is modal GUI behaviour; a headless runner never renders it | `devenv.exe SudokuSolver.sln /Build "Debug\|x64"` uses the same solution loader as the IDE and fails or hangs where the IDE would prompt; combined with a toolset/`ToolsVersion` inspection this covers the substance | **Reopened and reshaped 2026-08-13 — the proposed route is dead as written.** The image is `win25-vs2026`: there is no VS 2022 installed, so `devenv.exe` is VS **2026**'s and drives the wrong loader. What *is* covered is the toolset half — the build ran on `PlatformToolset=v143` / MSVC 14.44, the VS 2022 toolset shipped side-by-side — so this row narrows to the IDE-load clause alone. **Next: the `vswhere -legacy -all` probe from `run-procedures.ps1`** (W-10, no owner action). If a `17.x` instance is on the image, this closes by automation; if not, it goes to the Solutions Architect as a V-4 row with a measured reason rather than a suspicion |
-| A-3 | **TP-905** — tests appearing in **Test Explorer** | Test Explorer is a GUI surface | `vstest.console.exe` is the discovery and execution engine Test Explorer drives; if it discovers and runs both methods, the substantive claim holds | **Still not a V-4 item — but still open, 2026-08-13.** The first runs did *not* exercise it: the workflow's vstest invocation has never worked (defect DW-1, §9.1.5), so no discovery list and no `.trx` exist at any commit. Closes as soon as `run-procedures.ps1` runs `vstest.console.exe /ListTests:<dll>` plus a `/Logger:trx` execution and drops both in the evidence directory — agent-writable, no owner action, no permission (W-10). Do not record this row as closed until that artifact is in hand |
+| A-2 | **TP-900** — the solution *opening* in VS 2022 with no "project unavailable" and no migration prompt | The prompt is modal GUI behaviour; a headless runner never renders it | `devenv.exe SudokuSolver.sln /Build "Debug\|x64"` uses the same solution loader as the IDE and fails or hangs where the IDE would prompt; combined with a toolset/`ToolsVersion` inspection this covers the substance | **Genuine V-4 item — measured 2026-08-13 (§9.1.6), not a suspicion.** `vswhere -legacy -all -products *` (P2, `run-procedures.ps1`) confirms **no VS `17.x` instance exists on `win25-vs2026`**, on both the pre-fix and post-fix runs. The toolset half is covered — the build ran on `PlatformToolset=v143` / MSVC 14.44, the VS 2022 toolset shipped side-by-side. What remains, and cannot be automated on this image, is one sentence: *"the solution opens in the VS 2022 IDE itself with no migration prompt."* Ready to go forward with A-1 once A-4 is attempted (V-5) |
+| A-3 | **TP-905** — tests appearing in **Test Explorer** | Test Explorer is a GUI surface | `vstest.console.exe` is the discovery and execution engine Test Explorer drives; if it discovers and runs both methods, the substantive claim holds | **CLOSED 2026-08-13 (§9.1.6, DW-1 fixed).** `run-procedures.ps1` now runs `vstest.console.exe /ListTests:<dll>` for discovery and a separate `/Logger:trx` execution; both artifacts exist at SHA `3658728` (Windows run `31739274812`): 25/25 tests discovered, 25/25 executed and passed. No longer a V-4 candidate |
 | A-4 | **TP-004…008** — the console-handle behaviour (`PeekConsoleInput`, `GetFileType` = console, an interactive-equivalent stdin held open) | A runner step has no interactive console attached: stdin is a pipe or `NUL`, so `GetFileType` never reports a console and the console path is never entered. TP-008's redirected half runs fine; TP-004/005/006's do not | Drive the exe under a **ConPTY pseudoconsole** (`CreatePseudoConsole`, available on Windows Server 2022) from a small harness, so the child genuinely sees a console handle. This is the same mechanism Windows Terminal uses and it is not exotic | **Undecided — needs a feasibility spike on #17** before it goes anywhere near the client. If ConPTY works this whole row disappears, and it is the largest row on the list. **2026-08-13: the spike is now actually possible** — there is a live Windows job to try it against, and the image is Windows Server 2025, where `CreatePseudoConsole` is long-established. The spike belongs in `tests/windows/run-procedures.ps1` (W-10). Worth doing on its own terms even if it fails: *"we drove the exe under a pseudo-console and here is precisely what it still could not observe"* is a far stronger thing to put to a client than *"consoles are hard"* |
-| A-5 | **TP-500…504** — the timing set | Shared-tenant runner jitter against a ±1.0 s tolerance (§7 I-6) | W-7: three samples, Release build, all reported | **Not a V-4 item.** Run it; if the tolerance proves unholdable *with data in hand*, that is a requirements question for me, not a client-acceptance one. **2026-08-13: still NOT-RUN** — `tests/windows/run-timing.ps1` does not exist yet, and its absence is correctly recorded as NOT-RUN rather than as a pass. The machine it will run on is now known and modest — 2 physical cores / 4 logical, 2596 MHz, 16 GB (§9.1.5) — which is a reason to expect jitter, not a reason to pre-emptively widen §7 I-6 |
+| A-5 | **TP-500…504** — the timing set | Shared-tenant runner jitter against a ±1.0 s tolerance (§7 I-6) | W-7: three samples, Release build, all reported | **Not a V-4 item, and now has real data behind that call.** `tests/windows/run-timing.ps1` lands 2026-08-13 (§9.1.6) and, once DW-4's exit-code gate was fixed, produced genuine TP-500 evidence at SHA `3658728`: `easy`/`hard17` max 20–30 ms, `unsolvable` max ~12 ms, 30/30 runs at the correct exit code, all three W-7 samples present. Nowhere close to the 10 s ceiling on this modest 2-core/4-logical machine, so §7 I-6's tolerance is not in question yet. TP-501…504 stay NOT-RUN pending the RTVM-507 diagnostic hook |
 | A-6 | **TP-901** — build "on a machine that has never built this project" | — none; a fresh hosted runner satisfies this clause **better** than a client engineer's machine, which has VS configured and a warm state | n/a | **Not a V-4 item.** Recorded only to stop it being added later by association |
 
 Nothing on this list is surfaced to the client until it is down to the
@@ -1202,18 +1287,27 @@ rows that survive A-2, A-3 and A-4's automation attempts — per V-5 that
 is the Solutions Architect's step, and a two-row list is a decision
 where a six-row one is a shrug.
 
-**What has to happen before this list is sent (2026-08-13).** All three
-are agent-side, all three live in `tests/windows/run-procedures.ps1`,
-and none needs an owner action or a permission:
+**Third pass, 2026-08-13 (§9.1.6) — two of the three attempts are done.**
+A-3 closed by automation (DW-1 fixed, real TP-905 evidence in hand).
+A-2 was measured, not assumed, and came back negative: no VS `17.x`
+instance anywhere on this runner image, so it stays open, but as a
+one-sentence, measured V-4 row rather than a suspicion. **Only A-4 (the
+ConPTY spike, on #17) remains unattempted.** The list to send is
+expected to be **A-1's launch clause and A-2's IDE-load clause, plus A-4
+only if the spike fails** — still not surfaced per V-5 until that last
+attempt is made.
 
-1. `vstest.console.exe` discovery + execution evidence → closes **A-3**.
-2. `vswhere -legacy -all -products *` instance enumeration → closes or
-   confirms **A-2**.
-3. The ConPTY spike → closes or confirms **A-4**, the largest row.
+**What has to happen before this list is sent.** All three were
+agent-side, all three live (or will live) in
+`tests/windows/run-procedures.ps1`, and none needed an owner action or a
+permission:
 
-On the evidence so far I expect the list that reaches the client to be
-**A-1's launch clause, and possibly A-4**. Everything else should die by
-automation.
+1. ~~`vstest.console.exe` discovery + execution evidence → closes
+   **A-3**.~~ **Done 2026-08-13 — closed.**
+2. ~~`vswhere -legacy -all -products *` instance enumeration → closes or
+   confirms **A-2**.~~ **Done 2026-08-13 — confirmed open, measured.**
+3. The ConPTY spike → closes or confirms **A-4**, the largest remaining
+   row. Still outstanding, on #17.
 
 ### 9.5 DATA-IN coverage after the parser ([RTVM-100], issue #6)
 
