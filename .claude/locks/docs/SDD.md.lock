@@ -1,7 +1,0 @@
-{
-  "path": "docs/SDD.md",
-  "holder": "systems-engineer",
-  "issue": 8,
-  "acquired_at": "2026-08-13T12:57:18Z",
-  "reason": "reconcile 1.5 node-state byte figure with delivered solver"
-}
