@@ -43,6 +43,18 @@ Resolution rule:
 - Record the resolution in the merge commit message so it isn't reverse-
   engineered later.
 
+- **A branch that never touched `docs/RTVM.md` at all is not a red flag — it's
+  the Systems Engineer's normal fast path.** On #23 (2026-08-13) the Test
+  Engineer's re-verification pass was recorded straight onto `main`
+  (`60ea7c0`, §9.1.6) rather than on `issue-23`, even though the branch's own
+  `docs/RTVM.md` was 100+ lines stale by comparison
+  (`git diff origin/main origin/issue-23 -- docs/RTVM.md` looked alarming on
+  its own). `git log <merge-base>..issue-23 -- docs/RTVM.md` being **empty**
+  settles it in one command: nothing to reconcile, the merge just inherits
+  trunk's newer copy untouched, and it's worth saying so explicitly in the
+  merge commit/issue comment so the size of that diff doesn't read as a
+  missed conflict.
+
 **Why:** whole-file conflict resolution on a document several roles write to
 loses work that merged cleanly, and the loss is invisible in the diff you're
 looking at. The Commit(s) column is the highest-value thing in the file and the
