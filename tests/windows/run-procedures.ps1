@@ -277,7 +277,7 @@ Invoke-Section -Name 'TP-002' -Body {
     Add-Check -Checks $Checks -Tp 'TP-002' -Case 'bare-file-arg' -State $(if ($pass) { 'PASS' } else { 'FAIL' }) `
         -Expected 'stdout = S-EASY block, stderr empty, exit 0' `
         -Observed "exit=$($r.ExitCode) stderrBytes=$($r.StderrBytes) timedOut=$($r.TimedOut)" `
-        -Reason $(if (-not $pass) { "see $($p.Dir | Split-Path -Leaf)" } else { $null })
+        -Reason $(if (-not $pass) { Get-FailureReason -Result $r -Fallback "see $($p.Dir | Split-Path -Leaf)" } else { $null })
 
     $p2 = New-RunPaths -Case 'TP-002-trailing-args-ignored'
     $r2 = Invoke-Sudoku -Exe $Exe -ArgList @($easy, 'ignored', 'extra', 'args') -OutFile $p2.Out -ErrFile $p2.Err
@@ -286,7 +286,7 @@ Invoke-Section -Name 'TP-002' -Body {
     Add-Check -Checks $Checks -Tp 'TP-002' -Case 'trailing-args-ignored' -State $(if ($pass2) { 'PASS' } else { 'FAIL' }) `
         -Expected 'identical output/exit to the bare-file-arg case' `
         -Observed "exit=$($r2.ExitCode) timedOut=$($r2.TimedOut)" `
-        -Reason $(if (-not $pass2) { "see $($p2.Dir | Split-Path -Leaf)" } else { $null })
+        -Reason $(if (-not $pass2) { Get-FailureReason -Result $r2 -Fallback "see $($p2.Dir | Split-Path -Leaf)" } else { $null })
 
     $p3 = New-RunPaths -Case 'TP-002-file-arg-wins-over-stdin'
     $r3 = Invoke-Sudoku -Exe $Exe -ArgList @($easy) -StdinFile $FixturePaths['P-UNSOLVABLE'] -OutFile $p3.Out -ErrFile $p3.Err
@@ -295,7 +295,7 @@ Invoke-Section -Name 'TP-002' -Body {
     Add-Check -Checks $Checks -Tp 'TP-002' -Case 'file-arg-wins-over-stdin' -State $(if ($pass3) { 'PASS' } else { 'FAIL' }) `
         -Expected 'the file argument wins: stdout = S-EASY block, exit 0' `
         -Observed "exit=$($r3.ExitCode) timedOut=$($r3.TimedOut)" `
-        -Reason $(if (-not $pass3) { "see $($p3.Dir | Split-Path -Leaf)" } else { $null })
+        -Reason $(if (-not $pass3) { Get-FailureReason -Result $r3 -Fallback "see $($p3.Dir | Split-Path -Leaf)" } else { $null })
 }
 
 # --- TP-003 - stdin fallback. ---
@@ -307,7 +307,7 @@ Invoke-Section -Name 'TP-003' -Body {
     Add-Check -Checks $Checks -Tp 'TP-003' -Case 'stdin-fallback' -State $(if ($pass) { 'PASS' } else { 'FAIL' }) `
         -Expected 'no arguments, P-EASY on stdin -> S-EASY block, exit 0' `
         -Observed "exit=$($r.ExitCode) timedOut=$($r.TimedOut)" `
-        -Reason $(if (-not $pass) { "see $($p.Dir | Split-Path -Leaf)" } else { $null })
+        -Reason $(if (-not $pass) { Get-FailureReason -Result $r -Fallback "see $($p.Dir | Split-Path -Leaf)" } else { $null })
 }
 
 # --- TP-009 - unreadable file argument. ---
@@ -322,7 +322,7 @@ Invoke-Section -Name 'TP-009' -Body {
     Add-Check -Checks $Checks -Tp 'TP-009' -Case 'missing-file' -State $(if ($pass) { 'PASS' } else { 'FAIL' }) `
         -Expected 'stdout empty, stderr names the path, exit 1' `
         -Observed "exit=$($r.ExitCode) stdoutBytes=$($r.StdoutBytes) stderrBytes=$($r.StderrBytes)" `
-        -Reason $(if (-not $pass) { "see $($p.Dir | Split-Path -Leaf)" } else { $null })
+        -Reason $(if (-not $pass) { Get-FailureReason -Result $r -Fallback "see $($p.Dir | Split-Path -Leaf)" } else { $null })
 
     $dirArg = Join-Path $RunsDir 'TP-009-directory-arg'
     New-Item -ItemType Directory -Force -Path $dirArg | Out-Null
@@ -332,7 +332,7 @@ Invoke-Section -Name 'TP-009' -Body {
     Add-Check -Checks $Checks -Tp 'TP-009' -Case 'existing-directory' -State $(if ($pass2) { 'PASS' } else { 'FAIL' }) `
         -Expected 'stdout empty, stderr names the path, exit 1' `
         -Observed "exit=$($r2.ExitCode) stdoutBytes=$($r2.StdoutBytes) stderrBytes=$($r2.StderrBytes)" `
-        -Reason $(if (-not $pass2) { "see $($p2.Dir | Split-Path -Leaf)" } else { $null })
+        -Reason $(if (-not $pass2) { Get-FailureReason -Result $r2 -Fallback "see $($p2.Dir | Split-Path -Leaf)" } else { $null })
 }
 
 # --- TP-400/401/402/403/405/406 - output format, over the TP-300/405 fixture classes. ---
@@ -346,7 +346,7 @@ Invoke-Section -Name 'TP-400' -Body {
     Add-Check -Checks $Checks -Tp 'TP-400' -Case 'grid-format-easy' -State $(if ($pass) { 'PASS' } else { 'FAIL' }) `
         -Expected 'stdout byte-for-byte equal (after CRLF normalisation) to the S-EASY §6.2 block' `
         -Observed "exit=$($r.ExitCode) timedOut=$($r.TimedOut) stdoutBytes=$($r.StdoutBytes)" `
-        -Reason $(if (-not $pass) { "see $($p.Dir | Split-Path -Leaf)" } else { $null })
+        -Reason $(if (-not $pass) { Get-FailureReason -Result $r -Fallback "see $($p.Dir | Split-Path -Leaf)" } else { $null })
 }
 
 Invoke-Section -Name 'TP-401' -Body {
@@ -361,7 +361,7 @@ Invoke-Section -Name 'TP-401' -Body {
     Add-Check -Checks $Checks -Tp 'TP-401' -Case 'nonunique-note' -State $(if ($pass) { 'PASS' } else { 'FAIL' }) `
         -Expected '13-line grid (either S-NONUNIQUE-A or -B) followed by the not-unique note, stderr empty, exit 0' `
         -Observed "exit=$($r.ExitCode) shape=$($shape.Detail) note=$note" `
-        -Reason $(if (-not $pass) { "see $($p.Dir | Split-Path -Leaf)" } else { $null })
+        -Reason $(if (-not $pass) { Get-FailureReason -Result $r -Fallback "see $($p.Dir | Split-Path -Leaf)" } else { $null })
 }
 
 Invoke-Section -Name 'TP-402' -Body {
@@ -375,7 +375,7 @@ Invoke-Section -Name 'TP-402' -Body {
     Add-Check -Checks $Checks -Tp 'TP-402' -Case 'no-solution-statement' -State $(if ($pass) { 'PASS' } else { 'FAIL' }) `
         -Expected 'a single stdout line stating no solution, no grid, exit 2' `
         -Observed "exit=$($r.ExitCode) lineCount=$($lines.Count) firstLine='$($lines[0])'" `
-        -Reason $(if (-not $pass) { "see $($p.Dir | Split-Path -Leaf)" } else { $null })
+        -Reason $(if (-not $pass) { Get-FailureReason -Result $r -Fallback "see $($p.Dir | Split-Path -Leaf)" } else { $null })
 }
 
 Invoke-Section -Name 'TP-403' -Body {
@@ -392,7 +392,7 @@ Invoke-Section -Name 'TP-403' -Body {
         Add-Check -Checks $Checks -Tp 'TP-403' -Case $c.Name -State $(if ($pass) { 'PASS' } else { 'FAIL' }) `
             -Expected 'stdout zero bytes, diagnostic on stderr, exit 1' `
             -Observed "exit=$($r.ExitCode) stdoutBytes=$($r.StdoutBytes) stderrBytes=$($r.StderrBytes)" `
-            -Reason $(if (-not $pass) { "see $($p.Dir | Split-Path -Leaf)" } else { $null })
+            -Reason $(if (-not $pass) { Get-FailureReason -Result $r -Fallback "see $($p.Dir | Split-Path -Leaf)" } else { $null })
     }
 }
 
@@ -422,6 +422,20 @@ Invoke-Section -Name 'TP-406' -Body {
     $forbidden = @('Still working', 'abandoned', 'r1c1', 'Error', 'could not')
     foreach ($class in $FixtureClassRuns.Keys) {
         $run = $FixtureClassRuns[$class]
+
+        # A run that never reached its expected exit code (a launch
+        # failure, a crash, a hang) produces empty/irrelevant stdout that
+        # trivially "contains none of" the forbidden substrings - that read
+        # as a false PASS here (Test Engineer, issue #23, 2026-08-13:
+        # TP-406 marked PASS for a run that never executed the product at
+        # all). Absence of evidence is NOT-RUN, never PASS-by-emptiness.
+        $launchedAsExpected = ($run.Result.ExitCode -ne -1) -and ($run.Result.ExitCode -eq $run.ExpectedExit)
+        if (-not $launchedAsExpected) {
+            Add-Check -Checks $Checks -Tp 'TP-406' -Case "stream-separation-$class" -State 'NOT-RUN' `
+                -Reason (Get-FailureReason -Result $run.Result -Fallback "underlying $class run did not reach its expected exit code ($($run.ExpectedExit); observed $($run.Result.ExitCode)) - stdout content is not evidence of stream separation for a run that didn't happen as expected")
+            continue
+        }
+
         $stdout = (Get-Content -LiteralPath $run.Paths.Out -Raw -ErrorAction SilentlyContinue)
         if (-not $stdout) { $stdout = '' }
         $hit = $forbidden | Where-Object { $stdout.Contains($_) }
@@ -538,7 +552,7 @@ Invoke-Section -Name 'TP-505' -Body {
         Add-Check -Checks $Checks -Tp 'TP-505' -Case $entry.Name -State $(if ($pass) { 'PASS' } else { 'FAIL' }) `
             -Expected 'process exits within 60s, exit code in {0,1,2,3}, no unhandled-exception text' `
             -Observed "exit=$($r.ExitCode) timedOut=$($r.TimedOut) elapsedMs=$([math]::Round($r.ElapsedMs,1)) crashText=$(-not $noCrashText)" `
-            -Reason $(if (-not $pass) { "see $($caseDir | Split-Path -Leaf)" } else { $null })
+            -Reason $(if (-not $pass) { Get-FailureReason -Result $r -Fallback "see $($caseDir | Split-Path -Leaf)" } else { $null })
     }
 
     Add-Check -Checks $Checks -Tp 'TP-405' -Case 'corpus-exit-code-range' -State $(if ($allOk) { 'PASS' } else { 'FAIL' }) `

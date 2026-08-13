@@ -278,13 +278,25 @@ function Get-VsWherePath {
 
 # Runs $Exe with stdout/stderr captured to separate files (RTVM Test
 # Procedures preamble: "stdout and stderr are captured separately").
-# stdin is redirected from $StdinFile, or from the NUL device (a genuinely
-# closed stdin) if $StdinFile is not given — never inherited from the
-# calling shell, which under a CI job has no interactive console anyway.
+# stdin is redirected from $StdinFile, or from a freshly-created empty file
+# (a genuinely closed stdin - reads return EOF immediately) if $StdinFile is
+# not given — never inherited from the calling shell, which under a CI job
+# has no interactive console anyway.
+#
+# The empty file, not the literal string 'NUL', is deliberate: measured on
+# the real Windows runner (Test Engineer, issue #23, 2026-08-13),
+# Start-Process -RedirectStandardInput 'NUL' throws before the child process
+# launches. The exception was being caught correctly per C1, but every case
+# omitting -StdinFile then failed identically (39 rows, ~0.5ms "elapsed" -
+# too fast to be the product) and several of those false failures were
+# themselves masked as false PASSes downstream (TP-406 read the resulting
+# empty stdout as "contains no forbidden substrings"; TP-500 timed the
+# launch failure instead of the solver). A real empty file redirects and
+# behaves the same as the closed-stdin semantics this was meant to express.
 #
 # Returns @{ ExitCode; TimedOut; ElapsedMs; StdoutBytes; StderrBytes }.
 # Never throws (C1): a launch failure is reported as TimedOut = $false,
-# ExitCode = -1, with the reason in ElapsedMs's sibling field 'LaunchError'.
+# ExitCode = -1, with the reason in the sibling field 'LaunchError'.
 function Invoke-Sudoku {
     param(
         [Parameter(Mandatory)][string]$Exe,
@@ -301,7 +313,19 @@ function Invoke-Sudoku {
     '' | Out-File -LiteralPath $OutFile -Encoding utf8 -NoNewline
     '' | Out-File -LiteralPath $ErrFile -Encoding utf8 -NoNewline
 
-    $stdin = if ($StdinFile) { $StdinFile } else { 'NUL' }
+    $ownStdinFile = $null
+    if ($StdinFile) {
+        $stdin = $StdinFile
+    }
+    else {
+        # New-TemporaryFile / [IO.Path]::GetTempFileName() both create a
+        # real, empty, zero-byte file - redirecting stdin from it gives an
+        # immediate EOF, same observable behaviour the NUL-device literal
+        # was meant to have, without hitting whatever Start-Process does
+        # differently for a reserved device name.
+        $ownStdinFile = [System.IO.Path]::GetTempFileName()
+        $stdin = $ownStdinFile
+    }
 
     $previous = @{}
     foreach ($k in $EnvVars.Keys) {
@@ -366,7 +390,27 @@ function Invoke-Sudoku {
     }
     finally {
         foreach ($k in $EnvVars.Keys) { [Environment]::SetEnvironmentVariable($k, $previous[$k]) }
+        if ($ownStdinFile) {
+            try { Remove-Item -LiteralPath $ownStdinFile -Force -ErrorAction SilentlyContinue } catch { }
+        }
     }
+}
+
+# Chooses the Reason for a FAIL row: a launch failure (Invoke-Sudoku's
+# LaunchError - the process never ran at all) is a materially different and
+# more informative fact than "the assertion didn't hold", so it always takes
+# precedence over $Fallback. Without this, a harness bug that stops the
+# product from launching reads identically to the product itself failing
+# the check (Test Engineer, issue #23, 2026-08-13).
+function Get-FailureReason {
+    param(
+        [Parameter(Mandatory)][hashtable]$Result,
+        [Parameter(Mandatory)][AllowEmptyString()][string]$Fallback
+    )
+    if ($Result.ExitCode -eq -1 -and $Result.LaunchError) {
+        return "process failed to launch: $($Result.LaunchError)"
+    }
+    return $Fallback
 }
 
 # Probes whether the RTVM-507 diagnostic hook (SUDOKU_DIAG_MIN_SOLVE_MS) is

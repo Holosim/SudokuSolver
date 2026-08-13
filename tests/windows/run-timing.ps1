@@ -59,10 +59,16 @@ try {
         -Reason $(if (-not $isRelease) { 'a Debug binary would quietly invalidate every timing figure below' } else { $null })
 
     # --- Resolve the three timing fixtures, preferring samples/ (RTVM-907). ---
+    # ExpectedExit matters for $withinBudget below: a run that fails to
+    # launch (or otherwise doesn't reach the exit code RTVM-400/402 define
+    # for this fixture class) times a launch failure, not the solver, and
+    # must never read as a budget PASS (Test Engineer, issue #23,
+    # 2026-08-13: TP-500 was reporting PASS at 0.4-21.2ms against a corpus
+    # of runs that all failed to launch).
     $fixtureNames = @{
-        'easy'       = @{ Tp = 'P-EASY'; Sample = 'easy.txt' }
-        'hard17'     = @{ Tp = 'P-HARD17'; Sample = 'hard17.txt' }
-        'unsolvable' = @{ Tp = 'P-UNSOLVABLE'; Sample = 'unsolvable.txt' }
+        'easy'       = @{ Tp = 'P-EASY'; Sample = 'easy.txt'; ExpectedExit = 0 }
+        'hard17'     = @{ Tp = 'P-HARD17'; Sample = 'hard17.txt'; ExpectedExit = 0 }
+        'unsolvable' = @{ Tp = 'P-UNSOLVABLE'; Sample = 'unsolvable.txt'; ExpectedExit = 2 }
     }
     $Fixtures = Get-Fixtures
     $fixtureDir = Join-Path $EvidenceDir 'fixtures'
@@ -82,12 +88,15 @@ try {
     # --- TP-500: 10 consecutive runs per fixture, min/median/max, no retries. ---
     foreach ($key in @('easy', 'hard17', 'unsolvable')) {
         $fixturePath = $resolvedFixtures[$key]
+        $expectedExit = $fixtureNames[$key].ExpectedExit
         $runsDirForFixture = Join-Path $RunsDir $key
         New-Item -ItemType Directory -Force -Path $runsDirForFixture | Out-Null
 
         $timingsMs = New-Object System.Collections.Generic.List[double]
         $exitCodes = New-Object System.Collections.Generic.List[int]
+        $launchErrors = New-Object System.Collections.Generic.List[string]
         $anyTimedOut = $false
+        $anyWrongExit = $false
 
         for ($i = 1; $i -le 10; $i++) {
             $outFile = Join-Path $runsDirForFixture "run-$i-stdout.txt"
@@ -97,6 +106,10 @@ try {
             else {
                 $timingsMs.Add($r.ElapsedMs)
                 $exitCodes.Add($r.ExitCode)
+                if ($r.ExitCode -ne $expectedExit) {
+                    $anyWrongExit = $true
+                    if ($r.LaunchError) { $launchErrors.Add($r.LaunchError) }
+                }
             }
         }
 
@@ -112,19 +125,34 @@ try {
         $mid = [Math]::Floor(($sorted.Count - 1) / 2)
         $median = if ($sorted.Count % 2 -eq 1) { $sorted[$mid] } else { ($sorted[$mid] + $sorted[$mid + 1]) / 2 }
 
-        $withinBudget = ($max -le 10000) -and (-not $anyTimedOut) -and ($timingsMs.Count -eq 10)
+        # A timing figure is only evidence about the 10.0s budget if the
+        # process actually reached the exit code this fixture class is
+        # defined to produce (RTVM-400/402) - otherwise the number being
+        # measured is however long a launch failure or crash took, not a
+        # solve (Test Engineer, issue #23, 2026-08-13).
+        $withinBudget = ($max -le 10000) -and (-not $anyTimedOut) -and (-not $anyWrongExit) -and ($timingsMs.Count -eq 10)
+        $reason = if ($anyWrongExit) {
+            $detail = if ($launchErrors.Count -gt 0) { "; launch error(s): $(($launchErrors | Select-Object -Unique) -join '; ')" } else { '' }
+            "not every run reached the expected exit code ($expectedExit) - a timing figure from a failed run is not evidence about the solve budget$detail"
+        }
+        elseif (-not $withinBudget) {
+            'reported as an observation against the 10.0s ceiling, all samples intact - no retry (W-7)'
+        }
+        else { $null }
         Add-Check -Checks $Checks -Tp 'TP-500' -Case $key -State $(if ($withinBudget) { 'PASS' } else { 'FAIL' }) `
-            -Expected 'worst of 10 consecutive runs under 10.0s' `
+            -Expected "worst of 10 consecutive runs under 10.0s, every run exiting $expectedExit" `
             -Observed ([ordered]@{
-                    runs      = $timingsMs.Count
-                    minMs     = [math]::Round($min, 1)
-                    medianMs  = [math]::Round($median, 1)
-                    maxMs     = [math]::Round($max, 1)
-                    allMs     = ($timingsMs | ForEach-Object { [math]::Round($_, 1) })
-                    exitCodes = $exitCodes
+                    runs        = $timingsMs.Count
+                    minMs       = [math]::Round($min, 1)
+                    medianMs    = [math]::Round($median, 1)
+                    maxMs       = [math]::Round($max, 1)
+                    allMs       = ($timingsMs | ForEach-Object { [math]::Round($_, 1) })
+                    exitCodes   = $exitCodes
+                    expectedExit = $expectedExit
                     anyTimedOut = $anyTimedOut
+                    anyWrongExit = $anyWrongExit
                 } | ConvertTo-Json -Compress) `
-            -Reason $(if (-not $withinBudget) { 'reported as an observation against the 10.0s ceiling, all samples intact - no retry (W-7)' } else { $null })
+            -Reason $reason
     }
 
     # --- TP-501..504: NOT-RUN, same hook probe as run-procedures.ps1's P4. ---
