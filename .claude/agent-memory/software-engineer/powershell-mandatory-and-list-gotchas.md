@@ -1,6 +1,6 @@
 ---
 name: powershell-mandatory-and-list-gotchas
-description: Two PowerShell surprises that silently break evidence-collection scripts (tests/windows/*.ps1) — return a List<T> and Mandatory string/string[] params rejecting legitimate empty input
+description: PowerShell surprises that silently break evidence-collection scripts (tests/windows/*.ps1) — List<T> pipeline unrolling, Mandatory params rejecting empty input, and Start-Process -RedirectStandardInput 'NUL' throwing on real Windows
 metadata:
   type: reusable-solution
 ---
@@ -51,3 +51,28 @@ deliberately in `Common.ps1` for the same reason: strict mode turns *more*
 of these edge cases into hard failures, which cuts against C1 ("never
 throw out of a probe") for a script whose whole job is to survive
 surprising input.
+
+**3. `Start-Process -RedirectStandardInput 'NUL'` throws before the child
+process launches — on a real Windows runner, not on the Linux smoke test.**
+This one the Linux smoke test in point 2 above *cannot* catch, because
+`pwsh` on Linux doesn't reject the bare string the same way; it was only
+found by the Test Engineer running the actual Windows job (issue #23,
+2026-08-13). `Invoke-Sudoku`'s `try/catch` correctly turned the throw into
+evidence (`ExitCode = -1`, `LaunchError` set) rather than crashing — but
+every call site that omitted `-StdinFile` then failed identically and
+near-instantly (~0.4-0.9ms), and two downstream checks derived a false
+**PASS** from that failure rather than a FAIL: one that asserted "stdout
+contains none of these forbidden substrings" (trivially true of empty
+stdout) and one that measured elapsed time only, without checking the exit
+code (so it timed the launch failure, not the solver, against the
+performance budget). **Fix:** redirect stdin from a real, freshly-created
+empty temp file (`[System.IO.Path]::GetTempFileName()`) instead of the
+device-name literal — same closed-stdin/immediate-EOF semantics, no throw.
+**Generalizes to:** (a) any check whose PASS condition is "absence of a
+forbidden signal" rather than "presence of the expected one" is at risk of
+reading a launch/harness failure as a pass — cross-check against the exit
+code actually reaching what the fixture class defines, not just the
+content; (b) a result hashtable's error-detail field (here, `LaunchError`)
+is only useful if every caller that builds a FAIL `Reason` actually reads
+it — centralize that into one helper (`Get-FailureReason` in `Common.ps1`)
+rather than trusting each of a dozen call sites to remember.
