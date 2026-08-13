@@ -1,7 +1,0 @@
-{
-  "path": "docs/SDD.md",
-  "holder": "systems-engineer",
-  "issue": 9,
-  "acquired_at": "2026-08-13T16:05:32Z",
-  "reason": "§1.3 pre-solve blocking ruling, §2.5 systemError, §3.3 ProcessRunner"
-}
