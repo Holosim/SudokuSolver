@@ -5,11 +5,18 @@ metadata:
   type: feedback
 ---
 
-For a CI/CD-requested regression pass on trunk, **first** run
-`git diff --stat <branch-tip-that-passed> <trunk-tip> -- src tests samples
-*.sln .gitignore .gitattributes README.md`. If it is empty, the merge changed
-no product content and the pass is a re-confirmation, not new ground — say so
-in the comment and re-run the procedures anyway, but frame the result that way.
+For a CI/CD-requested regression pass on trunk, **first** diff product content
+between the branch tip that already passed and the trunk tip, over
+`src tests samples *.sln .gitignore .gitattributes README.md`. If it is empty,
+the merge changed no product content and the pass is a re-confirmation, not new
+ground — say so in the comment and re-run the procedures anyway, but frame the
+result that way.
+
+**The runner's clone is shallow (depth 1), so `git diff <old-sha> <trunk>`
+cannot work** — the old objects are not present and `git log` shows one commit.
+Use the API instead, which needs no fetch:
+`gh api repos/Holosim/SudokuSolver/compare/<passed-sha>...main --jq '{ahead:.ahead_by,files:[.files[].filename]}'`.
+Confirmed on issue #6's regression pass, 2026-08-13.
 
 **Why:** established on issue #5 (2026-08-07). Both CI/CD and the Systems
 Engineer independently stated the scope as "re-run what you already ran, not

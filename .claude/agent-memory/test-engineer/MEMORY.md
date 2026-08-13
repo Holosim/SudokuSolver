@@ -12,7 +12,7 @@
 ## Platform-specific test considerations
 
 - [DELIV inspection coverage](deliv-inspection-coverage.md) — which of TP-900..907 fully execute here, which need Windows, and the extra load-failure checks worth running.
-- [Parser test scope + open ruling](parser-test-scope-and-open-ruling.md) — TP-101/106 are half-runnable until #8/#9; the unsettled RTVM-102 vs TP-106 whitespace precedence.
+- [Parser test scope + I-15 ruling](parser-test-scope-and-open-ruling.md) — TP-101/106 half-runnable until #8/#9; whitespace-precedence now settled as IllegalCharacter.
 
 ## Recurring failure patterns
 
