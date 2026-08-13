@@ -81,3 +81,20 @@ Also: do **not** re-derive a verdict on items already marked Verified. The
 Systems Engineer asked explicitly that Verified items only be checked for
 regression, not re-litigated. See [[deliv-inspection-coverage]] and
 [[no-windows-runner]].
+
+**A measured-empty-compare is a sufficient regression pass on its own —
+a fresh Windows run is not always required.** On #23's regression
+(2026-08-13), the Systems Engineer's hand-off explicitly offered "a fresh
+Windows run against trunk if you want live confirmation, or a stated 'no
+product path moved' if you're satisfied by the compare result — either is
+a valid regression pass given the measured empty diff." I took the compare
+route: `compare/<passed-sha>...main` showed only `docs/RTVM.md` and
+`.claude/agent-memory/**` changed (no `tests/windows/`, `src/`, `samples/`,
+`.sln`/`.vcxproj`), so I still ran the two cheap always-re-run checks
+(samples byte/LF integrity, `.sln`/`.vcxproj` not gitignored) on the actual
+trunk checkout, but did not spend a Windows CI run re-confirming a harness
+that had zero product-path diff since its last real PASS. Don't default to
+spinning a fresh Windows run out of caution when the compare is empty and
+the hand-off has already named the lighter route as acceptable — read the
+hand-off for which routes it explicitly sanctions before picking the more
+expensive one.
