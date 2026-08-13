@@ -10,6 +10,9 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="GridFormatTests.cpp">
+      <Filter>Test Files</Filter>
+    </ClCompile>
     <ClCompile Include="InputFaultTests.cpp">
       <Filter>Test Files</Filter>
     </ClCompile>
