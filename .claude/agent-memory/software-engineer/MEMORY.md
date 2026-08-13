@@ -13,6 +13,7 @@
 
 - [Parser fault precedence](parser-precedence-reading.md) — why `parseGrid` is two passes, and the one RTVM self-conflict (TP-106's interior space) awaiting a ruling.
 - [Making invariants compile-time](making-invariants-compile-time.md) — the enum/static_assert/exhaustive-switch tricks this project uses instead of runtime checks.
+- [Solver search shape](solver-search-shape.md) — one search covers RTVM-200/201/202; measured margins and which mutations TP-200 can't catch.
 
 ## Process
 
