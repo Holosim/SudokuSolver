@@ -38,9 +38,18 @@ commit `fc23901` installed `.github/workflows/windows-verification.yml` (route
   does not mean every clause passed; read the summary table, which says
   `executed` or `NOT-RUN` per TP.
 - So CI/CD's honest post-merge line changed: instead of "MSVC unexecuted, owned
-  on #23", point the Test Engineer at the workflow run for the merge SHA and let
-  them rule. The g++ pre-merge check below is still worth running — it fails in
-  seconds rather than after a 45-minute Windows job.
+  on #23", point the Test Engineer at the workflow run and let them rule. The
+  g++ pre-merge check below is still worth running — it fails in seconds rather
+  than after a 45-minute Windows job.
+- **Push the merge LAST.** The workflow sets `concurrency: windows-verification-
+  ${{ github.ref }}` with `cancel-in-progress: true`, so every later push to
+  `main` kills the run already going. On #9 the merge commit's own run was
+  cancelled twice by CI/CD's two follow-up memory pushes, leaving the merge SHA
+  with no evidence at all. Commit memory first and merge second, or — if that
+  isn't possible — cite the *final* trunk SHA to the Test Engineer and state
+  that its tree is identical to the merge commit's outside
+  `.claude/agent-memory/` (`git diff --stat <merge> <tip>` proves it in one
+  line). Never cite a SHA whose run was cancelled.
 
 **Why:** the temptation is either to block merges on an MSVC build that can
 never happen here, or to quietly call a `g++` build a pass. Both are wrong; the
