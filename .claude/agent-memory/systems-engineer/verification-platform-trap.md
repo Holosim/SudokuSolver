@@ -112,6 +112,26 @@ closure look tidy would delete the only record that half a procedure never ran.
 that the status is deliberately unchanged. Then the closure reads as a decision
 rather than as an oversight six issues later.
 
+## The second `ready-for-rtvm-update` on an issue is the terminus, not the fast path (2026-08-13, #6)
+
+A feature issue gets handed back with `status:ready-for-rtvm-update` **twice**:
+once for the pre-merge test PASS (→ CI/CD with `status:ready-for-commit`, the
+documented fast path) and once for the post-merge *regression* PASS. The second
+one has no build to commit — the code is already on trunk — so routing it to
+CI/CD would be a no-op merge. Record the regression result in the §9.x ledger,
+comment, and **close**; that is the chain complete.
+
+**Why:** the fast-path rule assumes there is a branch waiting to be merged.
+After CI/CD's hand-back and the regression round trip, the only artifact left is
+the Systems Engineer's own doc edit, which goes straight to `main` (the
+`issue-N` branch convention covers feature code, and #6/#7's close-out commits
+`d07b853`/`c69073f`/`fc9e891` all landed on trunk directly).
+
+**How to apply:** read the thread, not just the label — if CI/CD has already
+reported a trunk SHA above you, you are in the terminus case. Write the
+regression result as a positive result ("the merge disturbed nothing", with the
+measured `compare` file list), keep the statuses where §9.2 puts them, and close.
+
 ## Two verification conventions worth carrying to the next project
 
 - **A green build is not evidence when the assertion is a `static_assert`.** A
