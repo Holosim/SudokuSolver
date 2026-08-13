@@ -327,6 +327,25 @@ ask "what does this check read as if the thing under test never ran at all?"
 before trusting a PASS. Require every timing/behavioural check to also assert
 the run reached its expected exit code, not just the metric in question.
 
+## A CI/CD commit confirmation can also land on a process issue with no Commit(s) cell (2026-08-13, #23)
+
+Same shape as the fast-path note above, one step later in the loop. CI/CD merged
+`tests/windows/*.ps1` to trunk (`bd43de2`) and handed #23 back with "record the
+SHA in the Commit(s) column and decide next steps" — the default instruction,
+written for an `[RTVM-nnn]` feature issue with exactly one matrix row to update.
+#23 has none: the harness traces to no single `RTVM-nnn` requirement, so there
+is no Commit(s) cell to populate.
+
+**How to apply:** record the merge SHA in the relevant §9.x narrative section
+instead (here, appended to §9.1.6, the same subsection the earlier fast-path
+update wrote), and explicitly say in both the doc and the hand-off that no
+matrix row's Status/Commit(s) moved. Still honor CI/CD's regression flag —
+route to Test Engineer — but scope it with a `compare` call
+(`[[verification-platform-trap]]`'s existing rule) between the last-verified
+branch tip and current trunk before asking for a fresh run; on #23 that
+returned only `docs/RTVM.md` + agent memory, so the regression pass is a
+narrow confirmation, not a re-verification from scratch.
+
 ## DW/A/I/V/W numbers: allocate from trunk, and check for the collision pattern
 
 Confirmed again on #23 that new evidence defects continue the *trunk* DW
