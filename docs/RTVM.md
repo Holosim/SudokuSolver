@@ -61,13 +61,13 @@ Blocked / Withdrawn.
 | RTVM-008 | An invocation with no interactive console (stdin redirected from a file or pipe, stdout/stderr redirected) is never blocked or delayed by the prompt mechanism, and always terminates with a result and an exit code. | SN-5, SN-8 | Test (TP-008) | Approved | |
 | RTVM-009 | A file argument that cannot be opened or read is reported as a specific diagnostic naming the path and the reason, and exits with code `1`. | SN-4, SN-8 | Test (TP-009) | Approved | |
 | **DATA-IN — internal representation of input (§4.2)** | | | | | |
-| RTVM-100 | The application parses 9 lines of 9 characters into an internal 9×9 grid in which each cell holds either a given digit 1–9 or "empty". | SN-1, SN-2 | Test (TP-100) | In Test | |
-| RTVM-101 | Both `0` and `.` denote an empty cell, interchangeably, including mixed within the same puzzle. | SN-1 | Test (TP-101) | In Test | |
+| RTVM-100 | The application parses 9 lines of 9 characters into an internal 9×9 grid in which each cell holds either a given digit 1–9 or "empty". | SN-1, SN-2 | Test (TP-100) | In Test | `3bc1b22` |
+| RTVM-101 | Both `0` and `.` denote an empty cell, interchangeably, including mixed within the same puzzle. | SN-1 | Test (TP-101) | In Test | `3bc1b22` |
 | RTVM-102 | Input whose shape is wrong — fewer than 9 lines, or any of the first 9 lines not exactly 9 characters after the rules of RTVM-106 are applied — is rejected as malformed with a message naming the offending line number and what was wrong with it. Interior horizontal whitespace is the one exception to that length test: it is reported as an illegal character (RTVM-103), not as a length fault on its own line — §7 I-15. | SN-4 | Test (TP-102) | Approved | |
 | RTVM-103 | Input containing a character other than `1`–`9`, `0` or `.` in the grid is rejected as malformed with a message naming the offending character and its row and column. | SN-4 | Test (TP-103) | Approved | |
 | RTVM-104 | Input that is well-formed but self-contradictory — the same digit given twice in a row, a column, or a 3×3 box — is rejected with a message naming the digit, the unit, and both conflicting cells. | SN-4 | Test (TP-104) | Approved | |
 | RTVM-105 | Validation reports exactly one fault, the first found, in the fixed precedence order: shape (RTVM-102) → illegal character (RTVM-103) → contradiction (RTVM-104). The single exception is interior horizontal whitespace, which outranks the length fault of the line it appears on and is reported as an illegal character (§7 I-15); precedence between different lines is unaffected. Cells are named in one-based `r<row>c<col>` form. A rejected puzzle is never passed to the solver. | SN-4 | Test (TP-105) | Approved | |
-| RTVM-106 | Input is accepted with either LF or CRLF line endings and with or without a trailing newline. Leading and trailing horizontal whitespace on a line is ignored; interior whitespace is an illegal character. Content after the ninth line is ignored. | SN-1, SN-8 | Test (TP-106) | In Test | |
+| RTVM-106 | Input is accepted with either LF or CRLF line endings and with or without a trailing newline. Leading and trailing horizontal whitespace on a line is ignored; interior whitespace is an illegal character. Content after the ninth line is ignored. | SN-1, SN-8 | Test (TP-106) | In Test | `3bc1b22` |
 | **CORE — solver (§4.4, §4.5, §5)** | | | | | |
 | RTVM-200 | Given a valid, uniquely-solvable standard 9×9 puzzle, the solver produces the grid's unique solution: all 81 cells filled with 1–9, with no digit repeated in any row, column, or 3×3 box, and every given preserved in place. | SN-2 | Test (TP-200) | Approved | |
 | RTVM-201 | Given a well-formed, non-contradictory puzzle that admits no completion, the solver reports "no solution" and terminates. It does not loop, guess indefinitely, or emit a partial grid. | SN-2, SN-4 | Test (TP-201) | Approved | |
@@ -952,6 +952,38 @@ case once #10 lands the wording. That is a real scheduled action, not a
 caveat: whoever closes the later of #8/#9 should expect these two rows
 back. Until then neither requirement goes past In Test even after CI/CD
 reports the trunk SHA — the SHA records the parser they sit on.
+
+**Merged to trunk 2026-08-13 —
+`3bc1b2227d1081f5b24edbb3549d5081cbe90ef5` (`3bc1b22`).** CI/CD merged
+`issue-6` (branch head `9fe0426`, one memory-only commit past the
+`06ec659` reported here) `--no-ff` with no conflicts, and re-ran the
+whole-program build and the TP-903 grep on the *merged* trunk content.
+That SHA is now in the Commit(s) column for RTVM-100, RTVM-101 and
+RTVM-106. **All three stay In Test**, including RTVM-100: §9.2's rule
+takes two things for Verified, and while RTVM-100 now has its SHA, its
+one remaining clause — execution under MSVC / the VS test project — is
+exactly the kind of clause that kept RTVM-900/903/907 at In Test after
+`85bab27`. TP-100 is a `Test`-method requirement whose home is the VS
+test project, so a `g++` pass is evidence, not a verdict (V-1), and the
+standing gap is #23. RTVM-101 and RTVM-106 additionally hold on their
+end-to-end clauses per the re-run trigger above. Nothing here needs
+re-executing when MSVC becomes available beyond the named clauses —
+what has passed has passed.
+
+**Regression on trunk, 2026-08-13.** CI/CD flagged this merge as
+needing regression testing — it is the first trunk merge carrying real
+feature code rather than scaffold — so RTVM-100/101/106 go back to the
+Test Engineer against trunk before this issue closes. Result to be
+recorded here; "no change required" is itself a result worth writing
+down (per the §9.2 note), so an empty product-path diff gets stated
+rather than assumed. Measured before the hand-off: trunk is two commits
+past `3bc1b22` and both are agent-memory/lock files only
+(`GET /compare/3bc1b22...main` → `.claude/**` exclusively), so the
+`src/` and `samples/` trees on trunk are identical to the `6d718e6` the
+95-assertion pass was taken on. The regression question is therefore
+"did the merge disturb anything", not "does the parser still work" —
+re-run TP-100/101/106's parse clauses plus the `ScaffoldTests`
+(RTVM-903/905) set on a clean trunk checkout and that is the whole job.
 
 **Fault data already correct, ahead of [RTVM-102].** Detection of shape
 and illegal-character faults is inseparable from accepting a valid
