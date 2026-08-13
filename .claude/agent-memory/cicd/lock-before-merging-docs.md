@@ -43,10 +43,17 @@ retry run is a fresh container that has to redo the work, but the thread then
 shows the merge was blocked on a lock rather than on anything wrong with the
 branch, and the numbers are there to compare against.
 
+**Do the verification first even when you expect to back off.** On #9 the
+holder's run finished during it and the lock came free ~90 seconds later, so the
+merge completed in the same run. Ordering the work "everything that doesn't need
+the lock, then acquire" is what made that possible; acquiring first would have
+burned the run.
+
 **Why:** on #9 (2026-08-13) the merge was ready and verified when
 `systems-engineer` took `docs/RTVM.md` for #23, three minutes earlier, to record
 the first Windows-run evidence. Both sides were writing large additions to the
-same document at the same moment.
+same document at the same moment — and when their commit landed it collided with
+the branch's, see [[merge-conflicts-that-are-id-collisions]].
 
 **How to apply:** every `status:ready-for-commit` run whose branch diff touches
 `docs/`. Related: [[branch-and-merge-conventions]].
