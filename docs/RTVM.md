@@ -1029,6 +1029,17 @@ and all three `.vcxproj` carry `PlatformToolset=v143` and
 2026 build succeeding is *forward* compatibility, and the requirement
 runs the other way.
 
+**A third run exists and is assessed elsewhere.** Run `31726188002` on
+trunk `d7d5e69` (2026-08-13) is the first on a tree carrying a console
+entry point, and it compiles the shipping `_WIN32` seam for the first
+time. It is written up in **§9.8.6.2** rather than here, because it
+belongs to a feature's verification chain — but two of its findings are
+general and are noted at the source: **DW-1 fired again unchanged** (so
+there is still no TP-905 evidence at any commit, and §9.4 A-3 remains
+open), and the machine block reported **different silicon and clock**
+from the table above on the same day, which is W-9 being earned rather
+than assumed.
+
 **Next step on this, and it costs nothing:** the probe belongs in
 `tests/windows/run-procedures.ps1` per W-10 — `vswhere -legacy -all
 -products *` enumerating every VS instance on the image, printed into
@@ -1218,12 +1229,21 @@ naming them, and no row here is Verified yet.
 | RTVM-101 | TP-101's **parse clause** — `P-EASY`, `P-EASY-DOTS` and `P-EASY-MIXED` all parse to an identical grid, identical compact form, no `.` surviving into the grid | TP-101's **end-to-end clause** — "all three run end-to-end to the `S-EASY` grid with exit `0`". Not runnable until `Solver` (#8) and the output layer (#9) exist; the binary currently exits `1` with empty stdout on a valid puzzle, which is the stub state, not a defect. Plus the MSVC re-execution |
 | RTVM-106 | TP-106's **parse clause**, all five positives (CRLF; LF; no trailing newline; two trailing blank lines and a 10th line `garbage`; three leading and two trailing spaces on line 3) and the negative case, which now matches §7 I-15 exactly: `IllegalCharacter`, `' '`, `first == {3,4}`, `line == 3`. Two Test-Engineer additions also pass — CRLF with no trailing newline, and tabs at both ends of line 6 | TP-106's **end-to-end clause** — the five positives are worded "expecting the `S-EASY` grid on stdout and exit `0`", which needs #8 and #9, and the negative's stderr wording needs [RTVM-102] (#10). Plus the MSVC re-execution |
 
-**Re-run trigger.** RTVM-101 and RTVM-106 must have their end-to-end
-clauses re-run once #8 and #9 are both merged, and RTVM-106's negative
-case once #10 lands the wording. That is a real scheduled action, not a
-caveat: whoever closes the later of #8/#9 should expect these two rows
-back. Until then neither requirement goes past In Test even after CI/CD
-reports the trunk SHA — the SHA records the parser they sit on.
+**Re-run trigger — DISCHARGED 2026-08-13, see §9.8.6.1.** RTVM-101 and
+RTVM-106 must have their end-to-end clauses re-run once #8 and #9 are
+both merged, and RTVM-106's negative case once #10 lands the wording.
+That is a real scheduled action, not a caveat: whoever closes the later
+of #8/#9 should expect these two rows back. Until then neither
+requirement goes past In Test even after CI/CD reports the trunk SHA —
+the SHA records the parser they sit on.
+
+The end-to-end half fired on #9's post-merge regression pass and passed
+on trunk `d7d5e69`: TP-101 3/3 (6/6 across both input paths) and TP-106
+5/5 (10/10), all byte-identical to §6.2 — recorded in full in
+**§9.8.6.1**. **Do not run these clauses a third time.** What remains on
+these two rows is the MSVC / Test Explorer clause (V-1, #23, now split
+per §9.8.6.2) and, for RTVM-106 only, the negative case's stderr wording
+(#10). Both stay **In Test**; Commit(s) stays `3bc1b22`.
 
 **Merged to trunk 2026-08-13 —
 `3bc1b2227d1081f5b24edbb3549d5081cbe90ef5` (`3bc1b22`).** CI/CD merged
@@ -1929,3 +1949,168 @@ from it must come from that same run's machine block. It does **not**
 discharge V-1 by itself: `vstest.console.exe` discovery is the clause
 V-1 turns on, and DW-1 (§9.1.5) means no TP-905 evidence exists at any
 commit yet.
+
+#### 9.8.6 Post-merge regression pass on trunk — result
+
+Executed by the Test Engineer on trunk `main` @ **`d7d5e69`** (merge
+commit `62cbb1e`), 2026-08-13 — **PASS**. All three parts of §9.8.5's
+asked-for scope pass. Unlike §9.7.2, this pass is *not* purely a
+re-confirmation: it discharges §9.5's re-run trigger and it produces one
+genuinely new class of evidence (§9.8.6.2).
+
+**Scope, re-derived on receipt as §9.8.5 asked.** `compare/bd3f362...main`
+at `d7d5e69` returns **fifteen files, 19 commits ahead** — not the twelve
+quoted in §9.8.5, because that figure was taken before this role's own
+`1e21d7e` and three memory pushes landed. The conclusion is unchanged and
+is now checked at the tree actually tested: **no path matching
+`src/`, `tests/`, `samples/`, `SudokuSolver.sln` or `.gitattributes`
+differs** between the branch tip the `bd3f362` PASS was taken on and
+trunk. The regression question was therefore "did the merge disturb
+anything?", and the answer is no. (§9.7.1's lesson holds for the third
+time: quote a compare figure only after your own push, and re-derive any
+figure handed to you.)
+
+Re-derived once more while writing this section — **21 ahead, 18
+files** — and the drift is again entirely `.claude/**` plus this
+document, one lock file and the two `windows-verification.yml` copies.
+The product-path list is still empty. Run `31726188002` was likewise
+confirmed against the API rather than taken from the hand-off:
+`headSha = d7d5e69…`, conclusion `success`, which is the tree the
+figures below were measured on.
+
+| Check | Result on `d7d5e69` |
+| --- | --- |
+| Full unit suite on merged trunk | **25 discovered / 25 passed / 0 failed** — 6 `GridFormatTests` + 5 `InputFaultTests` + 2 `ScaffoldTests` + 7 `SolveReportTests` + 5 `SolverTests`, exactly the expected 19 + 6. `g++ 13.3.0 -std=c++17 -Wall -Wextra -pedantic -O2`, zero warnings. Driver generated by scanning `TEST_CLASS`/`TEST_METHOD`, never hand-listed, so a test dropping out of the tree shows as a count change rather than a quieter green run |
+| Core-only link | Driver linked against `src/SudokuCore/*.cpp` only, no console object — RTVM-903's split demonstrated by the link succeeding |
+| TP-001 (both forms) | stdout is the grid and nothing else; stderr 0 B in every run; the stdin and file forms are `cmp`-identical |
+| TP-002, all three parts | stdin closed → exit `0`; `easy.txt a b c` → identical bytes, trailing args ignored; `easy.txt < unsolvable.txt` → **the file wins** |
+| TP-003 | exit `0`, stdout byte-identical to §6.2 (338 B), stderr 0 B |
+| TP-400 | Re-asserted against real process stdout *and* the six unit methods: 13 terminated lines; lines 1/5/9/13 exactly `+-------+-------+-------+`; all 13 lines 25 characters; nine row lines matching the §6.2 regex; zero bytes ≥ 0x80 |
+| Expected-value provenance | The comparison block was extracted **programmatically** from the merged `docs/RTVM.md` §6.2 and compared with `cmp` on raw redirected stdout — including the final terminator, which a `$(...)` capture would have hidden. §6.2's terminator paragraph (added at §9.8.5) is therefore itself under test |
+| Matrix audit | The merge had a conflict in `docs/RTVM.md`, so the document was in regression scope and was inspected rather than assumed: §9.1–§9.8.5 present and un-truncated, 67 requirement rows, every previously-merged `Commit(s)` value intact (`85bab27`×9, `3bc1b22`×3, `668f9a4`×3, `fdd9cea`×1) alongside the four new `62cbb1e` rows, and **exactly one `I-17` row**. The §7 collision is gone, not papered over |
+| Hygiene | Five `samples/*.txt` byte-identical to their §6.1 fixtures (90 B, LF, no CR); `.gitattributes` pins intact; `git check-ignore` on the `.sln` and every `.vcxproj` returns nothing (RTVM-900); six project/filter files parse as XML with **78/78** literal `Include` paths resolving — the 79th is `$(SolutionDir)samples\*.txt`, a `CopySamples` glob rather than a file reference, worth naming because a naive check flags it |
+
+Per §9.6, **mutation evidence was not re-derived** — the code has not
+changed, so re-deriving it would re-test the feature rather than the
+merge. The `bd3f362` evidence in §9.8 stands.
+
+##### 9.8.6.1 §9.5's re-run trigger — **DISCHARGED**
+
+§9.5's trigger ("re-run RTVM-101's and RTVM-106's end-to-end clauses
+once #8 and #9 are both merged") fired here and was executed **on the
+merged tree**, which is what §9.8.2 deferred it for:
+
+| Clause | Result on trunk `d7d5e69` |
+| --- | --- |
+| **TP-101 end-to-end** | **3/3** — `P-EASY` (all `0`), `P-EASY-DOTS` (all `.`), `P-EASY-MIXED` (rows 1–4 `0`, rows 5–9 `.`) all exit `0` with stdout byte-identical to §6.2. Run twice each, by file argument and by stdin — **6/6 identical** — because the clause's point is that the three spellings are indistinguishable *at the output*, and the input path must not change that either |
+| **TP-106 end-to-end, five positives** | **5/5**, and **10/10** counting both input paths: CRLF; LF; no trailing newline on line 9; two trailing blank lines plus a 10th line `garbage`; three leading and two trailing spaces on line 3 — every one exit `0`, byte-identical grid |
+| **TP-106 negative** (line 3 = `098 000060`) | exit `1`, stdout empty, **stderr still empty**. The §7 I-15 wording is **#10**'s, exactly as §9.5 and §9.8.2 predicted. Unchanged and still outstanding |
+
+All fixtures were generated from the §6.1 `P-EASY` block extracted out of
+the merged document, not transcribed.
+
+**RTVM-101 and RTVM-106 nevertheless stay In Test, and Commit(s) stays
+`3bc1b22`.** The trigger is discharged, not the requirement: RTVM-101
+still owes the MSVC / VS-test-project re-execution (V-1, #23), and
+RTVM-106 owes that plus its negative case's stderr wording (#10). What
+changes is that the §9.5 rows' *end-to-end* column is now closed —
+whoever updates those rows next should not re-run these clauses a third
+time, and #10 inherits only the negative.
+
+##### 9.8.6.2 New evidence: MSVC has now compiled the shipping `_WIN32` code
+
+The standing caveat on every pass in §9.8 was that
+`src/SudokuSolver/StdinChannel.cpp`'s `_WIN32` branch — the only branch
+the `.vcxproj` compiles, and the one that ships — had been **inspected,
+never compiled**. That is no longer true. Trunk tip `d7d5e69` has its own
+`windows-verification` run, **`31726188002`**, which was *not* cancelled,
+and its tree is the tree the pass above was taken on:
+
+- `Debug|x64` and `Release|x64` both **Build succeeded, 0 Warning(s),
+  0 Error(s)** under `MSVC 14.44.35207` / `v143` / `/std:c++17
+  /permissive- /W4`, with `StdinChannel.cpp` named in both compile
+  lines. `SudokuSolver.exe` and `SudokuSolver.Tests.dll` produced;
+  `CopySamples` ran.
+- TP-506's automatable clause is clean again: `dumpbin /dependents`
+  shows **`KERNEL32.dll` and nothing else**.
+- Machine facts, read from **this run's** machine block per **W-9**:
+  `win25-vs2026` 20260803.193.1, Windows Server 2025 10.0.26100, AMD
+  EPYC **7763**, 2 cores / 4 logical, **2445 MHz**, 16 GB. Different
+  silicon and clock from the EPYC 9V74 / 2596 MHz recorded in §9.1.5 on
+  the same day — which is precisely the observation W-9 exists to force,
+  and a standing warning against quoting §6.3 timing figures across runs.
+
+**What this does and does not credit, stated as a split rather than as a
+verdict.** Compilation of the shipping Windows code is now **executed
+evidence** at `d7d5e69`; **execution of it is not**. Concretely:
+
+- **DW-1 is unchanged and fired again.** The TP-905 step's job
+  conclusion is `success` while its raw log carries
+  `##[error]Process completed with exit code 1` and *"The test source
+  file …\evidence\discovered-tests.txt provided was not found"*. No
+  `discovered-tests.txt` and no `.trx` in the artifact. So there is
+  **still no execution evidence for the 25 methods under
+  `vstest.console.exe` at any commit**, and V-1's discovery clause —
+  which is the clause V-1 actually turns on for TP-100/200/300/400 —
+  is untouched. Both DW-2 surfaces behaved exactly as §9.1.5 documents:
+  a `success` job, and a broken step rendered as an absence. Read as
+  confirmation of the defect, not as a new one.
+- `runtime-procedures.txt` and `timing.txt` both read *"not present -
+  NOT-RUN"* (`tests/windows/run-procedures.ps1` and `run-timing.ps1`
+  still absent). Correct behaviour under V-6, not a pass and not a
+  regression — and per **W-10** those two scripts are agent-writable and
+  need no owner action, so they remain the cheapest outstanding work on
+  the Windows side. #23 owns them.
+
+**V-1 is therefore narrowed, not closed, and the narrowing is recorded
+here rather than by moving a status.** For every requirement in this
+project whose outstanding clause reads "MSVC re-execution", that clause
+now decomposes into two: *does the shipping code compile under the real
+toolchain* — **yes, at `d7d5e69`, for the whole solution including the
+`_WIN32` seam** — and *do the test methods execute and get discovered
+under `vstest.console.exe`* — **no, at any commit, DW-1**. Future §9.x
+rows should name the second half specifically; "MSVC re-execution"
+as an undifferentiated phrase now understates what has been done and
+overstates what remains. §9.1.5 records the first two Windows runs; this
+is the third, and it is the first taken on a tree carrying a console
+entry point.
+
+##### 9.8.6.3 Status outcome, carried items, and closure
+
+**No status changes.** RTVM-001, RTVM-002, RTVM-003 and RTVM-400 remain
+**In Test** with Commit(s) `62cbb1e`, on the same two counts as §9.8.5:
+the **committed automated harness** (#24 — TP-001/002/003 passed by
+hand, and this regression pass was likewise hand-run, which is the
+second consecutive pass whose evidence nothing in the repository can
+reproduce) and **TP-400's discovery under the real framework** (V-1 /
+DW-1). RTVM-101 and RTVM-106 remain In Test per §9.8.6.1. A regression
+pass adds no clause coverage by design, so §9.2's two-part rule is
+untouched — the finding is that the merge disturbed nothing, and that is
+a result, not an absence of one.
+
+Confirmed on the merged tree rather than inferred, all unchanged from
+§9.8.4 and **none of them defects**: `unsolvable.txt` → exit `2`, stdout
+empty (#11); `malformed.txt`, a missing path, and an existing
+**directory** → all exit `1`, stderr empty (#10). The directory case is
+worth keeping: it exits `1` rather than hanging or crashing, which is the
+POSIX-side behaviour §7 **I-18**'s widening of `SourceUnreadable` to
+cover a failed *read* as well as a failed *open* anticipated — the
+ruling is now observed, not just written. `nonunique.txt` → exit `0`,
+grid, no note line (#12). Beyond scope but re-checked: `hard17.txt`
+matches `S-HARD17` as extracted from §6.1; empty stdin and `< /dev/null`
+exit `1` without hanging; a 1 MB single line exits `1` with empty stdout,
+so §7 **I-13**'s bound still holds on trunk.
+
+`src/SudokuCore/Grid.h`'s pre-**I-16** comment is **still adrift**,
+carried from §9.7 and §9.8.4 and not fixed here either — a regression
+pass must not edit product code. It goes to **#10 or #11**, whichever
+opens the file first. Behaviour is unaffected and no test hangs off it.
+
+**Issue #9 closes here.** This is the second `status:ready-for-rtvm-update`
+on the issue and the terminus of the commit→regression→RTVM loop, not the
+fast path: the code is already on trunk, so there is nothing for CI/CD to
+commit, and routing it there would produce a third regression round trip
+over a docs-only change. The remaining path to Verified for
+RTVM-001/002/003/400 runs through **#24** (the harness) and **#23** (V-1 /
+DW-1), in that order; neither is reopened as work on this issue, and the
+issue closing is what releases #24 from `status:on-hold`.

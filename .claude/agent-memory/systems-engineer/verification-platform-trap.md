@@ -260,3 +260,33 @@ automated** from **executed by hand** explicitly, and write the rule that a
 requirement must not reach Verified on hand-run evidence once the harness exists.
 Don't gate the whole remaining feature set on the harness issue — that serialises
 the pipeline, and hand-run evidence is real evidence. #24 here, deps on #9 only.
+
+**Confirmed at the very next pass (2026-08-13, #9 regression).** The post-merge
+regression pass over those same three procedures was *also* hand-run, because
+the harness still did not exist — so the fragility compounds rather than being
+absorbed: two consecutive passes, neither reproducible by anything committed.
+Say so explicitly in the ledger row the second time, or "passed twice" reads as
+strengthening evidence when it is the same unrepeatable evidence twice.
+
+## Split "re-execute under the real toolchain" into compile and execute (2026-08-13, #9)
+
+Once a real-toolchain build starts running in CI, the outstanding clause phrased
+as "MSVC re-execution" stops being one thing. At #9 it decomposed into: *does the
+shipping platform-specific code compile under the real toolchain* — **yes**, the
+`_WIN32` seam was compiled clean under MSVC 14.44/v143 for the first time — and
+*do the test methods get discovered and executed under the real test runner* —
+**no**, at any commit, because the discovery step had been broken since it was
+written.
+
+**Why:** an undifferentiated phrase in a §9.x "still outstanding" column both
+understates what has been achieved (the shipping code now provably compiles) and
+overstates what remains (people read it as "nothing has run"). Neither error is
+visible until someone tries to decide whether a requirement can be promoted.
+
+**How to apply:** when the first genuine target-platform run lands, rewrite the
+outstanding clauses across the whole ledger into the two halves and name which
+half each requirement still owes. Keep reporting the measurement rather than
+moving a status — compile evidence does not promote a `Test`-method requirement,
+because its procedure asserts assertions running, not code compiling. And read
+the raw log: a step whose job concluded `success` can carry `##[error] … exit
+code 1` in its own log, which is how a broken discovery step survives three runs.
