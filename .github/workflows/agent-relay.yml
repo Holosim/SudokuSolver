@@ -1,14 +1,13 @@
 name: agent-relay
 
-# Fires whenever an "agent:*" label lands on an issue, or a role is
-# @-mentioned in a comment. See .github/AGENT_LABELS.md for the label
-# convention this workflow depends on.
+# Fires whenever an "agent:*" label lands on an issue. Label changes
+# are the sole trigger -- comments never trigger anything, by design.
+# See .github/AGENT_LABELS.md for the label convention this workflow
+# depends on.
 
 on:
   issues:
     types: [labeled]
-  issue_comment:
-    types: [created]
 
 permissions:
   contents: write
@@ -23,11 +22,7 @@ concurrency:
 
 jobs:
   relay:
-    if: >
-      (github.event_name == 'issues' && startsWith(github.event.label.name, 'agent:')) ||
-      (github.event_name == 'issue_comment' && !github.event.issue.pull_request &&
-       github.event.comment.user.type != 'Bot' &&
-       contains(github.event.comment.body, '@agent-'))
+    if: startsWith(github.event.label.name, 'agent:')
     runs-on: ubuntu-latest
     timeout-minutes: 30
     # RELAY_TOKEN must be a personal access token or GitHub App
@@ -42,15 +37,9 @@ jobs:
 
       - name: Determine which role should act
         id: role
-        env:
-          COMMENT_BODY: ${{ github.event.comment.body }}
         run: |
-          if [ "${{ github.event_name }}" = "issues" ]; then
-            ROLE="${{ github.event.label.name }}"
-            ROLE="${ROLE#agent:}"
-          else
-            ROLE=$(echo "$COMMENT_BODY" | grep -oE '@agent-[a-z-]+' | head -1 | sed 's/@agent-//')
-          fi
+          ROLE="${{ github.event.label.name }}"
+          ROLE="${ROLE#agent:}"
           if [ -z "$ROLE" ]; then
             echo "No agent role matched in this event — nothing to do."
             exit 1
