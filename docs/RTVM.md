@@ -866,6 +866,27 @@ lesson from a defect that would otherwise have cost a round trip to fix.
 | **W-10** | **Anything that can live in `tests/windows/*.ps1` lives there and not in the workflow.** The workflow's job is: build, locate outputs, invoke the script hooks, summarise, publish. Procedure logic, probes and one-off spikes go in the agent-writable scripts. | V-10 makes every line inside `.github/workflows/` a repository-owner commit; every line inside `tests/windows/` is a normal agent push. The TP-905 defect in §9.1.5 is fixable *today* from `run-procedures.ps1` and would otherwise have waited on a human. Design for the permission boundary rather than around it. |
 | **W-11** | **`docs/ci/windows-verification.yml` is the maintained source; `.github/workflows/windows-verification.yml` is the installed copy.** A `diff` between the two *is* the pending-install queue. Pending edits are **batched into one owner commit**, never trickled, and the head of `docs/ci/…` carries a dated `PENDING — NOT YET INSTALLED` block listing them. | Each install is a human interruption. Asking three times for three one-line fixes spends the client's goodwill on our own sequencing, and a silent divergence between the two files is worse than either. |
 
+**W-10 clarified 2026-08-13, on issue #23, after the Test Engineer found they
+still could not author `tests/windows/*.ps1` themselves.**
+`scripts/guard-test-engineer-writes.sh` blocks every Test Engineer `Edit`/
+`Write` outside `.claude/agent-memory/test-engineer/`, with no carve-out for
+`tests/windows/`, so revising these scripts is still a Software Engineer round
+trip today. **No allow-list is being added.** The guard's own header comment
+states its purpose without qualification: "a code change must always
+originate from, and be visible to, the Software Engineer — Test Engineer
+reports problems, it never patches around them." W-10's round trip is the
+**repository-owner** one (`.github/workflows/`, gated by V-10, a permission no
+agent holds) — moving procedure logic into `tests/windows/` closes *that*
+wall. It was never intended to also waive the separate, deliberate
+authorship wall between Test Engineer and the codebase; those are two
+different walls for two different reasons; closing one is not evidence the
+other should move too. Software Engineer stays the sole author of
+`tests/windows/*.ps1`, same as every other repository file; Test Engineer
+continues to specify the procedure in full (as in the `9f36ad3` spec above)
+and hands it to Software Engineer to implement — a real cost, but a bounded
+and already-budgeted one, not the open-ended owner round trip V-10 exists to
+avoid.
+
 #### 9.1.4 What no agent in this pipeline can do — **RESOLVED 2026-08-13 via route (b); the constraint itself is permanent (V-10)**
 
 Both of the following were probed on this runner on 2026-08-07 with the
@@ -1151,6 +1172,25 @@ tracing to one requirement. RTVM-905 and RTVM-506's own Commit(s)
 values stay `85bab27` and move only on issues #21/#14's own inspection
 passes, per §9.2's existing rule that the verdict for those rows
 belongs there, not here.
+
+**Post-merge regression pass, `main` @ `85525c4`, Test Engineer
+2026-08-13 — PASS, no regressions.** Scoped per standing practice with
+`gh api compare/3658728...main`: 7 files ahead of the tree the PASS
+above was taken on (`docs/RTVM.md` and `.claude/agent-memory/**`
+only), confirming the Systems Engineer's own pre-routing measurement —
+no path under `tests/windows/`, `src/`, `samples/` or any
+`.sln`/`.vcxproj` moved between `3658728` and current trunk. The Test
+Engineer additionally re-ran two silent-failure checks regardless of
+the empty diff: all five `samples/*.txt` still 90 bytes with zero CR
+bytes (TP-907), and `SudokuSolver.sln` plus all three `.vcxproj` still
+tracked and not `.gitignore`-excluded (RTVM-900). No Verified item was
+re-litigated. **This is the terminus for issue #23**, per the standing
+rule that a second `status:ready-for-rtvm-update` on the same issue —
+one for the pre-merge PASS, one for the post-merge regression PASS —
+closes the loop rather than restarting the fast path: there is no
+second branch to merge, the code already landed as `bd43de2` above. No
+RTVM matrix row's Status or Commit(s) column moves on this record,
+same reasoning as the merge-confirmation paragraph immediately above.
 
 ### 9.2 DELIV coverage after the Generate Code Base scaffold
 
