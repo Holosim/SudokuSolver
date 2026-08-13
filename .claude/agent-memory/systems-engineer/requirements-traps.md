@@ -145,3 +145,42 @@ skipped are the ones whose names sound obvious (`*Result`, `*Report`,
 `*Options`). Where the answer is a sum type, mirror whichever type in the same
 document already makes "neither case" unrepresentable — consistency is worth
 more than the marginal design.
+
+## An SDD can state the same invariant twice, in two places, incompatibly (2026-08-13)
+
+`docs/SDD.md` §2.3 said the 0-based → 1-based cell conversion "happens in
+exactly one place, in `Messages`"; §2.5 declared `CellRef` **1-based**. Both
+were written in the same SDD pass and neither is wrong alone — but if the fault
+object already carries 1-based cells, `Messages` cannot be where the `+1`
+happens. It surfaced only when the Software Engineer had to pick one (issue
+#7), and the Test Engineer then flagged that a test hung off the answer.
+
+**Why:** a "single point of truth" clause names a *place*; a type declaration
+names a *state*. They're written in different sections, for different readers,
+and they only contradict once someone traces a value from producer to renderer.
+
+**How to apply:** when the SDD says "X happens in exactly one place, in Y",
+check every type declaration on X's path — if any of them claims to already be
+in the post-X state, the clause is wrong about Y. Resolve toward **where the
+data is constructed**, not where it is rendered: the constructor is the
+narrower funnel, and it keeps the rendering layer free of arithmetic. Then make
+"exactly one place" literally true by naming a single function
+(`cellRefFromZeroBased()` here) rather than a module. Ruled as §7 I-16 — an
+interpretation, not a scope change, because the delivered code and the test
+procedure already agreed with each other.
+
+## A compile-time invariant needs mutation evidence or it is unverified (2026-08-13)
+
+RTVM-300's "exactly one outcome, never none, never two" was implemented as
+`static_assert`s plus `default`-less switches. A green build proves nothing
+about them — a deleted or vacuous `static_assert` compiles just as happily as a
+correct one.
+
+**How to apply:** whenever a requirement is satisfied by a compile-time
+construct (`static_assert`, deleted ctor, exhaustive switch, structured binding
+over every field), the test procedure's evidence is a **mutation table**: the
+mutation applied and the observed build/test failure. Both engineers produced
+one unprompted here; write it into the §9 ledger so it is the standing
+expectation rather than a habit. One recorded non-defect worth keeping:
+`!std::is_default_constructible_v<T>` is evaluated from outside the class, so
+adding a *private* default ctor does not trip it — only a public one.
