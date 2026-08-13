@@ -45,4 +45,26 @@ written evidence, or just computed and dropped — "the data exists
 somewhere in the script" is not the same as "the data reached the
 artifact."
 
-Related: [[windows-evidence-reading]], [[test-engineer-cannot-author-repo-files]].
+**Confirmed fixed, same day**: `b4dfe0f` fixed the stdin default (real temp
+file instead of `'NUL'`), added `Get-FailureReason` to thread `LaunchError`
+into every FAIL row's `Reason`, gated TP-406 on `ExitCode -eq ExpectedExit`
+before the substring check, and gated TP-500's `$withinBudget` on
+`-not $anyWrongExit`. Re-run on the pushed-together tip (`3658728`) showed
+genuine solve latencies (7-30ms, well under the 10s budget) with all exit
+codes correct — real evidence, not crash latency. **How I verified the
+fix was real and not just "the FAIL rows went away"**: read the source of
+the gating condition itself (`grep` for `anyWrongExit`/`ExpectedExit` in
+the `.ps1`), not only the JSON — a check that happens to pass this run
+could still be missing the gate. Confirming the *condition exists in code*
+is stronger evidence than confirming *this run's numbers are plausible*.
+
+Also surfaced seven genuinely-new-looking FAIL rows on the same re-run
+(TP-009/401/402/403) — correct exit codes, empty/absent wording. These
+were previously invisible because the stdin bug crashed those cases before
+the product ever ran; fixing the launch bug made pre-existing, already-
+scoped-elsewhere gaps ([[stub-wording-vs-exit-codes]], deferred to #10/#11)
+visible for the first time. Don't mistake "a fix exposed more FAIL rows"
+for "the fix caused a regression" — check whether each newly-visible FAIL
+is a known deferred item before reporting it as new breakage.
+
+Related: [[windows-evidence-reading]], [[test-engineer-cannot-author-repo-files]], [[stub-wording-vs-exit-codes]].
