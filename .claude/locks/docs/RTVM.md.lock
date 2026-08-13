@@ -1,7 +1,0 @@
-{
-  "path": "docs/RTVM.md",
-  "holder": "systems-engineer",
-  "issue": 9,
-  "acquired_at": "2026-08-13T17:28:24Z",
-  "reason": "record trunk SHA 62cbb1e for RTVM-001/002/003/400; resolve duplicate I-17"
-}
