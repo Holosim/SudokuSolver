@@ -5,6 +5,8 @@
 - [No Windows runner](no-windows-runner.md) — agent runs are Ubuntu with no MSVC/VS; what can substitute (g++ cross-compile, `/tmp` CppUnitTest shim) and what it proves.
 - [CppUnitTest shim gotchas](cppunittest-shim-gotchas.md) — namespace qualification and the extra macros the `/tmp` shim needs; both look like product defects and aren't.
 
+- [Generated test driver](generated-test-driver.md) — scan `TEST_CLASS`/`TEST_METHOD` to build the driver; the discovered count is the regression signal, plus the `.vcxproj` registration check it can't replace.
+
 - [Compile-time invariant testing](compile-time-invariant-testing.md) — `static_assert`/`-Wswitch` "tests" prove nothing unless mutated; how, plus the private-ctor false negative.
 
 ## How to scope work

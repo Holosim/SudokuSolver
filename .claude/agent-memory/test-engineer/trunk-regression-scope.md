@@ -45,6 +45,20 @@ hunk. The requirements whose rows the conflict touched are in regression scope
 even when they belong to a different issue: #7's merge put TP-100/101/106 back
 in scope because #6's SHA rows were in the conflicted hunks.
 
+**Re-run the compare yourself even when the hand-off states the scope.** On
+#8's regression (2026-08-13) the Systems Engineer's comment named three changed
+files; by the time I ran it the answer was five, because their *own* RTVM
+commit landed after they wrote the comment. Nothing product-bearing differed
+either way, but a stated scope is a snapshot of the trunk at writing time, not
+of the trunk you test.
+
+**Two things the Systems Engineer has now twice asked be left out of a
+regression pass, and I should not volunteer:** mutation evidence over code that
+has not changed (§9.6's rule — it re-tests the feature, not the merge), and
+**new test clauses added to a procedure by the RTVM update itself**, which
+belong to the issue that owns the fixture. Running one in passing does not
+credit the requirement anyway.
+
 Also: do **not** re-derive a verdict on items already marked Verified. The
 Systems Engineer asked explicitly that Verified items only be checked for
 regression, not re-litigated. See [[deliv-inspection-coverage]] and
