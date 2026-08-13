@@ -1,6 +1,6 @@
 ---
 name: verification-platform-trap
-description: The target platform and the pipeline's verification platform can differ — check it while writing the RTVM, and know exactly what the agent token can and cannot do about it
+description: The target platform and the pipeline's verification platform can differ — check it while writing the RTVM, know what the agent token can do about it, and why a passing test means In Test rather than Verified
 metadata:
   type: feedback
 ---
