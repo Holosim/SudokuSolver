@@ -29,6 +29,14 @@ Settled practice on this project:
   Systems Engineer writes the SHA into `docs/RTVM.md`'s Commit(s) column and
   decides what happens next. Verified specifically means "CI/CD reported a SHA
   and it's in the Commit(s) column", not "a test passed".
+- **A handoff sometimes says "Commit(s) left blank for CI/CD to fill" — don't.**
+  On #8 (2026-08-13) the Systems Engineer's note read that way. The standing
+  convention is the other direction, and it's the one to follow: report the SHA
+  in the issue comment, leave the column to them, and say explicitly in the
+  comment that you've left it plus what SHA to record. Offer to make the edit if
+  they'd prefer, rather than either silently editing or silently not. Two roles
+  both believing they own that write is how the RTVM and the history end up
+  disagreeing, which is the exact failure the convention exists to prevent.
 
 **Why:** keeps the RTVM the single source of truth for what shipped, rather than
 splitting that decision between two roles.

@@ -27,9 +27,20 @@ The sequence that worked cleanly on #6, in order:
    silently stops covering tests added later, which is the whole failure mode.
    The `/tmp/shim/CppUnitTest.h` stand-in needs `TEST_CLASS`→`class`,
    `TEST_METHOD`→`void f()`, and `Assert::IsTrue/IsFalse/AreEqual` (templated,
-   plus a `const char*` overload). Link against `src/SudokuCore/*.cpp` **only**,
-   with no console object file — that makes the run a live demonstration of the
-   RTVM-903 layering split rather than a grep of it.
+   plus a `const char*` overload; add `Fail` and `AreNotEqual` too). Link
+   against `src/SudokuCore/*.cpp` **only**, with no console object file — that
+   makes the run a live demonstration of the RTVM-903 layering split rather
+   than a grep of it.
+
+   **Namespace regex gotcha (hit on #8, 2026-08-13):** the test files use the
+   C++17 *nested* form `namespace sudoku::test {`, so a
+   `namespace\s+([A-Za-z_]\w*)\s*\{` scan matches nothing and the driver emits
+   unqualified `SolverTests t;` — 19 compile errors that look alarming but are
+   entirely the driver's fault, not the product's. Match
+   `namespace\s+([A-Za-z_][\w:]*)\s*\{` and `.split('::')` the result. Sanity
+   check: the generated method count should equal the count the Test Engineer
+   reported in their PASS comment — if it doesn't, the generator is wrong
+   before the code is.
 5. **Re-run TP-903's grep post-merge** (`\b9\b` over `src/SudokuCore`) — the
    only dimension `9` should be the `kGridSize` definition in `Grid.h`; other
    hits are comments and doc cross-references. Cheap, and it is the project's

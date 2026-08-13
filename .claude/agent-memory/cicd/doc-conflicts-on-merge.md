@@ -30,7 +30,12 @@ Resolution rule:
   written before that trunk commit existed; it wasn't wrong, it was stale.
 - Run `git log --oneline <merge-base>..origin/main -- docs/RTVM.md docs/SDD.md`
   **before** merging. If trunk touched the docs at all, no blanket side-rule
-  survives and every hunk gets read.
+  survives and every hunk gets read. **Frequently this comes back empty** — on
+  #8 (2026-08-13) trunk hadn't moved since the branch was cut, so a carefully
+  written four-hunk merge note simply didn't apply and the merge was clean. That
+  is a fine outcome; the point is that you established it in one command instead
+  of assuming it. Say so in the issue comment, so the note's author knows it was
+  read rather than ignored.
 - Verify afterwards by diffing against **both parents**, not just one:
   `git diff main:docs/RTVM.md docs/RTVM.md` should show only the branch's
   intended additions, and `git diff origin/issue-<n>:docs/RTVM.md docs/RTVM.md`
