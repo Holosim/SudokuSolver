@@ -65,7 +65,7 @@
       <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
       <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
       <PreprocessorDefinitions>_DEBUG;_WINDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>$(VCInstallDir)Auxiliary\VS\UnitTest\include;$(ProjectDir)..\..\src\SudokuCore;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(VCInstallDir)Auxiliary\VS\UnitTest\include;$(ProjectDir)..\..\src\SudokuCore;$(ProjectDir)..\..\src\SudokuSolver;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
     </ClCompile>
     <Link>
@@ -86,7 +86,7 @@
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
       <PreprocessorDefinitions>NDEBUG;_WINDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>$(VCInstallDir)Auxiliary\VS\UnitTest\include;$(ProjectDir)..\..\src\SudokuCore;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(VCInstallDir)Auxiliary\VS\UnitTest\include;$(ProjectDir)..\..\src\SudokuCore;$(ProjectDir)..\..\src\SudokuSolver;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
     </ClCompile>
     <Link>
@@ -100,6 +100,9 @@
   <ItemGroup>
     <ClCompile Include="GridFormatTests.cpp" />
     <ClCompile Include="InputFaultTests.cpp" />
+    <ClCompile Include="MessagesTests.cpp" />
+    <ClCompile Include="ParserTests.cpp" />
+    <ClCompile Include="ReporterTests.cpp" />
     <ClCompile Include="ScaffoldTests.cpp" />
     <ClCompile Include="SolveReportTests.cpp" />
     <ClCompile Include="SolverTests.cpp" />
@@ -116,6 +119,13 @@
     <ClCompile Include="..\..\src\SudokuCore\SolveControl.cpp" />
     <ClCompile Include="..\..\src\SudokuCore\SolveReport.cpp" />
     <ClCompile Include="..\..\src\SudokuCore\Solver.cpp" />
+    <!-- Console-layer units this issue's tests exercise directly
+         (MessagesTests, ReporterTests). Neither has a dependency on argv,
+         a console API, or a stream other than the std::ostream& Reporter
+         is handed, so both compile cleanly into this DLL alongside the
+         core units above. -->
+    <ClCompile Include="..\..\src\SudokuSolver\Messages.cpp" />
+    <ClCompile Include="..\..\src\SudokuSolver\Reporter.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\src\SudokuCore\SudokuCore.vcxproj">

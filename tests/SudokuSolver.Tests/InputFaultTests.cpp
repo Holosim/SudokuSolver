@@ -3,12 +3,13 @@
 // Procedure: docs/RTVM.md TP-302.
 //
 // TP-302 is written as "parse P-CONTRA-ROW and inspect the returned fault
-// object". Contradiction detection is RTVM-104 (#10) and is not implemented
-// yet, so the parse-driven half is not runnable here; when it lands, the
-// expected fault is exactly the one built in rtvm302_rowDuplicateFault... below
-// and that test grows a parseGrid call rather than new expectations.
+// object". Contradiction detection (RTVM-104) landed under #10, so the test
+// below now grows the parseGrid call TP-302 asks for, alongside the
+// hand-built expectation it already carried — both must agree, which is the
+// point: the parser's fault is exactly the fault TP-104's message is built
+// from, with nothing lost or added in between.
 //
-// The half that is testable now is the one the requirement is actually about:
+// The rest of this file is the half of TP-302 that needs no parser at all:
 // the fault is *data* — kind, line, cells, digit, character — and carries no
 // pre-formatted English sentence, so that every user-visible word lives in
 // Messages (docs/SDD.md 2.5, 2.7). That is a property of the type.
@@ -20,6 +21,8 @@
 
 #include "Grid.h"
 #include "InputFault.h"
+#include "Parser.h"
+#include "TestFixtures.h"
 
 using namespace Microsoft::VisualStudio::CppUnitTestFramework;
 
@@ -30,7 +33,8 @@ TEST_CLASS(InputFaultTests)
 public:
     // RTVM-302: the expected fault for P-CONTRA-ROW (docs/RTVM.md 6.1) —
     // digit 5 twice in row 1, at r1c1 and r1c7 — expressed entirely as data.
-    // Every field TP-302 names is present and separately inspectable.
+    // Every field TP-302 names is present and separately inspectable, and
+    // parseGrid on the real fixture must produce exactly this fault.
     TEST_METHOD(rtvm302_rowDuplicateFaultCarriesKindDigitAndBothCells)
     {
         InputFault fault;
@@ -48,6 +52,15 @@ public:
         Assert::IsTrue(fault.second == CellRef{ 1, 7 }, L"second cell is r1c7");
         Assert::IsTrue(fault.first.isApplicable() && fault.second.isApplicable(),
             L"a duplicate names both of its cells");
+
+        // TP-302's own instruction: parse P-CONTRA-ROW and inspect what
+        // comes back, rather than only the hand-built fault above.
+        const ParseResult parsed = parseGrid(kInputContraRow);
+        Assert::IsFalse(parsed.ok());
+        Assert::IsTrue(parsed.fault().kind == fault.kind);
+        Assert::AreEqual(fault.digit, parsed.fault().digit);
+        Assert::IsTrue(parsed.fault().first == fault.first);
+        Assert::IsTrue(parsed.fault().second == fault.second);
     }
 
     // RTVM-302: no pre-formatted message anywhere in the object. The

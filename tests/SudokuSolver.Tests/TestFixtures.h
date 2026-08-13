@@ -91,6 +91,63 @@ inline constexpr std::string_view kSolvedEasyFormatted =
 // 5, 9 and 13 does not retype it four times.
 inline constexpr std::string_view kFormatSeparatorLine = "+-------+-------+-------+";
 
+// Invalid fixtures (docs/RTVM.md 6.1's "Invalid fixtures" table), spelled as
+// the nine-line (or eight-line) text `parseGrid` actually reads rather than
+// the compact form, since these exercise the parser's line-oriented rules
+// rather than just a Grid's contents. Each is P-EASY with exactly the one
+// line named in the table replaced.
+
+// P-SHORT — P-EASY with line 9 removed (8 lines). TP-102 case 1.
+inline constexpr std::string_view kInputShort =
+    "530070000\n600195000\n098000060\n800060003\n400803001\n"
+    "700020006\n060000280\n000419005\n";
+
+// P-LONGLINE — P-EASY with line 5 = 40080300111 (11 characters). TP-102 case 2.
+inline constexpr std::string_view kInputLongLine =
+    "530070000\n600195000\n098000060\n800060003\n40080300111\n"
+    "700020006\n060000280\n000419005\n000080079\n";
+
+// P-SHORTLINE — P-EASY with line 5 = 4008030 (7 characters). TP-102 case 3.
+inline constexpr std::string_view kInputShortLine =
+    "530070000\n600195000\n098000060\n800060003\n4008030\n"
+    "700020006\n060000280\n000419005\n000080079\n";
+
+// P-BADCHAR — P-EASY with line 1 = X30070000 (r1c1 illegal). TP-103.
+inline constexpr std::string_view kInputBadChar =
+    "X30070000\n600195000\n098000060\n800060003\n400803001\n"
+    "700020006\n060000280\n000419005\n000080079\n";
+
+// P-CONTRA-ROW — P-EASY with line 1 = 530070500: digit 5 twice in row 1,
+// at r1c1 and r1c7. TP-104 case 1.
+inline constexpr std::string_view kInputContraRow =
+    "530070500\n600195000\n098000060\n800060003\n400803001\n"
+    "700020006\n060000280\n000419005\n000080079\n";
+
+// P-CONTRA-COL — P-EASY with line 1 = 430070000: digit 4 twice in column 1,
+// at r1c1 and r5c1. TP-104 case 2.
+inline constexpr std::string_view kInputContraCol =
+    "430070000\n600195000\n098000060\n800060003\n400803001\n"
+    "700020006\n060000280\n000419005\n000080079\n";
+
+// P-CONTRA-BOX — P-EASY with line 1 = 580070000: digit 8 twice in the
+// top-left box, at r1c2 and r3c3. TP-104 case 3.
+inline constexpr std::string_view kInputContraBox =
+    "580070000\n600195000\n098000060\n800060003\n400803001\n"
+    "700020006\n060000280\n000419005\n000080079\n";
+
+// P-MULTIFAULT — P-EASY with line 1 = X30070300 and line 9 removed (8
+// lines): a missing line, an illegal character and a row duplicate all at
+// once. Expect the shape fault only (RTVM-105). TP-105.
+inline constexpr std::string_view kInputMultiFault =
+    "X30070300\n600195000\n098000060\n800060003\n400803001\n"
+    "700020006\n060000280\n000419005\n";
+
+// P-MULTIFAULT-9 — the same line 1 as above with all 9 lines present:
+// expect the illegal character fault only, not the row duplicate. TP-105.
+inline constexpr std::string_view kInputMultiFault9 =
+    "X30070300\n600195000\n098000060\n800060003\n400803001\n"
+    "700020006\n060000280\n000419005\n000080079\n";
+
 // Builds a Grid from the compact row-major form above: '0' and '.' are empty,
 // and any character from '1' up to the kGridSize'th digit is a given. Anything
 // else is treated as empty, and a short string leaves the remaining cells
