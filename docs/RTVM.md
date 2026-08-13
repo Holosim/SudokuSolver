@@ -75,9 +75,9 @@ Blocked / Withdrawn.
 | RTVM-203 | The solve is cooperatively interruptible: once an abort is requested the solver stops and yields the "aborted" outcome within 1.0 s, leaving the process free to exit cleanly. | SN-5 | Test (TP-203) | Approved | |
 | RTVM-204 | The solver maintains a monotonically increasing count of search steps taken, readable by the rest of the application and by the test suite while the solve is in flight. This is what makes "the solve is still making progress" (§7 acceptance #6) an observable fact rather than an assertion. | SN-5 | Test (TP-204) | Approved | |
 | **DATA-OUT — internal representation of output (§4.1, §4.3)** | | | | | |
-| RTVM-300 | Every run produces exactly one outcome drawn from the closed set: `Solved`, `SolvedNotUnique`, `InvalidInput`, `NoSolution`, `Aborted`. There is no run that produces none and no run that produces two. | SN-3, SN-4, SN-8 | Test (TP-300) | In Test | |
-| RTVM-301 | The `Solved` and `SolvedNotUnique` outcomes carry a complete 9×9 grid of digits 1–9 with no empty cell. | SN-3 | Test (TP-301) | In Test | |
-| RTVM-302 | The `InvalidInput` outcome carries structured fault detail (fault kind, line/row/column, digit or character involved) rather than a pre-formatted message, so that all wording lives in the output layer. | SN-4, SN-7 | Test (TP-302) | In Test | |
+| RTVM-300 | Every run produces exactly one outcome drawn from the closed set: `Solved`, `SolvedNotUnique`, `InvalidInput`, `NoSolution`, `Aborted`. There is no run that produces none and no run that produces two. | SN-3, SN-4, SN-8 | Test (TP-300) | In Test | `668f9a4` |
+| RTVM-301 | The `Solved` and `SolvedNotUnique` outcomes carry a complete 9×9 grid of digits 1–9 with no empty cell. | SN-3 | Test (TP-301) | In Test | `668f9a4` |
+| RTVM-302 | The `InvalidInput` outcome carries structured fault detail (fault kind, line/row/column, digit or character involved) rather than a pre-formatted message, so that all wording lives in the output layer. | SN-4, SN-7 | Test (TP-302) | In Test | `668f9a4` |
 | **OUT — presentation (§4.1, §4.3)** | | | | | |
 | RTVM-400 | A solved grid is written to stdout pretty-printed with box separators, in exactly the 13-line ASCII format given in §6.2. | SN-3 | Test (TP-400) | Approved | |
 | RTVM-401 | For the `SolvedNotUnique` outcome the grid is followed on stdout by a statement that the solution shown is not unique. | SN-3 | Test (TP-401) | Approved | |
@@ -1054,6 +1054,59 @@ One recorded non-defect, so it is not re-raised: a **private** default
 constructor does not trip `!std::is_default_constructible_v`, because
 the trait is evaluated from outside the class. That mutation only means
 anything when the constructor is added to the `public:` section.
+
+**Merged to trunk 2026-08-13 —
+`668f9a4c1c2c82fe955f751b7a829039ed11fae8` (`668f9a4`).** CI/CD merged
+`issue-7` (branch head `f5d8577`, two memory-only commits past the
+`6aadb90` this section's status changes were written at) `--no-ff`, and
+re-ran the whole-program build, the 14-test unit suite (core-only link)
+and the TP-903 greps on the *merged* trunk content rather than on the
+branch. That SHA is now in the Commit(s) column for RTVM-300, RTVM-301
+and RTVM-302. **All three stay In Test**, exactly as the re-run trigger
+above said they would: §9.2's two-part rule needs the SHA *and* every
+clause executed, and each of these three still has a clause the current
+feature set cannot reach (#18, #8/#12, #10 respectively), on top of the
+standing MSVC gap (V-1, #23). The SHA records the vocabulary they sit
+on; it does not promote the status.
+
+**The merge needed a doc conflict resolved, and the rule this section's
+own handoff gave was stale.** That handoff said "for `docs/RTVM.md` and
+`docs/SDD.md`, take `issue-7`'s version", on the grounds that it was a
+strict superset of #6's *pending branch*. By merge time #6 had landed
+and trunk had gained the `3bc1b22` SHAs in the Commit(s) column for
+RTVM-100/101/106 plus §9.5's merge-and-regression paragraphs — none of
+which existed on `issue-7`. Taking the branch wholesale would have
+silently **reverted the trunk SHAs this matrix exists to record.** CI/CD
+resolved it per hunk instead (trunk for the RTVM-100/101/106 rows and
+§9.5; branch for §7 I-16, this §9.6 and the DATA-OUT status changes) and
+verified against both parents. `docs/SDD.md` auto-merged clean and was
+genuinely a superset. Confirmed on trunk while recording this SHA:
+RTVM-100, RTVM-101 and RTVM-106 still read `3bc1b22`, and §9.5 is
+intact. **Standing rule from this:** a "take my branch's version"
+instruction is scoped to the trunk that existed when it was written, so
+it expires the moment anything else merges. State the *reason* the
+branch wins (what it adds) rather than the verdict, so whoever merges
+can re-derive it against the trunk actually in front of them.
+
+**Regression on trunk, 2026-08-13.** CI/CD flagged this merge as needing
+regression testing — feature code onto trunk plus a hand-resolved doc
+conflict that touched rows belonging to #6's requirements as well as
+this issue's. Measured before the hand-off, so the Test Engineer is not
+guessing at scope: trunk is two commits past `668f9a4` and
+`GET /compare/668f9a4...main` returns `.claude/agent-memory/cicd/**`
+only. The `src/`, `tests/`, `samples/` and `.vcxproj` trees on trunk are
+therefore byte-identical to the `130cc8b` the 14-test pass was taken on.
+The regression question is **"did the merge disturb anything"**, not
+"does the vocabulary work" — the whole job is: re-run the 14 tests
+(`SolveReportTests`, `InputFaultTests`, `ScaffoldTests`) on a clean
+trunk checkout with the core-only link; re-run TP-100/101/106's parse
+clauses, since the conflict resolution sat on their rows; and confirm by
+inspection that RTVM-100/101/106 read `3bc1b22` and RTVM-300/301/302
+read `668f9a4` in the Commit(s) column with §9.5 and §9.6 both present
+and un-truncated. Mutation evidence is **not** required on a regression
+pass — the guards were mutation-checked at `130cc8b` and the code has
+not changed. "No change required" is itself a result worth writing down
+here, so an empty product-path diff gets stated rather than assumed.
 
 **New core API adopted into the SDD.** `outcomeCarriesGrid`,
 `outcomeCarriesFault`, `SolveReport::hasGrid`/`hasFault`/
