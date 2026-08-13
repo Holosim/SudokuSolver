@@ -37,5 +37,14 @@ default constructible". A mutation that builds clean is only meaningful if the
 mutation is actually visible at the assertion's access context. Insert the
 mutation into the `public:` section.
 
+**Scope limit, ruled by the Systems Engineer 2026-08-13 (`docs/RTVM.md` §9.6):**
+mutation evidence is required when a compile-time invariant is *first* verified,
+and **not** on a later regression pass where the code is byte-identical —
+re-deriving the mutation table then is re-testing the feature, not the merge.
+If something in the regression run *does* fail, the mutation table is the
+fastest way to localise it. §9.6 also now states the general convention: for a
+compile-time assertion, state the mutation and its observed effect or the clause
+counts as unverified.
+
 See [[no-windows-runner]] and [[cppunittest-shim-gotchas]] for the harness the
 mutated copy is built with.

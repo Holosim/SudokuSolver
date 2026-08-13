@@ -34,6 +34,17 @@ Two things deserve re-running regardless of the diff, because they fail
 - `git check-ignore` on `*.sln` / `*.vcxproj` — an ignored solution leaves the
   tree looking complete and only the clone broken (RTVM-900).
 
+**After a merge whose conflict was in `docs/RTVM.md` or `docs/SDD.md`, inspect
+the matrix as part of the regression, not just the code.** Confirm the
+**Commit(s)** column of *previously merged* requirements still holds its old
+trunk SHA, and that the §9.x coverage sections are present and un-truncated. A
+"take my branch's version" merge note expires the moment anything else merges,
+and taking a doc wholesale silently deletes the trunk SHAs the matrix exists to
+record — near-miss on #7's merge (2026-08-13), caught by CI/CD resolving hunk by
+hunk. The requirements whose rows the conflict touched are in regression scope
+even when they belong to a different issue: #7's merge put TP-100/101/106 back
+in scope because #6's SHA rows were in the conflicted hunks.
+
 Also: do **not** re-derive a verdict on items already marked Verified. The
 Systems Engineer asked explicitly that Verified items only be checked for
 regression, not re-litigated. See [[deliv-inspection-coverage]] and

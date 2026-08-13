@@ -10,6 +10,7 @@
 ## How to scope work
 
 - [Trunk regression scope](trunk-regression-scope.md) — diff product content against the passed branch tip first; what to re-run regardless; don't re-litigate Verified items.
+- [Doc drift is not a failure](doc-drift-is-not-a-failure.md) — stale source comments contradicting a new §7 ruling go to the Systems Engineer as an observation, not a handback.
 
 ## Platform-specific test considerations
 
