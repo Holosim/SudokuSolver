@@ -463,10 +463,30 @@ the `SourceUnreadable` case is constructed by the console layer (RTVM-009,
 Keeping one fault vocabulary across both layers is what lets `Messages` be the
 single place any English exists.
 
+`observedLength` carries one sentinel value, declared beside `parseGrid` in
+`Parser.h`:
+
+```cpp
+inline constexpr int kLengthExceedsCap = kMaxLineBytes + 1;  // docs/RTVM.md §7 I-13
+```
+
+A line that runs past `kMaxLineBytes` is never scanned further, so its true
+length is unknown and `observedLength` is set to `kLengthExceedsCap` instead.
+`Messages` renders that case as **"more than 4096 characters"** (I-13's own
+wording) and must never print the sentinel as a number; every other value of
+`observedLength` is the exact stripped length and is printed as such. Added
+2026-08-13 with the parser (#6); the rendering half belongs to [RTVM-102] (#10).
+
 Validation precedence is fixed by RTVM-105 and §7 I-7 —
 shape → illegal character → contradiction — and the parser returns on the
 **first** fault found. It never returns a list, and a rejected puzzle is never
-handed to the solver.
+handed to the solver. One exception, ruled on #6 and recorded as `docs/RTVM.md`
+§7 **I-15**: interior horizontal whitespace is classified as an
+`IllegalCharacter` during the shape pass and outranks the length fault of the
+line it sits on, because RTVM-106 declares it an illegal character and
+"line 3 has 10 characters" is the less useful of the two diagnostics. The
+exception is that narrow — it never crosses lines, and it never applies to a
+non-whitespace character.
 
 ### 2.6 Core interfaces
 
@@ -519,6 +539,7 @@ struct SolveOptions {
                                 const SolveOptions& options,
                                 SolveControl& control);
 [[nodiscard]] std::string formatGrid(const Grid& grid);              // RTVM-400
+[[nodiscard]] std::string toCompactString(const Grid& grid);         // TP-100/TP-101
 
 } // namespace sudoku
 ```
@@ -539,6 +560,18 @@ business, and any change lands back here.
 and writes to nothing. TP-400 asserts it byte for byte; keeping it a pure
 function is what makes that a unit test rather than a process capture, and
 keeps the core free of streams for TP-903.
+
+`toCompactString` returns the `kCellCount`-character form: every cell in
+row-major order, `0` for an empty cell, no separators and no newline. **Adopted
+2026-08-13 as specified** — TP-100 requires a round trip back to the
+81-character form and TP-101 compares three grids for identity, and §2.6 named
+no function either could use, so the Software Engineer added one at [RTVM-100]
+(#6) and flagged it, the same route `ParseResult` took. It is a *test and
+comparison* surface, not an output format (RTVM-400's rendering is
+`formatGrid`) and not an input format — `parseGrid` accepts `kGridSize` lines
+only, so an 81-character single line is malformed. It lives beside `formatGrid`
+in `GridFormat.h`/`.cpp` rather than on `Grid`, which keeps `Grid` free of
+formatting.
 
 ### 2.7 Console layer
 
