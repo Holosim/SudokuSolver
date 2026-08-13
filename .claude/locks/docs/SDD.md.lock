@@ -1,7 +1,0 @@
-{
-  "path": "docs/SDD.md",
-  "holder": "systems-engineer",
-  "issue": 6,
-  "acquired_at": "2026-08-13T03:43:58Z",
-  "reason": "adopt toCompactString and kLengthExceedsCap into 2.5/2.6"
-}
