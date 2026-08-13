@@ -4,6 +4,7 @@
 
 - [Branch & merge conventions](branch-and-merge-conventions.md) — `issue-<n>` branches, `--no-ff` merges, and why CI/CD never sets Verified.
 - [Doc conflicts on merge](doc-conflicts-on-merge.md) — `docs/RTVM.md`/`SDD.md` conflict; resolve per-hunk, never whole-file.
+- [Lock before merging docs](lock-before-merging-docs.md) — a merge that rewrites `docs/RTVM.md` is an edit; lock it, and verify on a scratch branch first.
 
 ## Build & toolchain notes
 
