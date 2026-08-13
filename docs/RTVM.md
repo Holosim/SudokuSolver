@@ -1124,6 +1124,34 @@ Table rows below updated accordingly. The list still has an open row
 is made — recorded here so the next reader sees it went from three open
 automation attempts to one.
 
+**Merged to trunk 2026-08-13 as `bd43de2`** (CI/CD, `--no-ff`, branch
+head `84f83b3`; `issue-23` left in place per convention). CI/CD flagged
+this as a trunk merge needing regression testing. Scoped with a
+`compare` call rather than a guess, per standing practice:
+`gh api repos/Holosim/SudokuSolver/compare/3658728...main` — comparing
+the Test Engineer's own re-verified commit (`3658728`, Windows run
+`31739274812`, the PASS recorded above) against current trunk — returns
+**only** `docs/RTVM.md` and `.claude/agent-memory/**`. No path under
+`tests/windows/`, `src/`, `samples/` or any `.sln`/`.vcxproj` moved
+between the tree the PASS was taken on and trunk today, so the merge
+itself introduced no product change for the regression pass to
+re-derive. This is not itself the regression pass — routed to Test
+Engineer below per CI/CD's flag, with this scope measurement so the
+question is "did the merge disturb anything" (answer, provisionally:
+no product path changed) rather than "does the harness work", which
+was already just re-verified.
+
+No RTVM item's Status or Commit(s) column moves on this record. The
+scripts landed here are verification tooling (`tests/windows/*.ps1`),
+not the implementation of any single `RTVM-nnn` row, so there is no
+Commit(s) cell in the main matrix (§5) for this merge to populate —
+consistent with the `[[verification-platform-trap]]` note that a
+`status:ready-for-rtvm-update` can land on this process issue without
+tracing to one requirement. RTVM-905 and RTVM-506's own Commit(s)
+values stay `85bab27` and move only on issues #21/#14's own inspection
+passes, per §9.2's existing rule that the verdict for those rows
+belongs there, not here.
+
 ### 9.2 DELIV coverage after the Generate Code Base scaffold
 
 State at branch `issue-5` @ `04b0269`, inspected by the Test Engineer
