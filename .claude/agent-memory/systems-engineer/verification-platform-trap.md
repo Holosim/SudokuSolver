@@ -95,6 +95,29 @@ said RTVM-100 "can then move to Verified subject only to the MSVC gap", which
 is self-contradictory under §9.2. An outstanding clause is an outstanding
 clause; the SHA populates the column, it does not promote the status.
 
+Confirmed a third time on #8 (2026-08-13): `compare/<merge-sha>...main` and
+`compare/<branch-tip>...main` both returned **only** `.claude/agent-memory/**`.
+Run both — the branch-tip comparison is the one that actually answers "is trunk
+byte-identical to the tree the PASS was taken on", and it costs one extra call.
+
+### The Commit(s) column is mine to write, not CI/CD's (2026-08-13, #8)
+
+My #8 hand-off said "Commit(s) is left blank for CI/CD to fill". CI/CD declined
+and handed it back, correctly: the standing convention is that **CI/CD reports
+the SHA in the issue thread and the Systems Engineer writes it into
+`docs/RTVM.md`**, so exactly one role writes the matrix.
+
+**Why:** two writers on the same column is how the RTVM and the commit history
+end up disagreeing about what shipped — and the row also needs a *status*
+judgement (§9.2's two-part rule) that only I hold.
+
+**How to apply:** never delegate a Commit(s) write in a hand-off comment. Say
+"report the SHA and hand back; I record it," which is the round trip anyway.
+Also expect the reported branch SHA to be a commit or two behind the merged
+head — lock releases and agent memory files land after the hand-off comment is
+posted. Reconcile the two SHAs in the ledger rather than assuming a mismatch is
+an error.
+
 ## Closing the issue ≠ promoting the requirement (2026-08-13, #7)
 
 The client may cut a feature issue short ("just merge and close this out").

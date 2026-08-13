@@ -69,7 +69,7 @@ Blocked / Withdrawn.
 | RTVM-105 | Validation reports exactly one fault, the first found, in the fixed precedence order: shape (RTVM-102) → illegal character (RTVM-103) → contradiction (RTVM-104). The single exception is interior horizontal whitespace, which outranks the length fault of the line it appears on and is reported as an illegal character (§7 I-15); precedence between different lines is unaffected. Cells are named in one-based `r<row>c<col>` form. A rejected puzzle is never passed to the solver. | SN-4 | Test (TP-105) | Approved | |
 | RTVM-106 | Input is accepted with either LF or CRLF line endings and with or without a trailing newline. Leading and trailing horizontal whitespace on a line is ignored; interior whitespace is an illegal character. Content after the ninth line is ignored. | SN-1, SN-8 | Test (TP-106) | In Test | `3bc1b22` |
 | **CORE — solver (§4.4, §4.5, §5)** | | | | | |
-| RTVM-200 | Given a valid, uniquely-solvable standard 9×9 puzzle, the solver produces the grid's unique solution: all 81 cells filled with 1–9, with no digit repeated in any row, column, or 3×3 box, and every given preserved in place. | SN-2 | Test (TP-200) | In Test | |
+| RTVM-200 | Given a valid, uniquely-solvable standard 9×9 puzzle, the solver produces the grid's unique solution: all 81 cells filled with 1–9, with no digit repeated in any row, column, or 3×3 box, and every given preserved in place. | SN-2 | Test (TP-200) | In Test | `fdd9cea` |
 | RTVM-201 | Given a well-formed, non-contradictory puzzle that admits no completion, the solver reports "no solution" and terminates. It does not loop, guess indefinitely, or emit a partial grid. | SN-2, SN-4 | Test (TP-201) | Approved | |
 | RTVM-202 | The solver determines whether a puzzle has more than one solution by searching for at most two solutions and stopping. Where two are found it yields the first found together with a "not unique" indication. It does not enumerate or count all solutions. | SN-2, SN-3 | Test (TP-202) | Approved | |
 | RTVM-203 | The solve is cooperatively interruptible: once an abort is requested the solver stops and yields the "aborted" outcome within 1.0 s, leaving the process free to exit cleanly. | SN-5 | Test (TP-203) | Approved | |
@@ -1375,3 +1375,37 @@ form "is produced only in the output layer", which §7 **I-16** has
 superseded. #8 did not open `Grid.h`, so it is passed on again rather
 than changed on trunk outside a feature branch. Behaviour is unaffected
 either way, and no test hangs off it.
+
+#### 9.7.1 Merge to trunk, and the scope of the regression pass
+
+`issue-8` was merged to `main` by CI/CD on 2026-08-13 as
+**`fdd9cea`** (`fdd9ceaa10e2c75205d87dab7ddff11417c9133c`), a `--no-ff`
+merge commit; that SHA is now RTVM-200's Commit(s) value. Two SHA
+reconciliations, recorded so this thread and the history agree: the
+merged branch head was `bf6cbb9`, two commits beyond the `e3d5459`
+named in the hand-off (the extra two are lock releases and an agent
+memory file — nothing product-bearing), and `git log <merge-base>..main`
+was empty, so the merge-note hunk instructions had nothing to guard
+against and the merge was clean with no manual selection.
+
+**RTVM-200 remains In Test, and the SHA does not change that.** §9.2's
+rule takes two things; the SHA supplies one. The `P-SEARCH` clause
+(#11) and the MSVC re-execution (V-1, #23) are both still outstanding,
+so the re-run trigger above stands unchanged.
+
+**Regression scope, measured rather than assumed.**
+`compare/fdd9cea...main` returns three files, all under
+`.claude/agent-memory/cicd/`, and `compare/bf6cbb9...main` returns the
+same three. **No path under `src/`, `tests/`, `samples/` or `docs/`
+differs between the branch tip the PASS was taken on and trunk.** The
+regression question is therefore "did the merge disturb anything?" and
+not "does the solver work?" — the latter was answered at `bf6cbb9`
+and stands. What that asks for concretely: build the merged trunk and
+re-run the full unit suite (19 tests expected, the five `SolverTests`
+methods plus the 14 pre-existing), confirm `SolverTests.cpp` is still
+registered in both the test `.vcxproj` and its `.filters`, and confirm
+the five `samples/*.txt` are still 90 bytes each. As established in §9.6, **mutation
+evidence is not required on a regression pass** over code that has not
+changed; re-deriving it re-tests the feature rather than the merge.
+The `P-SEARCH` clause is *not* in scope here either — it belongs to
+#11, which owns the fixture and the method.
