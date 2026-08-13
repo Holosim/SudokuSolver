@@ -95,5 +95,34 @@ said RTVM-100 "can then move to Verified subject only to the MSVC gap", which
 is self-contradictory under §9.2. An outstanding clause is an outstanding
 clause; the SHA populates the column, it does not promote the status.
 
+## Closing the issue ≠ promoting the requirement (2026-08-13, #7)
+
+The client may cut a feature issue short ("just merge and close this out").
+Close the issue — but the requirement's status lives in `docs/RTVM.md` and is
+governed by §9.2, not by the issue's state. On #7 all three DATA-OUT items
+stayed **In Test** with the trunk SHA recorded while the issue closed.
+
+**Why:** the re-run trigger in the §9.x ledger is what brings the outstanding
+clauses back (#18, #8/#12, #10 here); it is keyed to the *later* issues, not to
+this one, so closing loses nothing. Silently promoting to Verified to make the
+closure look tidy would delete the only record that half a procedure never ran.
+
+**How to apply:** when closing early, write one paragraph in the ledger saying
+*who* instructed the close, *what had already been executed* at that point, and
+that the status is deliberately unchanged. Then the closure reads as a decision
+rather than as an oversight six issues later.
+
+## Two verification conventions worth carrying to the next project
+
+- **A green build is not evidence when the assertion is a `static_assert`.** A
+  deleted or vacuous compile-time guard compiles just as happily as a real one.
+  Require the mutation and its observed effect to be stated, or treat the clause
+  as unverified. (One recorded non-defect: a *private* default constructor does
+  not trip `!std::is_default_constructible_v` — the trait is evaluated from
+  outside the class.)
+- **Mutation evidence is not required on a regression pass** over unchanged
+  code. Re-deriving it re-tests the feature instead of the merge. Say so in the
+  hand-off, or the Test Engineer will reasonably produce it anyway.
+
 See [[requirements-traps]], [[sudoku-solver-project-context]],
 [[doc-state-across-branches]].

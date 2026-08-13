@@ -1116,3 +1116,59 @@ route `ParseResult` and `toCompactString` took. All are now specified
 in `docs/SDD.md` §2.4/§2.5 as delivered — no rename, no signature
 change. The §2.3-vs-§2.5 contradiction the same handoff raised is ruled
 in §7 **I-16** and both SDD clauses are reworded to match.
+
+**Regression result, 2026-08-13 — PASS. The merge disturbed nothing.**
+Executed by the Test Engineer on a clean `main` checkout at `9844fd7`
+(merge `668f9a4`). Recorded here because "no change required" is a
+result, not an absence of one:
+
+- **The product-path diff across the merge is empty.**
+  `GET /compare/668f9a4...main` returns `docs/RTVM.md`,
+  `.github/workflows/agent-relay.yml` and agent-memory paths only —
+  `src/`, `tests/`, `samples/`, the `.sln` and all six project files on
+  trunk are byte-identical to the `130cc8b` the original pass was taken
+  on. That is stated rather than implied, per the scoping note above.
+- **14 of 14 unit tests pass** (`SolveReportTests` 7,
+  `InputFaultTests` 5, `ScaffoldTests` 2), linked against
+  `src/SudokuCore/*.cpp` **only** with no console object file — the run
+  re-demonstrates the RTVM-903 split rather than asserting it. Clean
+  build, no warnings. No mutation evidence was required or produced, as
+  directed: the guards were mutation-checked at `130cc8b` and the code
+  has not changed since, so re-deriving M1–M9 would re-test the feature
+  rather than the merge.
+- **TP-100 / TP-101 / TP-106 parse clauses re-run — 26 checks, 0
+  failures.** In scope because the hand-resolved conflict sat on those
+  rows. §7 **I-15** still holds exactly as narrow as ruled: interior
+  whitespace reports `IllegalCharacter` at `{3,4}`, while `P-LONGLINE`
+  still reports `LineTooLong` and `P-MULTIFAULT` still reports the
+  missing line. I-16 landing on adjacent code did not widen it.
+- **Doc inspection confirms the per-hunk resolution held.**
+  RTVM-100/101/106 still read `3bc1b22`; RTVM-300/301/302 read
+  `668f9a4`; all six are In Test; §9.5 and §9.6 are both present and
+  un-truncated; §7 I-15 and I-16 are both in the table.
+- Standing checks re-run green: whole-program build, TP-903 greps,
+  TP-907 sample sizes and `.gitattributes` pins, RTVM-900's
+  `git check-ignore`, project-file XML and `Include`-path resolution,
+  and a programmatic re-derivation of the §6.1 fixtures.
+- **MSVC / Test Explorer remain unexecuted** (V-1, #23), as standing.
+
+**Issue #7 is closed at this point on client instruction** ("no
+regression testing on issue-7 branch — submit, merge and close this
+out", 2026-08-13); the regression pass above had already been executed
+and returned clean, so nothing was skipped to close it. **RTVM-300,
+RTVM-301 and RTVM-302 remain In Test with `668f9a4` recorded**, and
+closing the issue does not promote them: §9.2's two-part rule still
+wants the outstanding clauses executed. The re-run trigger above is the
+live mechanism — #18 for TP-300's whole-run half, #8/#12 for TP-301 as
+worded, #10 for TP-302's parse-driven half — and those rows return to
+this matrix as each lands, independently of #7's state.
+
+**Documentation drift carried into #8** (observation, no defect, no
+test hangs off it): `src/SudokuCore/Grid.h` still comments that "the
+1-based `r<row>c<col>` form required by RTVM-105 is produced only in the
+output layer." Under §7 **I-16** that is now the wrong reading — the
+`+1` happens at fault construction in `cellRefFromZeroBased()` and
+`Messages` does no arithmetic. `Grid.h` was not touched by #7, so the
+comment is left for whoever next opens the file (#8 is the likely one)
+rather than being changed on trunk outside a feature branch. Behaviour
+is unaffected either way.
