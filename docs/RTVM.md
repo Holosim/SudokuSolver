@@ -51,9 +51,9 @@ Blocked / Withdrawn.
 | Req ID | Requirement | Stakeholder Need(s) | Verification Method | Status | Commit(s) |
 | --- | --- | --- | --- | --- | --- |
 | **UI — user interface (§4.1, §4.4)** | | | | | |
-| RTVM-001 | On launch the application begins solving immediately. It presents no menu, no mode selection, and asks the user nothing before reading the puzzle. | SN-1, SN-6 | Test (TP-001) | In Test | |
-| RTVM-002 | If a first command-line argument is present it is treated as a path to a puzzle file, and the puzzle is read from that file. Any further arguments are ignored. | SN-1, SN-8 | Test (TP-002) | In Test | |
-| RTVM-003 | If no command-line argument is present the puzzle is read from standard input. | SN-1, SN-8 | Test (TP-003) | In Test | |
+| RTVM-001 | On launch the application begins solving immediately. It presents no menu, no mode selection, and asks the user nothing before reading the puzzle. | SN-1, SN-6 | Test (TP-001) | In Test | `62cbb1e` |
+| RTVM-002 | If a first command-line argument is present it is treated as a path to a puzzle file, and the puzzle is read from that file. Any further arguments are ignored. | SN-1, SN-8 | Test (TP-002) | In Test | `62cbb1e` |
+| RTVM-003 | If no command-line argument is present the puzzle is read from standard input. | SN-1, SN-8 | Test (TP-003) | In Test | `62cbb1e` |
 | RTVM-004 | While a solve is still running at a prompt point (RTVM-501/502) the application writes a progress prompt to stderr stating (a) that it is still working, (b) the whole seconds elapsed, (c) how to stop, and (d) that no response is required. | SN-5 | Test (TP-004) | Approved | |
 | RTVM-005 | If the user gives the documented stop response at any prompt, the application stops the solve, reports that it was abandoned at the user's request, and exits with code `3`. | SN-5 | Test (TP-005) | Approved | |
 | RTVM-006 | No prompt requires a response. The application never blocks on reading a prompt reply: continuing is the default and an unanswered prompt simply lapses at the next prompt point. | SN-5, SN-8 | Test (TP-006) | Approved | |
@@ -79,7 +79,7 @@ Blocked / Withdrawn.
 | RTVM-301 | The `Solved` and `SolvedNotUnique` outcomes carry a complete 9×9 grid of digits 1–9 with no empty cell. | SN-3 | Test (TP-301) | In Test | `668f9a4` |
 | RTVM-302 | The `InvalidInput` outcome carries structured fault detail (fault kind, line/row/column, digit or character involved) rather than a pre-formatted message, so that all wording lives in the output layer. | SN-4, SN-7 | Test (TP-302) | In Test | `668f9a4` |
 | **OUT — presentation (§4.1, §4.3)** | | | | | |
-| RTVM-400 | A solved grid is written to stdout pretty-printed with box separators, in exactly the 13-line ASCII format given in §6.2. | SN-3 | Test (TP-400) | In Test | |
+| RTVM-400 | A solved grid is written to stdout pretty-printed with box separators, in exactly the 13-line ASCII format given in §6.2. | SN-3 | Test (TP-400) | In Test | `62cbb1e` |
 | RTVM-401 | For the `SolvedNotUnique` outcome the grid is followed on stdout by a statement that the solution shown is not unique. | SN-3 | Test (TP-401) | Approved | |
 | RTVM-402 | For the `NoSolution` outcome a plain statement that the puzzle has no solution is written to stdout, and no grid is written. | SN-3, SN-4 | Test (TP-402) | Approved | |
 | RTVM-403 | For the `InvalidInput` outcome a specific human-readable diagnostic naming the fault is written to **stderr**, and nothing is written to stdout. | SN-4 | Test (TP-403) | Approved | |
@@ -713,6 +713,18 @@ change** — recorded here so it is a decision on the record rather than
 an assumption in someone's head. The Solutions Architect can overrule
 any of them and the affected RTVM item will be reissued.
 
+**Numbering rule (added 2026-08-13, after the first collision).** An
+`I-` number is allocated by reading **trunk's** table at the moment of
+writing, never by counting rows on a feature branch. Two branches in
+flight will otherwise pick the same next number, which is what happened
+to `I-17`: issue #23 and issue #9 each appended one, and CI/CD merged
+both verbatim rather than guessing a renumbering (correctly — that is
+requirements authorship). When a collision does reach trunk, the row
+with **fewer inbound citations** moves, keeps its full text unaltered,
+and carries a *"renumbered from"* sentence so a citation written before
+the merge still resolves. `I-` numbers are otherwise never reused: a
+withdrawn interpretation stays in the table marked so.
+
 | # | Question scope left open | Decision taken | Affects |
 | --- | --- | --- | --- |
 | I-1 | Line endings | LF and CRLF both accepted; trailing newline optional. Windows-targeted software that rejected CRLF would be indefensible. | RTVM-106 |
@@ -731,9 +743,9 @@ any of them and the affected RTVM item will be reissued.
 | I-14 | What "Windows 10/11" in §6.3 means for the machine timings are actually taken on | **Amended 2026-08-13 — the parenthetical below was factually wrong and the label, not the image, is what is normative.** The reference machine is *whatever image the `windows-latest` label resolves to on the day of the run*, and the run's own machine block is the record of it (W-9). On 2026-08-13 that was **`win25-vs2026`: Windows Server 2025 10.0.26100, AMD EPYC 9V74, 2 cores / 4 logical, 16 GB** — not the Windows Server 2022 image this interpretation originally named. The ruling below is unchanged and the reasoning survives intact; only the machine identity was wrong, and it was wrong because it was assumed rather than read. Original text follows. ~~The GitHub-hosted `windows-latest` image (Windows Server 2022, x64, 4 vCPU, 16 GB)~~ The GitHub-hosted `windows-latest` image **is** an acceptable §6.3 reference machine and is the normative one for TP-500…504. It shares the kernel, the MSVC toolset and the ABI of Windows 11; §6.3's intent was to exclude an underpowered or loaded machine, not to distinguish client from server SKUs. TP-500's existing requirement to report the machine it ran on is what keeps this honest. Raised because §9.1.3 wires the timing set onto exactly that runner, and "we measured on the wrong machine" is a cheap objection to close now and an expensive one to close at acceptance. | RTVM-500…504, §6.3, §9.1.3 |
 | I-15 | Which fault a line carrying **interior whitespace** reports, when that whitespace also makes the line the wrong length | **The illegal character**, at its `r<row>c<col>` position, in preference to a length fault on that same line. The exception is exactly that narrow: it applies only to horizontal whitespace, and only against the length check of the line the whitespace is on. RTVM-105's order is otherwise untouched — fewer than 9 lines still outranks any character fault anywhere, and a non-whitespace illegal character still loses to a length fault on its own line. Reasons: (a) RTVM-106 declares interior whitespace an illegal character, and under strict shape-first precedence that clause is nearly unreachable, since a line carrying an extra space is by construction not 9 characters; (b) TP-106's negative fixture `098 000060` is 10 characters and asserts the illegal-character message, so the two documents contradicted each other as written; (c) "illegal character ' ' at r3c4" locates the fault, "line 3 has 10 characters" does not, and RTVM-102/103 exist to say *what* is wrong. Column position is counted after leading/trailing whitespace is stripped. Raised on issue #6 by the Software Engineer (implemented this reading) and the Test Engineer (tested it, declined to rule); ruled 2026-08-13. No scope change and no behaviour change against the delivered parser — this records the reading it was built and passed under. | RTVM-102, RTVM-103, RTVM-105, RTVM-106 |
 | I-16 | **Where** the 0-based → 1-based cell conversion happens, given that `docs/SDD.md` §2.3 said "in exactly one place, in `Messages`" while §2.5 declared `CellRef` already **1-based** | **At fault construction, not at rendering.** An `InputFault` carries 1-based cells; `Messages` renders `r<row>c<col>` straight from the fault and performs no arithmetic. The two SDD clauses could not both hold — if the fault already carries 1-based cells, the `+1` must have happened before `Messages` ever sees it. Resolved in favour of §2.5 because (a) the parser delivered at [RTVM-100] (#6) already stores 1-based cells and passed TP-100/TP-106 that way, (b) TP-302 as written inspects the *fault object* for `r1c1`/`r1c7` with no output layer in the picture, so the fault is where the 1-based form has to exist, and (c) `Messages` is the one place English lives (§2.5, §2.7) — giving it arithmetic as well makes it two responsibilities. §2.3's "exactly one place" intent is preserved literally: the `+1` is spelled once, in `cellRefFromZeroBased()` in `InputFault.h`, and every fault-producing path calls it rather than adding one itself. An out-of-grid coordinate yields a *not applicable* `CellRef` rather than a wrapped one (RTVM-505). `docs/SDD.md` §2.3 and §2.5 both reworded to say this. Raised on issue #7 by the Software Engineer and seconded by the Test Engineer; ruled 2026-08-13. No scope change and no behaviour change against the delivered code — this records the reading it was built and passed under. | RTVM-103, RTVM-104, RTVM-105, RTVM-302 |
-| I-17 | What "VS 2022" in `D-1`/`D-3` constrains: the **artifact**, or the **machine that builds it** | **The artifact.** RTVM-900/901/906 are satisfied by a solution and project files that Visual Studio 2022 opens and builds with the `v143` toolset and ISO C++17 — the *delivered thing* is what carries the constraint. It does not follow that every build taken as evidence must be performed by a VS 2022 installation. Consequences, and they cut both ways: (a) the `Debug\|x64` / `Release\|x64` builds on the `win25-vs2026` runner **are** valid evidence for RTVM-901's "builds clean" and RTVM-906's language-standard clause, because the compiler actually invoked is `PlatformToolset=v143` / MSVC 14.44 — the VS 2022 toolset, shipped side-by-side in the newer install; (b) they are **not** evidence for TP-900's *"opens in VS 2022 with no migration prompt"*, which is a claim about the VS 2022 solution loader and can only be discharged by a VS 2022 loader — a newer IDE opening the solution demonstrates forward compatibility, and the requirement runs the other way. The committed artifacts remain pinned to VS 2022 form (`.sln` `Format Version 12.00` / `# Visual Studio Version 17` / `VisualStudioVersion = 17.0.31903.59`; `PlatformToolset=v143`; `WindowsTargetPlatformVersion=10.0`), and **no project file may be retargeted to satisfy a runner** — that is V-7 applied to MSVC exactly as it already applies to `g++`. Raised by the Systems Engineer on issue #23 after reading the first Windows run (§9.1.5); it is scope-adjacent, so it is **flagged to the Solutions Architect for confirmation** as I-14 was. No scope change and no change to any delivered file. | RTVM-900, RTVM-901, RTVM-906, §9.4 A-2 |
 | I-17 | Whether a **blocking** read of standard input is ever permissible, given that `docs/SDD.md` §3.7 bans "any call that can block … under any circumstance" while RTVM-003 requires reading a puzzle a user may still be typing | **The ban binds the solve path, not puzzle acquisition.** From the moment the solver is entered until it returns, nothing may block — that is what RTVM-006 and RTVM-008 actually assert, and §3.7's absolute wording was written about the *prompt* read. Before the solve starts there is no prompt, no elapsed-time bound and no result to deliver, and a program that refused to wait for line 4 of an interactively typed puzzle would fail RTVM-003 outright. A bounded blocking read is therefore permitted **only** during acquisition, and only through `StdinChannel` (§1.3's single-owner rule is unaffected — the same buffer continues into the control channel). "Bounded" is the existing bounds, not new ones: acquisition stops at 9 logical lines (I-2) and never scans past 4096 bytes on one line (I-13), so no input can hold the process open without producing either a puzzle or a fault. Redirected or closed stdin reaches EOF, which ends the read — so RTVM-008's non-interactive guarantee is untouched. An interactive user who types four lines and walks away does leave the process waiting, indefinitely and by design: no requirement bounds that, and it is what every stdin-reading tool does. Raised on issue #9 by the Software Engineer (who implemented this reading as a `readLineBlocking` used pre-solve only) and seconded by the Test Engineer; ruled 2026-08-13. No scope change and no behaviour change against the delivered build. `docs/SDD.md` §1.3 and §3.7 both reworded to say this. | RTVM-003, RTVM-006, RTVM-008 |
 | I-18 | Which error domain `InputFault::systemError` carries, given `docs/SDD.md` §2.5 documented it as a `GetLastError` code while the delivered `InputSource` opens files with `std::ifstream` and populates it from `errno` | **`errno`, on every platform — one domain, no tag.** The MSVC CRT sets `errno` on a failed `std::ifstream` open just as glibc does, while `GetLastError` after a CRT call is incidental rather than specified; carrying whichever of the two the calling path happened to set would make the number uninterpretable without a provenance flag, and a flag is cost for no requirement. Nothing asserts the field numerically — TP-009 asks only that stderr *names the path* and *states it could not be opened* — so the field exists solely to let `Messages` render a reason. Two consequences that are binding on **#10**: (a) the reason text is produced by one helper in `Messages` over the `strerror` family, and CRT/locale-supplied text does not breach RTVM-302's "no English outside `Messages`" (it is not a literal in the fault) — accordingly TP-009 and TP-403 must not pin an exact CRT phrase; (b) `SourceUnreadable` covers a failed **read** as well as a failed **open**, because TP-009's second case is an existing *directory*, which fails at open on Windows but opens and then fails to read on a POSIX runner. Raised on issue #9 by the Software Engineer; ruled 2026-08-13 before #10 starts, while it is still cheap. No scope change; `docs/SDD.md` §2.5 and §2.7 reworded. | RTVM-009, RTVM-302, RTVM-403 |
+| I-19 | **Renumbered from `I-17` on 2026-08-13, at the merge of `issue-9` (`62cbb1e`); the text below is unchanged.** Issue #23's branch and issue #9's branch both allocated `I-17` concurrently and CI/CD merged both rows verbatim rather than pick a renumbering. This row is the one that moved, because nothing else in `docs/` or `docs/SDD.md` cited it while the other `I-17` had six inbound citations. **A citation of “§7 I-17” written before `62cbb1e` that concerns VS 2022, `D-1`/`D-3`, or the runner's toolset means this row (I-19); one that concerns blocking reads or `StdinChannel` means I-17 as it now stands.** Original question: What "VS 2022" in `D-1`/`D-3` constrains: the **artifact**, or the **machine that builds it** | **The artifact.** RTVM-900/901/906 are satisfied by a solution and project files that Visual Studio 2022 opens and builds with the `v143` toolset and ISO C++17 — the *delivered thing* is what carries the constraint. It does not follow that every build taken as evidence must be performed by a VS 2022 installation. Consequences, and they cut both ways: (a) the `Debug\|x64` / `Release\|x64` builds on the `win25-vs2026` runner **are** valid evidence for RTVM-901's "builds clean" and RTVM-906's language-standard clause, because the compiler actually invoked is `PlatformToolset=v143` / MSVC 14.44 — the VS 2022 toolset, shipped side-by-side in the newer install; (b) they are **not** evidence for TP-900's *"opens in VS 2022 with no migration prompt"*, which is a claim about the VS 2022 solution loader and can only be discharged by a VS 2022 loader — a newer IDE opening the solution demonstrates forward compatibility, and the requirement runs the other way. The committed artifacts remain pinned to VS 2022 form (`.sln` `Format Version 12.00` / `# Visual Studio Version 17` / `VisualStudioVersion = 17.0.31903.59`; `PlatformToolset=v143`; `WindowsTargetPlatformVersion=10.0`), and **no project file may be retargeted to satisfy a runner** — that is V-7 applied to MSVC exactly as it already applies to `g++`. Raised by the Systems Engineer on issue #23 after reading the first Windows run (§9.1.5); it is scope-adjacent, so it is **flagged to the Solutions Architect for confirmation** as I-14 was. No scope change and no change to any delivered file. | RTVM-900, RTVM-901, RTVM-906, §9.4 A-2 |
 
 ## 8. Carried forward to the SDD — **CLOSED 2026-08-07 (issue #3)**
 
@@ -1829,3 +1841,91 @@ touched `GridFormat.*`, not `Grid.h`, and editing product code after the
 tested tree was frozen would have invalidated the `8fb6cc5` pass for a
 comment. Carried to **#10 or #11**, whichever opens `Grid.h` first.
 Behaviour is unaffected and no test hangs off it.
+
+#### 9.8.5 Merge to trunk, the §7 ID collision, and the scope of the regression pass
+
+`issue-9` was merged to `main` by CI/CD on 2026-08-13 as **`62cbb1e`**,
+a `--no-ff` merge of branch head `bd3f362` — exactly the SHA named in
+the hand-off, with no commits added after it. That SHA is now the
+Commit(s) value for **RTVM-001, RTVM-002, RTVM-003 and RTVM-400**.
+
+**All four remain In Test, and the SHA does not change that.** §9.2's
+rule takes two things and the SHA supplies one; the other is every
+clause of the procedure executed where the clause names a toolchain.
+Outstanding for all four: the **committed automated harness** (#24,
+§9.8.1 — TP-001/002/003 passed *by hand*, so nothing in the repository
+re-runs them yet) and the standing **MSVC / Test Explorer
+re-execution** (V-1, #23). TP-400's six `GridFormatTests` methods also
+still need discovery under the real framework rather than the `/tmp`
+`CppUnitTest.h` shim.
+
+**The §7 ID collision, resolved.** The merge was not clean: trunk had
+gained `f58c868` (issue #23) two minutes earlier, and both sides had
+appended an interpretation numbered **`I-17`**. CI/CD resolved it as a
+union — both rows kept verbatim, nothing renumbered — and referred the
+renumbering here, which is right: it is requirements authorship, not a
+merge decision. Resolved as follows, and the reasoning is in §7's new
+numbering rule:
+
+- **`I-17` stays with the blocking-read ruling** (issue #9). It had six
+  inbound citations — `docs/SDD.md` §1.3 (twice), §2.7's component
+  table and §3.7's open-questions entry, plus §9.8's RTVM-003 row and
+  §9.8's preamble — none of which needed touching.
+- **The "VS 2022 constrains the artifact, not the machine" ruling
+  (issue #23) becomes `I-19`**, text unaltered, with a *renumbered
+  from* sentence at the head of the row so that a citation of
+  "§7 I-17" written before `62cbb1e` still resolves to the row its
+  author meant. It had **zero** inbound citations in `docs/`, so
+  nothing else moved. Its status is unchanged in every other respect:
+  still flagged to the **Solutions Architect** for confirmation as
+  I-14 was, still governing §9.4 A-2, and still carrying the corollary
+  that no project file may be retargeted to suit a runner.
+
+Nobody's ruling changed and no delivered file changed; only one label
+moved.
+
+**Regression scope, measured rather than assumed.** `compare/bd3f362...main`
+(taken at trunk `42c3625`) returns twelve files: four `cicd` memory
+files, three `solutions-architect`/`systems-engineer` memory files, one
+lock file, `.github/workflows/windows-verification.yml`,
+`docs/ci/windows-verification.yml`, `docs/PROJECT_DEFINITION.md` and
+`docs/RTVM.md`. **No path under `src/`, `tests/` or `samples/` differs
+between the branch tip the PASS was taken on and trunk.** So the
+regression question is "did the merge disturb anything?", not "does the
+entry point work?" — the latter was answered at `bd3f362` and stands.
+Per §9.7.1's own correction, this figure is stale by one commit the
+moment it is written: it does **not** include the doc and memory push
+carrying this very section. Re-derive it on receipt.
+
+Concretely, the regression pass is asked for:
+
+1. Build merged trunk and re-run the full unit suite — **25 expected**
+   (19 pre-existing + 6 `GridFormatTests`), core-only link intact.
+2. Re-run **TP-001, TP-002 (all three parts), TP-003 and TP-400**
+   against the merged binary. These are the three that passed by hand,
+   so a merge-time regression on them has nothing else watching for it.
+3. **§9.8.2's two deferred clauses, which are the reason this pass is
+   not a formality:** TP-101 and TP-106 **end-to-end** on the merged
+   tree. The advance evidence was taken early and is recorded in
+   §9.8.2 in full; it was deliberately not credited there, because the
+   re-run trigger is worded against trunk and this is trunk. Crediting
+   them here closes the trigger; RTVM-101 and RTVM-106 nevertheless
+   stay **In Test** on V-1 (and RTVM-106 additionally on #10's I-15
+   wording).
+
+As established in §9.6, **mutation evidence is not required on a
+regression pass** over code that has not changed.
+
+**One thing this merge changed that is not in the diff of `src/`.**
+Trunk now carries `.github/workflows/windows-verification.yml`
+(`fc23901`, route (b) — a human copied it across), so pushes to `main`
+now produce a real `msbuild` + `vstest.console.exe` + `dumpbin` run.
+The run for `62cbb1e` itself was **cancelled** by follow-up memory
+pushes under the workflow's per-ref `cancel-in-progress`; the surviving
+run is on trunk tip **`42c3625`**, whose tree is identical to `62cbb1e`
+outside `.claude/agent-memory/`. That is the run to read, and per **W-2**
+it is evidence, not a verdict — and per **W-9** any machine fact quoted
+from it must come from that same run's machine block. It does **not**
+discharge V-1 by itself: `vstest.console.exe` discovery is the clause
+V-1 turns on, and DW-1 (§9.1.5) means no TP-905 evidence exists at any
+commit yet.

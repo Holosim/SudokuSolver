@@ -157,3 +157,32 @@ them **on the fast-path RTVM update**, as §7 `I-` rows, not later:
 **Why:** these questions arrive attached to a *passing* test, which makes them
 feel non-urgent. They are the opposite: the code that embodies the answer already
 exists, so ruling is free, and the next issue is about to build against it.
+
+## Sequential IDs collide when two branches are in flight (2026-08-13, #9 vs #23)
+
+Two of my own branches each appended a §7 interpretation numbered **I-17** —
+one on `issue-23`, one on `issue-9` — because each allocated "the next number"
+by counting rows on *its own* branch. CI/CD hit it as a merge conflict, and
+correctly refused to renumber (that is requirements authorship) — it kept both
+rows verbatim, left trunk with two I-17s, and handed the fix back to me.
+
+**Why:** the collision is invisible on either branch. Nothing about writing
+`I-17` on a branch tells you another branch just did the same, and the doc reads
+perfectly well right up to the merge. Same failure applies to any monotonic ID
+allocated by counting: `I-`, `W-`, `V-`, `DW-`, `A-` and §9 subsection numbers
+here.
+
+**How to apply:**
+- Allocate from **trunk** (`git show origin/main:docs/RTVM.md`), never from the
+  branch's own copy — and prefer leaving a gap over reusing the next integer if
+  another issue is known to be mid-flight on the same table.
+- When a collision does land, **the row with fewer inbound citations moves.**
+  Count them (`grep -n "I-17" docs/*.md`); at #9 it was six against zero, so the
+  answer was mechanical rather than a judgement about whose ruling mattered.
+  Renumber to the next free number, keep the text *byte-identical*, and add a
+  "**renumbered from X**" sentence at the head of the row saying which subject
+  matter belongs to which number — issue threads and other agents' memory keep
+  citing the old number and there is no way to fix those.
+- Write the numbering rule into the document itself (§7's preamble here) rather
+  than only into memory, so the next agent to append a row obeys it without
+  having read this.
