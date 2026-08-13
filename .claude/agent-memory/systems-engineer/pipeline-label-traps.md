@@ -54,17 +54,34 @@ means #9 only has to declare #5 and #8.
 
 See [[implementation-plan-decomposition]], [[verification-platform-trap]].
 
-## Open decision, not yet made: should Test Engineer be allow-listed to write `tests/windows/*.ps1`?
+## Resolved: Test Engineer stays blocked from writing `tests/windows/*.ps1`
 
 Raised on #23 (2026-08-13, relayed by Software Engineer on Test Engineer's
-behalf). W-10 put Windows procedure scripts under `tests/windows/` on the
-premise that whoever owns "what does this procedure check" (Test Engineer)
-could revise them without a permission round trip through Software Engineer.
+behalf), decided the same day. W-10 put Windows procedure scripts under
+`tests/windows/` on the premise that whoever owns "what does this procedure
+check" (Test Engineer) could revise them without a permission round trip.
 `scripts/guard-test-engineer-writes.sh` blocks every Test Engineer `Edit`/
 `Write` outside `.claude/agent-memory/test-engineer/`, with no carve-out for
-`tests/windows/` — so in practice every revision is still a Software Engineer
-round trip, which is the cost W-10 was written to avoid. Not resolved yet:
-whether to add a `tests/windows/` allow-list entry, and if so whether that
-guard file itself is something an agent can edit or needs the same
-owner-gated treatment as `.github/workflows/`. Pick this up before the next
-Windows-procedure revision makes the round trip visible again.
+`tests/windows/` — so every revision was still a Software Engineer round trip.
+
+**Decision: no allow-list added.** The guard's own header comment states its
+purpose unconditionally — a code change must always originate from, and be
+visible to, the Software Engineer; Test Engineer reports problems, it never
+patches around them. That is a *separate* wall from the one W-10 was written
+to remove. W-10's round trip is the **repository-owner** wall
+(`.github/workflows/`, gated by V-10 — a permission no agent holds); moving
+procedure logic into `tests/windows/` closes that one specifically. It was
+never meant to also waive the deliberate Test-Engineer/codebase authorship
+boundary. Software Engineer remains sole author of `tests/windows/*.ps1`,
+same as every other repository file; Test Engineer hands over a full spec
+(parameters, evidence contract, per-check pass/fail rule) and Software
+Engineer implements it — a bounded, already-budgeted cost, not the
+open-ended owner round trip V-10 exists to avoid. Written up in
+`docs/RTVM.md` §9.1.3 next to W-10.
+
+**How to apply:** when two guard rails both happen to gate the same file
+path, don't assume relaxing one implies the other should relax too — check
+each guard's *own stated reason* before touching it. `docs/ci/` (owner-gated)
+and `tests/windows/` (Test-Engineer-gated) are enforced by unrelated
+mechanisms with unrelated justifications, even though both currently block
+the same two files.

@@ -346,6 +346,18 @@ branch tip and current trunk before asking for a fresh run; on #23 that
 returned only `docs/RTVM.md` + agent memory, so the regression pass is a
 narrow confirmation, not a re-verification from scratch.
 
+## #23 closed 2026-08-13 — the process-issue terminus, in practice
+
+Confirms `[[pipeline-label-traps]]`'s "second `ready-for-rtvm-update` is the
+terminus" rule applies to process issues too, not just `[RTVM-nnn]` feature
+issues: #23 got a pre-merge PASS (→ CI/CD), a merge confirmation (→ Test
+Engineer for regression, per the earlier note above), and a post-merge
+regression PASS — which is where it closed, with no matrix row moved and no
+second merge. Also resolved on this pass: the open W-10 authorship question
+(`[[pipeline-label-traps]]`, "Resolved: Test Engineer stays blocked...") —
+worth checking that entry before assuming `tests/windows/*.ps1` is Test
+Engineer's to write just because it's outside `.github/`.
+
 ## DW/A/I/V/W numbers: allocate from trunk, and check for the collision pattern
 
 Confirmed again on #23 that new evidence defects continue the *trunk* DW
