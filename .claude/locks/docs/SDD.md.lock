@@ -1,7 +1,0 @@
-{
-  "path": "docs/SDD.md",
-  "holder": "systems-engineer",
-  "issue": 7,
-  "acquired_at": "2026-08-13T03:49:46Z",
-  "reason": "adopt core API into SDD 2.4/2.5; resolve 2.3-vs-2.5 CellRef contradiction"
-}
