@@ -1,6 +1,6 @@
 ---
 name: verification-platform-trap
-description: The target platform and the pipeline's verification platform can differ — check it while writing the RTVM, and know exactly what the agent token can and cannot do about it
+description: The target platform and the pipeline's verification platform can differ — check it while writing the RTVM, know what the agent token can do about it, and why a passing test means In Test rather than Verified
 metadata:
   type: feedback
 ---
@@ -51,6 +51,49 @@ it. And when handing the block up, ship the finished artifact somewhere
 pushable (`docs/ci/<name>.yml`) so the human's task is one copy, not a design
 job. Reduce the ask to the single smallest permission that unblocks it and say
 which permissions are explicitly *not* being asked for.
+
+## The `status:ready-for-rtvm-update` fast path is not "mark it Verified"
+
+Two things gate Verified here (`docs/RTVM.md` §9.2's rule): every clause of the
+procedure executed on the *real* toolchain, **and** CI/CD's trunk SHA in the
+Commit(s) column. A passing Test Engineer run on the Ubuntu runner satisfies
+neither on its own. So the fast path moves the item to **In Test**, and Verified
+waits for the CI/CD hand-back — and even then stays In Test if a clause is
+still unexecuted.
+
+**Why:** a feature's procedure routinely contains end-to-end clauses that need
+components built by *later* issues (TP-101/TP-106 here are worded "runs
+end-to-end to `S-EASY` with exit 0", which needs the solver and the reporter).
+The unit half passing is a real pass and should not be downgraded, but calling
+it Verified means nobody ever re-runs the other half.
+
+**How to apply:** on every fast-path update, add a clause-level row (§9.2's
+shape; §9.5 for the parser) saying what ran and what did not, and write an
+explicit **re-run trigger** naming the issue whose merge makes the missing
+clause reachable. Vertically-sliced RTVM items get verified in two passes; plan
+for the second one in writing, because nothing else in the pipeline will
+remember it.
+
+## Scope a post-merge regression pass with a `compare` call, not a guess (2026-08-13)
+
+On the CI/CD commit confirmation for a feature branch, ask the API what
+actually moved before routing the Test Engineer:
+`gh api repos/OWNER/REPO/compare/<merge-sha>...main --jq '[.files[].filename]'`.
+On issue #6 the answer was `.claude/**` only — `src/` and `samples/` on trunk
+were byte-identical to the branch commit the 95-assertion pass was taken on.
+
+**Why:** "needs regression testing" from CI/CD is a routing flag, not a scope.
+Handed on unqualified it invites a full re-execution of a procedure that was
+just executed, and the shallow clone (`git rev-list --count HEAD` = 2) means
+local `git diff` against the merge SHA silently fails rather than answering.
+
+**How to apply:** write the measured file list into the §9.x ledger and state
+the regression question in one sentence ("did the merge disturb anything", not
+"does the feature work"), naming the specific clauses to re-run. Also: when
+recording the SHA, resist the earlier hand-off comment's own optimism — mine
+said RTVM-100 "can then move to Verified subject only to the MSVC gap", which
+is self-contradictory under §9.2. An outstanding clause is an outstanding
+clause; the SHA populates the column, it does not promote the status.
 
 See [[requirements-traps]], [[sudoku-solver-project-context]],
 [[doc-state-across-branches]].

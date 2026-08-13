@@ -8,6 +8,7 @@
 ## Build & toolchain notes
 
 - [No Windows build verification](no-windows-build-verification.md) — Ubuntu runners vs. an MSVC deliverable: what a pre-merge build check can honestly claim.
+- [Pre-merge check sequence](pre-merge-check-sequence.md) — conflict preview, build the *merged* content, TP-903 grep, and the `git merge -F -` stdin quirk.
 
 ## Release & versioning
 

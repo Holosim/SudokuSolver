@@ -18,6 +18,12 @@ Settled practice on this project:
   and that's fine, they're part of the record.
 - **Leave the `issue-<n>` branch in place** after merging; it's the traceable
   artifact the issue thread refers to by SHA.
+- **Merge the branch head, not the SHA quoted in the handoff comment.** Roles
+  write their memory commit *after* posting the handoff, so `issue-<n>` is
+  routinely one or two commits ahead of the SHA the Systems Engineer names. On
+  #6 the note said `06ec659`; the head was `9fe0426` (memory index upkeep).
+  Always `git log` the branch and merge the head, then say in the issue comment
+  which SHA you actually merged and what the extra commits were.
 - Report the merge SHA on the issue and hand back to `agent:systems-engineer`.
   **CI/CD never sets an RTVM item to Verified and never closes the issue** —
   Systems Engineer writes the SHA into `docs/RTVM.md`'s Commit(s) column and

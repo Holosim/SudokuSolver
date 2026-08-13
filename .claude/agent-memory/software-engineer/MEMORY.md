@@ -11,6 +11,8 @@
 
 ## Reusable solutions
 
+- [Parser fault precedence](parser-precedence-reading.md) — why `parseGrid` is two passes, and the one RTVM self-conflict (TP-106's interior space) awaiting a ruling.
+
 <!-- Algorithms or components already solved well enough to reuse rather
      than re-derive — what it does, where it lives, what it assumes. -->
 
