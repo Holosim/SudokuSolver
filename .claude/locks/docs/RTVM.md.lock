@@ -1,7 +1,0 @@
-{
-  "path": "docs/RTVM.md",
-  "holder": "systems-engineer",
-  "issue": 7,
-  "acquired_at": "2026-08-13T04:33:13Z",
-  "reason": "record trunk regression pass and close out RTVM-300/301/302"
-}
