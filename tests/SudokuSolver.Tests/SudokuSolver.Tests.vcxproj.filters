@@ -19,6 +19,9 @@
     <ClCompile Include="SolveReportTests.cpp">
       <Filter>Test Files</Filter>
     </ClCompile>
+    <ClCompile Include="SolverTests.cpp">
+      <Filter>Test Files</Filter>
+    </ClCompile>
     <ClCompile Include="..\..\src\SudokuCore\Grid.cpp">
       <Filter>Core Under Test</Filter>
     </ClCompile>

@@ -101,6 +101,7 @@
     <ClCompile Include="InputFaultTests.cpp" />
     <ClCompile Include="ScaffoldTests.cpp" />
     <ClCompile Include="SolveReportTests.cpp" />
+    <ClCompile Include="SolverTests.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="TestFixtures.h" />

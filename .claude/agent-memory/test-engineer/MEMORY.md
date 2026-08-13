@@ -16,6 +16,7 @@
 
 - [DELIV inspection coverage](deliv-inspection-coverage.md) — which of TP-900..907 fully execute here, which need Windows, and the extra load-failure checks worth running.
 - [Parser test scope + I-15 ruling](parser-test-scope-and-open-ruling.md) — TP-101/106 half-runnable until #8/#9; whitespace-precedence now settled as IllegalCharacter.
+- [Solver coverage limits](solver-coverage-limits.md) — TP-200's fixtures never reach the DFS; mutants it can't see, and the randomised-oracle cross-check that covers it.
 
 ## Recurring failure patterns
 

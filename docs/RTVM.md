@@ -69,7 +69,7 @@ Blocked / Withdrawn.
 | RTVM-105 | Validation reports exactly one fault, the first found, in the fixed precedence order: shape (RTVM-102) → illegal character (RTVM-103) → contradiction (RTVM-104). The single exception is interior horizontal whitespace, which outranks the length fault of the line it appears on and is reported as an illegal character (§7 I-15); precedence between different lines is unaffected. Cells are named in one-based `r<row>c<col>` form. A rejected puzzle is never passed to the solver. | SN-4 | Test (TP-105) | Approved | |
 | RTVM-106 | Input is accepted with either LF or CRLF line endings and with or without a trailing newline. Leading and trailing horizontal whitespace on a line is ignored; interior whitespace is an illegal character. Content after the ninth line is ignored. | SN-1, SN-8 | Test (TP-106) | In Test | `3bc1b22` |
 | **CORE — solver (§4.4, §4.5, §5)** | | | | | |
-| RTVM-200 | Given a valid, uniquely-solvable standard 9×9 puzzle, the solver produces the grid's unique solution: all 81 cells filled with 1–9, with no digit repeated in any row, column, or 3×3 box, and every given preserved in place. | SN-2 | Test (TP-200) | Approved | |
+| RTVM-200 | Given a valid, uniquely-solvable standard 9×9 puzzle, the solver produces the grid's unique solution: all 81 cells filled with 1–9, with no digit repeated in any row, column, or 3×3 box, and every given preserved in place. | SN-2 | Test (TP-200) | In Test | |
 | RTVM-201 | Given a well-formed, non-contradictory puzzle that admits no completion, the solver reports "no solution" and terminates. It does not loop, guess indefinitely, or emit a partial grid. | SN-2, SN-4 | Test (TP-201) | Approved | |
 | RTVM-202 | The solver determines whether a puzzle has more than one solution by searching for at most two solutions and stopping. Where two are found it yields the first found together with a "not unique" indication. It does not enumerate or count all solutions. | SN-2, SN-3 | Test (TP-202) | Approved | |
 | RTVM-203 | The solve is cooperatively interruptible: once an abort is requested the solver stops and yields the "aborted" outcome within 1.0 s, leaving the process free to exit cleanly. | SN-5 | Test (TP-203) | Approved | |
@@ -261,11 +261,22 @@ and Test Engineer both raised the conflict.
 
 ### CORE
 
-**TP-200 — correct solve.** Solve `P-EASY` and `P-HARD17`. Expect
-exactly `S-EASY` and `S-HARD17` respectively (§6.1). For each result,
-assert programmatically: 81 cells all in 1–9; every row, column, and
-3×3 box is a permutation of 1–9; every given in the input appears
-unchanged at the same position.
+**TP-200 — correct solve.** Solve `P-EASY`, `P-HARD17` and `P-SEARCH`.
+Expect exactly `S-EASY`, `S-HARD17` and `S-EASY` respectively (§6.1).
+For each result, assert programmatically: 81 cells all in 1–9; every
+row, column, and 3×3 box is a permutation of 1–9; every given in the
+input appears unchanged at the same position.
+
+`P-SEARCH` is the **branch-and-backtrack case**, added 2026-08-13 after
+the issue #8 test pass showed both original fixtures fall to constraint
+propagation alone (`nodesExplored == 1`), leaving the search half of
+`docs/SDD.md` §1.5 un-exercised by this procedure — see §9.7. For
+`P-SEARCH` additionally assert `nodesExplored() > 1`, i.e. that at
+least one branch was taken. Assert the **inequality, not a count**: the
+node total is an implementation property, not a requirement, and
+pinning it would fail on any legitimate propagation improvement. (For
+reference only, measured against the delivered solver at `c662bb1`:
+`P-SEARCH` 5 nodes, `P-EASY` 1, `P-HARD17` 1.)
 
 **TP-201 — no solution.** Solve `P-UNSOLVABLE` (§6.1 — `P-EASY` with
 `r1c3` set to `1`; the givens are mutually consistent, so this is *not*
@@ -531,6 +542,32 @@ for a unique 9×9 puzzle; this is the performance reference):
 856129743
 274836159
 ```
+
+`P-SEARCH` — valid, uniquely solvable, 25 givens. Dug from `S-EASY`, so
+**its unique solution is `S-EASY`** and no new solution fixture is
+needed. Its purpose is coverage, not difficulty: unlike `P-EASY` and
+`P-HARD17` it is **not** solvable by naked and hidden singles alone, so
+it is the fixture that forces the §1.5 MRV branch/backtrack path to run
+(§9.7):
+
+```
+504000910
+002000040
+090000000
+050700400
+000003000
+700020806
+960037000
+080400600
+000200170
+```
+
+Machine-verified 2026-08-13, three independent properties: exactly one
+solution (exhaustive search stopped at a second, none found); that
+solution is byte-identical to `S-EASY`; and naked + hidden singles run
+to fixpoint leave the grid incomplete with no contradiction, i.e. a
+guess is unavoidable. Every given agrees with `S-EASY` at the same
+position by construction.
 
 `P-UNSOLVABLE` — `P-EASY` with `r1c3` set to `1`. The givens are
 mutually consistent (no row, column, or box duplicate), so RTVM-104
@@ -1230,3 +1267,111 @@ output layer." Under §7 **I-16** that is now the wrong reading — the
 comment is left for whoever next opens the file (#8 is the likely one)
 rather than being changed on trunk outside a feature branch. Behaviour
 is unaffected either way.
+
+### 9.7 CORE coverage after the solver core ([RTVM-200], issue #8)
+
+State at branch `issue-8` @ `05f7466` (product commit `c662bb1`),
+tested by the Test Engineer 2026-08-13 — **PASS**, 19 tests, 0
+failures, at both `-O0` and `-O2`, under a `g++ 13.3.0 -std=c++17
+-Wall -Wextra -Wpedantic -Wshadow` driver linked against `SudokuCore`
+**only** (no console object file — again a live demonstration of the
+RTVM-903 split rather than a grep of it). Same table shape and same
+V-6 rule as §9.2, §9.5 and §9.6: a procedure with unexecuted clauses
+gets a row naming them, and no row here is Verified.
+
+| Req | Executed here and passed | Still outstanding |
+| --- | --- | --- |
+| RTVM-200 | TP-200's **original two cases in full**. `P-EASY` → `S-EASY` and `P-HARD17` → `S-HARD17`, byte-identical to §6.1; for both, all 81 cells in 1–9, every row/column/box a permutation of 1–9, every given unchanged in place. The checks are falsifiable, not merely green: a moved `r1c1` given, a blanked cell, a duplicated digit and an unsolved grid are each rejected, and `nodesExplored() > 0` rules out a hard-coded answer. Fixtures independently re-derived from §6.1 rather than from the test header — all four match byte for byte, `P-EASY` has 30 givens, `P-HARD17` has 17, and each solution is a genuine solution consistent with every given. Ten repeat solves of `P-HARD17` are byte-identical (determinism). Beyond the procedure, a randomised cross-check against an independently written oracle: **60/60 uniquely-solvable puzzles returned `Solved` with exactly the oracle's grid**, 33 of them requiring real backtracking | **The new `P-SEARCH` clause** — added to TP-200 by this update and therefore not run in the #8 pass; it needs a fixture and one test method in `tests/SudokuSolver.Tests/`. Executed at **#11** (see the re-run trigger below). Plus the standing **MSVC / VS test-project re-execution** (V-1, #23) — the `g++` pass is evidence, not a verdict |
+
+**The coverage gap this section exists to record, and what was done
+about it.** Both TP-200 fixtures solve at `nodesExplored == 1`:
+constraint propagation alone finishes them, and the MRV
+branch/backtrack half of `docs/SDD.md` §1.5 never runs. The Test
+Engineer found this, and it is a genuine hole in the *procedure*, not
+in the requirement or the code — TP-200 asks about the answer, not the
+route, so it passed correctly. Two consequences were confirmed by
+mutation, on a throwaway copy of the tree:
+
+| Mutation of `Solver.cpp` | TP-200 as it stood |
+| --- | --- |
+| Row elimination dropped from `assign` | **FAILS** — the procedure is falsifiable |
+| Candidates tried in **descending** digit order | passes — undetectable |
+| Hidden singles removed entirely | passes, ~5× slower |
+| Box elimination dropped | passes — the hidden-single sweep re-imposes it |
+
+The fix is **additive, and this test iteration is not cancelled**: the
+#8 pass verified TP-200 as written and stands. TP-200 now carries a
+third case, `P-SEARCH` (§6.1) — dug from `S-EASY`, 25 givens, uniquely
+solvable, and *not* solvable by naked and hidden singles alone — with
+an added assertion that `nodesExplored() > 1`. Because it was dug from
+`S-EASY` its expected output is a fixture that already exists and is
+already independently verified, so the new clause adds no new expected
+value to get wrong. Verified against the delivered solver at `c662bb1`
+before being written here: `P-SEARCH` → `Solved`, grid equal to
+`S-EASY`, 5 nodes. **The code is not suspected and needs no change** —
+only the test project gains a fixture and a method.
+
+**Ascending candidate order remains unevidenced by test.** It is
+normative in §1.5 because RTVM-202 and RTVM-401 depend on "the first
+solution found" being reproducible, it is implemented as written
+(`Solver.cpp`), and it has been confirmed by reading — but no procedure
+here can detect it, since a uniquely-solvable puzzle has the same
+answer whatever order the digits are tried in. **TP-202 (#12) is the
+only place it becomes provable**, and that is stated so nobody later
+mistakes RTVM-200's pass for evidence of it. `P-SEARCH` does not close
+this either: it proves a branch was taken, not which branch was taken
+first.
+
+**Re-run trigger.** TP-200's `P-SEARCH` clause is executed at **#11**
+([RTVM-201]) — the next issue to touch `tests/SudokuSolver.Tests/
+SolverTests.cpp`, already scoped as tests against existing code, so the
+clause costs one fixture and one method there rather than a new build
+of the solver. If #12 reaches the file first, either may carry it; what
+must not happen is RTVM-200 reaching Verified without it. RTVM-200
+therefore stays **In Test** after CI/CD reports the trunk SHA, on two
+counts (the `P-SEARCH` clause and V-1), per §9.2's two-part rule.
+
+**Not claimed by this issue, and deliberately so.** The zero- and
+two-solution exits of the same search loop already map to `NoSolution`
+and `SolvedNotUnique`, because they are exits of one search rather than
+separate code — but RTVM-201 (#11) and RTVM-202 (#12) keep their own
+procedures and their own status. Those two issues are correctly scoped
+as **tests against existing code**, not as further implementation.
+Likewise the §2.6 poll shape landed early and was smoke-checked
+(`pollNodeInterval == 0` disables polling with no hang and no division;
+`onPoll` returning `false` yields `Outcome::Aborted`), but **RTVM-203
+and RTVM-204 are not verified by that** — #16 owns them. RTVM-500 is
+untouched: for reference only, at `-O0`, `P-EASY` 67 µs, `P-HARD17`
+311 µs, `P-BLANK` 1.5 ms and Inkala/Platinum-Blonde-class adversarial
+grids 2–26 ms, i.e. four orders of magnitude inside the 10 s budget —
+but #15 proves it on the §6.3 reference machine, and margins measured
+on a Linux runner are not that. `options.minSolveDuration` is carried
+through the API and honoured by nobody yet (`TODO(RTVM-507)`), which is
+#13's, and is what keeps that issue additive.
+
+**§9.5's re-run trigger has *not* fired.** It names the later of #8 and
+#9 for RTVM-101's and RTVM-106's end-to-end clauses; #9 is still
+`status:on-hold`, and the built console binary still exits `1` with
+empty stdout *and* empty stderr on a valid `P-EASY` — that is the stub
+state of the output layer, not a solver regression. Those clauses stay
+outstanding and return at #9.
+
+**SDD §1.5's node-state size is reconciled here, no defect.** §1.5
+specified undo by restoring a saved copy of the node state at "≈216
+bytes"; the delivered node also carries a `std::array<Digit,
+kCellCount>` of assigned digits, so ≈300 bytes. The reason is sound and
+was declared by the Software Engineer rather than discovered: a
+one-bit-per-digit candidate mask cannot distinguish *assigned* from
+*one candidate remaining, not yet propagated*, and the report has to
+emit digits. At maximum depth 81 that is ~50 KB of stack — still a
+rounding error against RTVM-500, and no observable behaviour changes.
+`docs/SDD.md` §1.5 is updated to describe what was delivered, so the
+design record and the code agree; this is a documentation
+reconciliation, not a change request.
+
+**Documentation drift, still open, carried forward to #9/#11.**
+`src/SudokuCore/Grid.h` still comments that the 1-based `r<row>c<col>`
+form "is produced only in the output layer", which §7 **I-16** has
+superseded. #8 did not open `Grid.h`, so it is passed on again rather
+than changed on trunk outside a feature branch. Behaviour is unaffected
+either way, and no test hangs off it.

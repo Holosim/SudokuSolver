@@ -22,7 +22,10 @@ and is not one — it is the console layer's stub state.
 (`parseGrid` + `toCompactString`), and say in the comment which half was
 deferred rather than reporting the stub as a failure. `docs/RTVM.md` §9.5
 carries the re-run trigger: whoever closes the later of #8 and #9 should
-expect RTVM-101 and RTVM-106 back. Do **not** re-litigate these clauses on
+expect RTVM-101 and RTVM-106 back. **Status 2026-08-13: #8 (solver) has
+passed, #9 is still `status:on-hold`, so the trigger has NOT fired** — the
+built console binary still exits `1` with empty stdout and stderr on
+`P-EASY`. Re-check #9 before assuming the end-to-end clauses are runnable. Do **not** re-litigate these clauses on
 a regression pass — they are recorded as outstanding, not as unknown. See
 [[no-windows-runner]] for why the MSVC half is also deferred.
 

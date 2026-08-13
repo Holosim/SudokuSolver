@@ -191,7 +191,13 @@ State, per search node:
 
 - `std::array<CandidateMask, kCellCount> candidates` — one bit per digit.
 - `std::array<CandidateMask, kGridSize> rowUsed, colUsed, boxUsed`.
+- `std::array<Digit, kCellCount> cells` — the digits assigned so far.
 - `int unsolvedCount`.
+
+The `cells` array is not redundant with `candidates`, and the reason is
+worth keeping: a one-bit-per-digit mask cannot distinguish *assigned* from
+*one candidate remaining but not yet propagated*, and the report has to emit
+digits. Recorded as delivered at [RTVM-200] (RTVM §9.7).
 
 Propagation applied to fixpoint before every branch:
 
@@ -210,10 +216,11 @@ Search:
   — it makes "the first solution found" (RTVM-202, RTVM-401) reproducible run
   to run, which a test procedure needs even though TP-202 is careful not to
   assert *which* of the two solutions appears.
-- Undo by restoring a saved copy of the node state (≈216 bytes; maximum depth
-  81). Copying is chosen over incremental undo bookkeeping deliberately: it is
-  a rounding error against the budget and it is the version a maintaining
-  engineer can read (`ST-2`, `D-4`).
+- Undo by restoring a saved copy of the node state (≈300 bytes as delivered;
+  maximum depth 81, so ~50 KB of stack in the worst case). Copying is chosen
+  over incremental undo bookkeeping deliberately: it is a rounding error
+  against the budget and it is the version a maintaining engineer can read
+  (`ST-2`, `D-4`).
 
 Uniqueness (RTVM-202, §7 I-8):
 
