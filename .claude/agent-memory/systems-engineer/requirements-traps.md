@@ -213,3 +213,36 @@ one unprompted here; write it into the §9 ledger so it is the standing
 expectation rather than a habit. One recorded non-defect worth keeping:
 `!std::is_default_constructible_v<T>` is evaluated from outside the class, so
 adding a *private* default ctor does not trip it — only a public one.
+
+## A correctness fixture can pass without exercising the algorithm it verifies (2026-08-13)
+
+Both TP-200 fixtures (`P-EASY`, `P-HARD17`) fell to constraint propagation
+alone — `nodesExplored == 1`. The procedure passed honestly and verified the
+requirement, but the MRV branch/backtrack half of the design never executed.
+Mutation confirmed it: descending candidate order, and hidden singles removed
+entirely, both still passed. The Test Engineer found this and correctly
+reported it as coverage, not as a failure.
+
+**Why:** a requirement about the *answer* ("produces the unique solution") says
+nothing about the *route*, so fixtures chosen for being canonical or difficult
+can systematically miss the branch the design's margin depends on. The famous
+hard fixture is the worst offender — 17-clue puzzles are hard for *humans*, not
+for a propagator.
+
+**How to apply:** when a requirement is verified by output equality but the SDD
+specifies an algorithm with a distinguishable slow path, add a fixture chosen
+for *path coverage* and an assertion on the observable that proves the path ran
+(here `nodesExplored() > 1`). Assert the **inequality, not the count** — the
+count is an implementation property and pinning it fails on any legitimate
+optimisation. Cheapest construction: dig the new fixture out of a solution
+fixture that already exists, so its expected output is an already-verified
+value and the fixture adds no new expected data to get wrong. Machine-verify
+three properties (unique solution; solution equals the existing fixture;
+propagation alone gets stuck) *and* run it against the delivered binary before
+writing the clause, so you never specify a clause the shipped code fails.
+
+**Do not cancel the passing test iteration for this.** The cancel rule is for
+an ambiguity whose resolution needs a code change; a coverage clause that needs
+only a test fixture is additive. Record it as an outstanding clause with a
+re-run trigger naming the next issue that already opens the same test file
+(#11 here), and say in the ledger that the code is not suspected.
