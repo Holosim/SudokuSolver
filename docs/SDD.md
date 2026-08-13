@@ -375,9 +375,17 @@ Notes that matter for the later tier:
   `static_assert` makes that fail loudly at compile time rather than silently
   truncating.
 - Rows and columns are **0-based internally** and rendered **1-based** as
-  `r<row>c<col>` only in the output layer (RTVM-105). The conversion happens in
-  exactly one place, in `Messages`. Off-by-one in a diagnostic is the cheapest
-  possible way to fail TP-103, TP-104 and TP-302 at once.
+  `r<row>c<col>` (RTVM-105). The conversion happens in exactly one place —
+  `cellRefFromZeroBased()` in `InputFault.h` (§2.5) — which is called **where a
+  fault is constructed**, not where it is rendered. A `CellRef` inside an
+  `InputFault` is therefore already 1-based, and `Messages` prints it with no
+  arithmetic of its own. Off-by-one in a diagnostic is the cheapest possible way
+  to fail TP-103, TP-104 and TP-302 at once, which is why the `+1` is spelled
+  once and never open-coded. *Reworded 2026-08-13 (issue #7): this clause
+  previously said the conversion happened "in `Messages`", which contradicted
+  §2.5's 1-based `CellRef`. Ruled in `docs/RTVM.md` §7 **I-16** in favour of
+  §2.5 — the reading the delivered parser and TP-302 were already built and
+  passed under.*
 
 ### 2.4 Data schema — the outcome type (RTVM-300)
 
@@ -390,6 +398,11 @@ enum class Outcome : std::uint8_t {
     Solved, SolvedNotUnique, InvalidInput, NoSolution, Aborted
 };
 
+// The populated-field invariant table below, stated once and answerable from
+// the outcome alone — a caller never probes a report to discover it.
+[[nodiscard]] bool outcomeCarriesGrid(Outcome outcome);
+[[nodiscard]] bool outcomeCarriesFault(Outcome outcome);
+
 class SolveReport {
 public:
     static SolveReport solved(Grid g, std::uint64_t nodes);
@@ -399,9 +412,12 @@ public:
     static SolveReport aborted(std::uint64_t nodes);
 
     [[nodiscard]] Outcome outcome() const;
-    [[nodiscard]] const Grid& grid() const;            // precondition: has a grid
+    [[nodiscard]] bool hasGrid() const;
+    [[nodiscard]] const Grid& grid() const;            // precondition: hasGrid()
+    [[nodiscard]] bool hasFault() const;
     [[nodiscard]] const InputFault& fault() const;     // precondition: InvalidInput
     [[nodiscard]] std::uint64_t nodesExplored() const;
+    [[nodiscard]] bool hasCompleteGrid() const;        // RTVM-301
 private:
     explicit SolveReport(Outcome o);   // private; no default ctor, so no "none"
     Outcome m_outcome;
@@ -424,6 +440,40 @@ than a thing tests have to catch. The populated-field invariant:
 | `NoSolution` | — | — | `2` |
 | `Aborted` | — | — | `3` |
 
+The first three columns of that table are `outcomeCarriesGrid` /
+`outcomeCarriesFault`; `hasGrid()` and `hasFault()` must agree with them for
+every report, and TP-300 asserts exactly that. The **exit-code column is
+deliberately not represented in the core** — RTVM-405 maps outcomes to exit
+codes in the console layer (§2.8), and the core knows nothing about process
+exit (RTVM-903).
+
+`hasCompleteGrid()` is RTVM-301 stated as a predicate: true only when the
+report carries a grid in which every one of `kCellCount` cells holds a digit
+`1..kGridSize`. `Grid::isComplete()` answers only the "no empty cell" half, and
+only a grid-carrying outcome is required to answer both, so the check that
+matches the requirement lives on the report, where the outcome is known. The
+`solved()` / `solvedNotUnique()` factories are the solver's promise that it
+holds; this is how the promise is checked rather than assumed (TP-301).
+
+**The closed set is closed by the build, not by discipline.** A `static_assert`
+pins each enumerator to its numeric value, so *inserting* a member fails to
+compile rather than silently renumbering an outcome another translation unit
+was compiled against; *appending* one is caught by the two `outcomeCarries*`
+switches, which carry no `default` label (MSVC C4062 at /W4, gcc/clang
+`-Wswitch`). Two further `static_assert`s state the "never none" half as a
+property of the type: `!std::is_default_constructible_v<SolveReport>` and
+`!std::is_constructible_v<SolveReport, Outcome>`. "Never two" needs no
+assertion — the outcome is a single scalar member. Note that
+`is_default_constructible` is evaluated from outside the class, so it catches a
+**public** default constructor only; that is the intended scope, since a
+private one cannot produce an outcome-less report anyway.
+
+*Adopted as specified 2026-08-13 (issue #7): `outcomeCarriesGrid`,
+`outcomeCarriesFault`, `hasGrid`, `hasFault` and `hasCompleteGrid` were added
+at [RTVM-300] and flagged for adoption, the same route `ParseResult` and
+`toCompactString` took. No rename and no signature change — this section now
+matches `src/SudokuCore/SolveReport.h` as delivered.*
+
 ### 2.5 Data schema — structured input fault (RTVM-302)
 
 RTVM-302 requires the fault to be **data**, not a pre-formatted sentence, so
@@ -442,7 +492,19 @@ enum class FaultKind : std::uint8_t {
     SourceUnreadable   // populated by the CLI, not the parser
 };
 
-struct CellRef { int row = 0; int col = 0; };   // 1-based; 0 == not applicable
+struct CellRef {
+    int row = 0;                                   // 1-based; 0 == not applicable
+    int col = 0;
+    [[nodiscard]] constexpr bool isApplicable() const noexcept;   // row && col
+};
+
+[[nodiscard]] constexpr bool operator==(const CellRef&, const CellRef&) noexcept;
+[[nodiscard]] constexpr bool operator!=(const CellRef&, const CellRef&) noexcept;
+
+// The one place the 0-based internal coordinates of §2.3 become the 1-based
+// form a fault carries. Out of range == not applicable, never a wrapped cell
+// name (RTVM-505).
+[[nodiscard]] constexpr CellRef cellRefFromZeroBased(int row, int col) noexcept;
 
 struct InputFault {
     FaultKind     kind{};
@@ -456,6 +518,25 @@ struct InputFault {
     std::uint32_t systemError = 0;       // SourceUnreadable only (GetLastError)
 };
 ```
+
+`CellRef` is **1-based**, and it becomes 1-based at construction: every
+fault-producing path builds its cells through `cellRefFromZeroBased()` and
+nothing else adds one. `Messages` renders `r{row}c{col}` straight from the
+fault and performs no arithmetic — see §2.3 and `docs/RTVM.md` §7 **I-16**,
+which rules the contradiction between the two clauses as they were originally
+worded. `isApplicable()` is how the output layer asks whether a fault names a
+cell at all, so no caller has to know that `0` is the sentinel; equality exists
+so a test can assert a cell in one line. An out-of-grid coordinate yields a
+*not applicable* reference rather than a nonsense cell name, because RTVM-505
+requires that no input path produce a crash or a garbage diagnostic.
+
+**No prose, enforced structurally.** Every member of `InputFault` is a
+coordinate, a code, a count or a single character; there is deliberately no
+`message`, `description` or `detail` string. The one `std::string` is `path`,
+which is a filesystem path echoed back to the user and is populated only for
+`SourceUnreadable`. TP-302 asserts this by naming every member in a structured
+binding, so adding a wording field fails to compile rather than failing a
+review.
 
 `InputFault` is a pure data type and lives in the core, but it performs no I/O:
 the `SourceUnreadable` case is constructed by the console layer (RTVM-009,

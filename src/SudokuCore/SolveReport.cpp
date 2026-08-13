@@ -25,6 +25,38 @@ const InputFault& emptyFault()
 
 } // namespace
 
+// Both switches are exhaustive and carry no default label on purpose: a sixth
+// outcome appended to the enum makes the compiler point at these two functions
+// (MSVC C4062 at /W4, gcc/clang -Wswitch) instead of silently defaulting to
+// "carries nothing". Together they are the docs/SDD.md 2.4 invariant table.
+bool outcomeCarriesGrid(Outcome outcome)
+{
+    switch (outcome) {
+    case Outcome::Solved:
+    case Outcome::SolvedNotUnique:
+        return true;
+    case Outcome::InvalidInput:
+    case Outcome::NoSolution:
+    case Outcome::Aborted:
+        return false;
+    }
+    return false;   // unreachable for a valid Outcome; RTVM-505 leaves nothing open
+}
+
+bool outcomeCarriesFault(Outcome outcome)
+{
+    switch (outcome) {
+    case Outcome::InvalidInput:
+        return true;
+    case Outcome::Solved:
+    case Outcome::SolvedNotUnique:
+    case Outcome::NoSolution:
+    case Outcome::Aborted:
+        return false;
+    }
+    return false;   // unreachable for a valid Outcome; RTVM-505 leaves nothing open
+}
+
 SolveReport::SolveReport(Outcome o)
     : m_outcome(o)
 {
@@ -90,6 +122,22 @@ bool SolveReport::hasFault() const
 const InputFault& SolveReport::fault() const
 {
     return m_fault.has_value() ? *m_fault : emptyFault();
+}
+
+bool SolveReport::hasCompleteGrid() const
+{
+    if (!m_grid.has_value()) {
+        return false;
+    }
+    for (int row = 0; row < kGridSize; ++row) {
+        for (int col = 0; col < kGridSize; ++col) {
+            const int digit = static_cast<int>(m_grid->at(row, col));
+            if (digit < 1 || digit > kGridSize) {
+                return false;
+            }
+        }
+    }
+    return true;
 }
 
 std::uint64_t SolveReport::nodesExplored() const
