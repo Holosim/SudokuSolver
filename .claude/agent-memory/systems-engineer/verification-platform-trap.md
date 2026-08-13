@@ -100,6 +100,15 @@ Confirmed a third time on #8 (2026-08-13): `compare/<merge-sha>...main` and
 Run both — the branch-tip comparison is the one that actually answers "is trunk
 byte-identical to the tree the PASS was taken on", and it costs one extra call.
 
+**Take the measurement *after* your own push, not before.** On #8 I quoted a
+three-file list in the hand-off; by the time the Test Engineer re-derived it, it
+was five — the two extras were my own commit (`docs/RTVM.md` + a memory file),
+pushed after the comment was drafted. The conclusion held, but the figure was
+stale by one commit at the moment it was written. Either push first and then
+measure, or state the comparison as "excluding this run's own doc commit".
+Corollary in the other direction: **re-derive any scope figure handed to you**;
+that is what caught this.
+
 ### The Commit(s) column is mine to write, not CI/CD's (2026-08-13, #8)
 
 My #8 hand-off said "Commit(s) is left blank for CI/CD to fill". CI/CD declined
@@ -154,6 +163,14 @@ the Systems Engineer's own doc edit, which goes straight to `main` (the
 reported a trunk SHA above you, you are in the terminus case. Write the
 regression result as a positive result ("the merge disturbed nothing", with the
 measured `compare` file list), keep the statuses where §9.2 puts them, and close.
+
+Applied again on #8 (2026-08-13, §9.7.2). I had started down the fast path —
+cut an `issue-8` branch for the close-out edit and drafted a CI/CD hand-off —
+before this entry corrected it. Worth stating why the fast path is actively
+wrong here rather than merely redundant: it would have merged a docs-only branch
+to trunk, and CI/CD's own rule ("a trunk merge needs regression testing") would
+then have produced a *third* regression round trip over a change containing no
+`src/`, `tests/` or `samples/` path. The terminus case exists to stop that loop.
 
 ## Two verification conventions worth carrying to the next project
 
