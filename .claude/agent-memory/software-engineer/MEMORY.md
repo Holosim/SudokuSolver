@@ -7,6 +7,8 @@
 ## Platform-specific notes
 
 - [No MSVC in the agent runner](no-msvc-in-agent-runner.md) — runs are Linux/g++; how to compile-check a VS 2022 deliverable anyway.
+- [Console layer platform seam](console-layer-platform-seam.md) — three functions in `StdinChannel.cpp` keep the Windows deliverable runnable on the Linux agent.
+- [Blocking is allowed before the solve](blocking-is-allowed-before-the-solve.md) — why `readLineBlocking` exists and where the RTVM-006/008 ban actually bites.
 - [CppUnitTestFramework and the static CRT](msvc-cppunittest-crt.md) — why a `/MT` exe forces the test project to compile core sources itself.
 
 ## Reusable solutions
