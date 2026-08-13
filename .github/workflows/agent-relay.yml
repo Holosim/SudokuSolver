@@ -132,6 +132,12 @@ jobs:
       - name: Handle known infrastructure failures, or fail normally
         if: steps.run_claude.outcome == 'failure'
         run: |
+          # Brief pause: querying this run's own log immediately after the
+          # previous step finished has, at least once, come back empty even
+          # for a run that clearly did produce output -- possibly a lag
+          # between a step finishing and its log being available via the
+          # API. Cheap hedge against that either way.
+          sleep 5
           RUN_LOG="$(gh run view ${{ github.run_id }} --log 2>/dev/null || true)"
 
           notify() {
@@ -160,7 +166,7 @@ jobs:
             exit 0
           fi
 
-          if echo "$RUN_LOG" | grep -qi "authentication_error"; then
+          if echo "$RUN_LOG" | grep -qiE "authentication_error|authentication_failed|API key is invalid"; then
             notify "$(cat <<'EOF'
           **This run could not execute — the Anthropic API rejected the key as invalid.**
 
