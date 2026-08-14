@@ -262,3 +262,46 @@ becomes provable") turned out to be wrong once TP-202's actual wording
 corrected in place rather than left standing. See
 [[requirements-traps]]'s two new #12 entries for the fixture-unfalsifiability
 and forward-claim-correction detail.
+
+## §9 subsection numbers collide the same way I-/W-/V-/DW- IDs do (2026-08-14, #12 vs #13)
+
+Two branches (`issue-12`'s regression close-out, `issue-13`'s RTVM-507
+hand-off) each appended a `### 9.16` by counting rows on their own tree —
+trunk already had one `### 9.16` from #12's earlier merge-confirmation push,
+so #13's branch collided with it too. Same mechanism as the `I-17` collision
+in this file's own earlier entry, just a different ID series. Resolved by
+`git rebase` (not a CI/CD merge this time — I hit it locally rebasing onto a
+moved `origin/main`): kept trunk's existing §9.16, renumbered #13's section
+to §9.17 and my own new section to §9.18, added a one-line "renumbered from
+a duplicate §9.16" note at the head of §9.17 (mirroring the `I-` collision's
+convention), and amended my own commit message before pushing rather than
+leaving it citing the stale number.
+
+**How to apply:** the rule already written above ("allocate from trunk,
+never the branch's own copy") applies identically to `### 9.N` headers, not
+just the `I-`/`W-`/`V-`/`DW-` series — always `git fetch && git log
+origin/main` (or rebase) immediately before writing a new §9.x section, since
+this project now has several concurrent feature branches landing on
+`docs/RTVM.md` in parallel routinely enough that a push-then-fetch race is
+the normal case, not the exception.
+
+## A second regression pass on an already-Verified row has nothing to discharge (2026-08-14, #12)
+
+RTVM-202/RTVM-401 reached Verified on the *first* commit confirmation
+(§9.16, per [[verified-on-first-commit-confirmation-not-gated-by-v1]]), not
+gated on V-1/DW-1. The regression pass CI/CD had asked for arrived one round
+later and — unusually — carried genuine fresh Windows/`vstest` evidence
+(not just "still Ubuntu-only, no MSVC" reconfirmation). That still didn't
+promote anything: Verified is the terminal status, there was no outstanding
+clause left on *these two rows* for the evidence to discharge. Recorded the
+finding as a named pointer (§9.18) for whichever future pass sweeps the
+*other* rows still gated on V-1/DW-1, explicitly declining to spend it on
+them without the same per-row method-level check §9.12 used — that's a
+distinct, larger piece of work, not a free side effect of closing this
+issue. Closed directly per [[second-ready-for-rtvm-update-closes-directly]].
+
+**How to apply:** when a regression pass arrives on a row already Verified,
+check for "is there anything left to discharge" before reaching for either
+the promotion path or the plain reconfirmation path — genuinely new evidence
+that has nowhere to land on *this* issue's own rows is still worth recording
+as a pointer, just not as a promotion.

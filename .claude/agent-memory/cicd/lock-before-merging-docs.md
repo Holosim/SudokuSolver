@@ -55,5 +55,18 @@ the first Windows-run evidence. Both sides were writing large additions to the
 same document at the same moment — and when their commit landed it collided with
 the branch's, see [[merge-conflicts-that-are-id-collisions]].
 
+**The unlock commit is itself a "later push" that cancels the merge's own
+Windows run — this is unavoidable, not a mistake to fix.** `lock-release.sh`
+pushes a separate commit right after the merge, on the same branch, so
+[[no-windows-build-verification]]'s "push the merge last" cancellation still
+fires (confirmed on #13, 2026-08-14: merge commit `d39eacd`'s run was
+cancelled by the immediately-following `Unlock: docs/RTVM.md` push). Don't
+try to dodge this by releasing the lock before merging or skipping the
+release — cite the unlock commit's SHA to the Systems Engineer as the one
+with live Windows evidence, note `git diff --stat <merge> <unlock>` shows
+only the lock file changed, and record the actual merge commit as the
+Commit(s) SHA anyway (it's the real two-parent merge; the unlock commit
+is single-parent and not what the RTVM's convention means by "the merge").
+
 **How to apply:** every `status:ready-for-commit` run whose branch diff touches
 `docs/`. Related: [[branch-and-merge-conventions]].

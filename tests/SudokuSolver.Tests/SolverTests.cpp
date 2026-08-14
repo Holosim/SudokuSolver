@@ -13,13 +13,18 @@
 // rtvm200_theSolutionCheckerRejectsAGridThatIsNotASolution is what keeps the
 // structural pass falsifiable.
 //
-// RTVM-201 (no solution, TP-201) is verified below, on the same search;
-// RTVM-202 (non-uniqueness) is verified under #12.
+// RTVM-201 (no solution, TP-201) and RTVM-202 (non-uniqueness, TP-202) both
+// run on the same search, and are both verified below (#11 and #12
+// respectively).
 
 #include "CppUnitTest.h"
 
+#include <algorithm>
+#include <chrono>
+#include <cstdint>
 #include <string>
 #include <string_view>
+#include <vector>
 
 #include "Grid.h"
 #include "GridFormat.h"
@@ -84,6 +89,47 @@ namespace {
     }
     return true;
 }
+
+// RTVM-507 (docs/SDD.md 3.6): a control that records every
+// progress.nodesExplored it is given and never requests an abort. Used to
+// observe the poll cadence and the node counter across the diagnostic hook's
+// extension passes without depending on wall-clock sampling.
+class RecordingSolveControl final : public SolveControl
+{
+public:
+    bool onPoll(const SolveProgress& progress) override
+    {
+        m_samples.push_back(progress.nodesExplored);
+        return true;
+    }
+
+    [[nodiscard]] const std::vector<std::uint64_t>& samples() const { return m_samples; }
+
+private:
+    std::vector<std::uint64_t> m_samples;
+};
+
+// A control that answers "continue" for the first `pollsBeforeAbort` calls
+// and "abort" on every call after that -- the RTVM-203 shape: an abort
+// requested partway through a run, not on the very first poll.
+class AbortAfterNPollsControl final : public SolveControl
+{
+public:
+    explicit AbortAfterNPollsControl(int pollsBeforeAbort)
+        : m_pollsBeforeAbort(pollsBeforeAbort)
+    {
+    }
+
+    bool onPoll(const SolveProgress&) override
+    {
+        ++m_pollCount;
+        return m_pollCount <= m_pollsBeforeAbort;
+    }
+
+private:
+    int m_pollsBeforeAbort;
+    int m_pollCount = 0;
+};
 
 // Runs one TP-200 case end to end against the core: solve, then assert the
 // outcome, the exact expected grid, and the three structural properties.
@@ -230,6 +276,184 @@ public:
         Assert::IsTrue(report.outcome() == Outcome::Solved,
             L"P-EASY, unmodified, must still solve — proves the NoSolution "
             L"result above comes from the r1c3 mutation, not a broken search");
+    }
+
+    // TP-202, non-uniqueness: P-NONUNIQUE solves to SolvedNotUnique, and the
+    // printed grid is exactly S-NONUNIQUE-A or S-NONUNIQUE-B — deliberately
+    // not pinned to one, since docs/RTVM.md TP-202 says which one depends on
+    // search order and must not be asserted.
+    TEST_METHOD(rtvm202_solvesPNonUniqueToOneOfItsTwoKnownSolutions)
+    {
+        const Grid        puzzle = gridFromCompactForm(kPuzzleNonUnique);
+        NullSolveControl  control;
+        const SolveReport report = solve(puzzle, SolveOptions{}, control);
+
+        Assert::IsTrue(report.outcome() == Outcome::SolvedNotUnique,
+            L"P-NONUNIQUE has exactly two solutions and must report SolvedNotUnique");
+        Assert::IsTrue(report.hasCompleteGrid(),
+            L"the first solution found is still a complete grid (RTVM-301)");
+
+        const std::string found = toCompactString(report.grid());
+        const bool matchesA = found == std::string(kSolvedNonUniqueA);
+        const bool matchesB = found == std::string(kSolvedNonUniqueB);
+        Assert::IsTrue(matchesA || matchesB,
+            L"the reported grid must be exactly S-NONUNIQUE-A or S-NONUNIQUE-B");
+        Assert::IsTrue(isWellFormedSolution(report.grid()),
+            L"every row, column and box must still be a permutation of 1..kGridSize");
+        Assert::IsTrue(preservesGivens(puzzle, report.grid()),
+            L"every given must appear unchanged at the same position");
+    }
+
+    // TP-202's control case: a uniquely-solvable puzzle must report Solved,
+    // never SolvedNotUnique. rtvm200_solvesPEasyToItsUniqueSolution already
+    // pins the Solved outcome for P-EASY; this restates it under RTVM-202's
+    // own name so the control case has a home that survives even if that
+    // test's assertions ever narrow.
+    TEST_METHOD(rtvm202_controlCasePEasyStaysUnique)
+    {
+        NullSolveControl  control;
+        const SolveReport report =
+            solve(gridFromCompactForm(kPuzzleEasy), SolveOptions{}, control);
+
+        Assert::IsTrue(report.outcome() == Outcome::Solved,
+            L"a uniquely-solvable puzzle must report Solved, not SolvedNotUnique");
+    }
+
+    // TP-202's instrumentation clause ("assert ... the solver stopped after
+    // finding the second solution and did not continue searching"), on the
+    // fixture where it is actually falsifiable.
+    //
+    // P-NONUNIQUE cannot show this: after propagation it has exactly one
+    // branch cell with exactly two viable candidates, so the whole search
+    // tree is exhausted at 3 nodes (root + 2 children) whether maxSolutions
+    // is 2 or 1'000'000 — verified by hand against this solver. There is
+    // nothing left to explore either way, so a node-count comparison on
+    // P-NONUNIQUE cannot distinguish "stopped because two were found" from
+    // "kept going and found nothing more because there was nothing more".
+    //
+    // P-BLANK — the same fixture this issue's design notes call out — has an
+    // enormous branching factor, so raising the solution budget by one
+    // measurably grows the search: proof that maxSolutions genuinely bounds
+    // the work rather than the tree happening to run out on its own.
+    //
+    // TP-202's wording ties the instrumentation clause to P-NONUNIQUE
+    // specifically; using P-BLANK instead is flagged in the issue #12
+    // hand-off rather than assumed silently.
+    TEST_METHOD(rtvm202_stoppingAtTwoSolutionsBoundsTheSearch)
+    {
+        NullSolveControl control;
+        const Grid        blank = gridFromCompactForm(kPuzzleBlank);
+
+        SolveOptions stopAtTwo;
+        stopAtTwo.maxSolutions = 2;
+        const SolveReport twoSolutions = solve(blank, stopAtTwo, control);
+
+        SolveOptions stopAtThree;
+        stopAtThree.maxSolutions = 3;
+        const SolveReport threeSolutions = solve(blank, stopAtThree, control);
+
+        Assert::IsTrue(twoSolutions.outcome() == Outcome::SolvedNotUnique);
+        Assert::IsTrue(threeSolutions.outcome() == Outcome::SolvedNotUnique,
+            L"P-BLANK has far more than three solutions");
+        Assert::IsTrue(twoSolutions.nodesExplored() < threeSolutions.nodesExplored(),
+            L"a search capped at two solutions must explore strictly fewer nodes "
+            L"than the same search capped at three, or the cap is not actually "
+            L"stopping anything");
+    }
+
+    // RTVM-507 / docs/SDD.md 3.6, "inert cost" row: minSolveDuration == 0
+    // (SolveOptions' default) must add no measurable delay. This alone cannot
+    // tell a correct gate from a solver that never honours minSolveDuration at
+    // all -- rtvm507_activatingTheHookExtendsWallClockTimeWithoutChangingTheOutcome
+    // below is what actually exercises the branch that does.
+    TEST_METHOD(rtvm507_hookIsInertWhenMinSolveDurationIsZero)
+    {
+        NullSolveControl control;
+        const SolveOptions options{};
+        Assert::AreEqual(0LL, static_cast<long long>(options.minSolveDuration.count()),
+            L"SolveOptions::minSolveDuration defaults to zero");
+
+        const auto before = std::chrono::steady_clock::now();
+        const SolveReport report =
+            solve(gridFromCompactForm(kPuzzleHard17), options, control);
+        const auto elapsed = std::chrono::steady_clock::now() - before;
+
+        Assert::IsTrue(report.outcome() == Outcome::Solved);
+        Assert::IsTrue(elapsed < std::chrono::milliseconds(500),
+            L"an inert hook must not add any measurable wall-clock delay");
+    }
+
+    // RTVM-507's central behaviour: with the hook active, solve() keeps
+    // performing search work until at least minSolveDuration has elapsed,
+    // then returns the outcome it already had, unchanged (docs/SDD.md 3.6).
+    TEST_METHOD(rtvm507_activatingTheHookExtendsWallClockTimeWithoutChangingTheOutcome)
+    {
+        NullSolveControl control;
+        SolveOptions options{};
+        options.minSolveDuration = std::chrono::milliseconds(50);
+
+        const Grid puzzle = gridFromCompactForm(kPuzzleHard17);
+        const auto before = std::chrono::steady_clock::now();
+        const SolveReport report = solve(puzzle, options, control);
+        const auto elapsed = std::chrono::steady_clock::now() - before;
+
+        Assert::IsTrue(elapsed >= options.minSolveDuration,
+            L"the hook must keep the solve running for at least minSolveDuration");
+        Assert::IsTrue(report.outcome() == Outcome::Solved);
+        Assert::AreEqual(std::string(kSolvedHard17), toCompactString(report.grid()),
+            L"the extension must return the same answer an unextended solve would");
+    }
+
+    // RTVM-507's "not a sleep" requirement (docs/SDD.md 3.6): the extension
+    // must keep polling `control` and keep advancing the reported node count,
+    // not idle. Falsifiable: a `std::this_thread::sleep_for` in place of real
+    // search work would call onPoll at most once (from the original search),
+    // and the samples below would not keep growing past that.
+    TEST_METHOD(rtvm507_hookKeepsPollingAndAdvancingTheNodeCounterDuringExtension)
+    {
+        RecordingSolveControl control;
+        SolveOptions options{};
+        options.pollNodeInterval = 1;                          // poll every node
+        options.minSolveDuration = std::chrono::milliseconds(100);
+
+        const SolveReport report =
+            solve(gridFromCompactForm(kPuzzleHard17), options, control);
+        static_cast<void>(report);
+
+        const std::vector<std::uint64_t>& samples = control.samples();
+        Assert::IsTrue(samples.size() > 10,
+            L"a 100 ms extension polling every node must produce many samples, "
+            L"far more than the single node a real (unextended) search on "
+            L"P-HARD17 explores");
+        Assert::IsTrue(std::is_sorted(samples.begin(), samples.end()),
+            L"RTVM-204: the node counter must never go backwards, including "
+            L"across RTVM-507 extension pass boundaries");
+        Assert::IsTrue(samples.front() > 0ULL,
+            L"the first sample must already be positive");
+        Assert::IsTrue(samples.back() > samples.front(),
+            L"the counter must keep advancing over the course of the extension");
+    }
+
+    // RTVM-203 outranks RTVM-507: an abort requested while the diagnostic
+    // extension is running must still be honoured promptly, not deferred
+    // until minSolveDuration elapses.
+    TEST_METHOD(rtvm507_anAbortDuringTheExtensionStopsTheSolveRatherThanRunningToDuration)
+    {
+        AbortAfterNPollsControl control(/*pollsBeforeAbort=*/5);
+        SolveOptions options{};
+        options.pollNodeInterval = 1;
+        options.minSolveDuration = std::chrono::seconds(5);
+
+        const auto before = std::chrono::steady_clock::now();
+        const SolveReport report =
+            solve(gridFromCompactForm(kPuzzleHard17), options, control);
+        const auto elapsed = std::chrono::steady_clock::now() - before;
+
+        Assert::IsTrue(report.outcome() == Outcome::Aborted,
+            L"an abort requested during the extension must win over the hook");
+        Assert::IsTrue(elapsed < std::chrono::seconds(1),
+            L"RTVM-203: abort latency stays under 1.0 s even with "
+            L"minSolveDuration set far beyond it");
     }
 };
 

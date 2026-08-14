@@ -16,6 +16,8 @@
 - [Second ready-for-rtvm-update closes directly](second-ready-for-rtvm-update-closes-directly.md) — a repeat regression-pass handoff that discharges nothing (no promotion) closes the issue outright, no CI/CD round trip; only route to CI/CD when a clause is actually discharged and a row promotes.
 - [No-code measurement still routes to CI/CD](no-code-measurement-still-routes-to-cicd.md) — a measurement-only issue's first Approved→Verified promotion takes the fast path to CI/CD even with a docs-only diff; don't confuse with the repeat-handoff close-directly case.
 - [Commit(s) SHA recorded is the merge commit](commit-sha-recorded-is-the-merge-commit.md) — when CI/CD offers a pre-merge evidence SHA vs. its own `--no-ff` merge SHA, record the merge SHA; verify against prior rows' parent count, don't trust a CI/CD comment's claimed convention at face value.
+- [Verified on first commit confirmation, not gated by V-1](verified-on-first-commit-confirmation-not-gated-by-v1.md) — the first commit-confirmation hand-back promotes straight to Verified even with regression testing still pending; don't hold at In Test the way older precedent did.
+- `rtvm-conventions.md` also covers: §9 subsection numbers collide across branches just like I-/W-/V-/DW- IDs (allocate from trunk); a regression pass on an already-Verified row has nothing to discharge — record fresh evidence as a pointer, not a promotion.
 
 ## Project context
 

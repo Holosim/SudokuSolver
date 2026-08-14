@@ -205,6 +205,38 @@ anywhere. Software Engineer creates it; Test Engineer and CI/CD check
 it out before doing anything else on that issue. Nothing gets merged
 to trunk except by CI/CD, and only once Test Engineer has signed off.
 
+## Comment structure
+
+Every comment carries two fixed elements, regardless of role or
+outcome — not organic habit, a fixed structure, because tooling now
+depends on it and not just readability.
+
+**First line: addressee, then speaker.** `Systems Engineer, Test
+Engineer:` means Test Engineer is speaking *to* Systems Engineer, not
+just introducing itself. (Convention borrowed from Navy watch-standing
+communication — "Conn, Sonar" identifies who needs the attention
+before who's asking for it.) When the primary intended reader is the
+human client rather than another role, use `Client, <Speaker>:`.
+
+**Last line: an explicit, structured next-status line.** This is what
+`stall-recovery.yml` actually parses to recover a stalled hand-off —
+get the format right and recovery is reliable; get it wrong and
+recovery is back to guessing. Exactly one of:
+
+```
+**Next:** `agent:<role-name>`
+```
+for a genuine hand-off,
+```
+**Next:** Continuing — <what happens next, briefly>
+```
+if you're keeping the issue and moving to your own next step, or
+```
+**Next:** Waiting on human reply
+```
+for the one case where nobody should be triggered until the client
+answers.
+
 ## Document locations
 
 Every role's file references these; keep the paths consistent across

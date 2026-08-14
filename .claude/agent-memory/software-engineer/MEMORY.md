@@ -13,6 +13,8 @@
 
 ## Reusable solutions
 
+- [RTVM-507 diagnostic hook](rtvm-507-diagnostic-hook.md) — why the extension reuses one `Search` instance instead of rebuilding it per pass, and the RTVM-203/204 continuity trap that would hide.
+
 - [Parser fault precedence](parser-precedence-reading.md) — why `parseGrid` is three passes, and how the TP-106 interior-space conflict was ruled (§7 I-15).
 - [Contradiction pass and fault wording](contradiction-pass-and-fault-wording.md) — RTVM-104's row-major scan order, box numbering in messages, and what RTVM-102..105/009/403 wording is (and isn't) pinned to.
 - [Making invariants compile-time](making-invariants-compile-time.md) — the enum/static_assert/exhaustive-switch tricks this project uses instead of runtime checks.
@@ -20,6 +22,7 @@
 - [Output layer scope per issue](output-layer-scope-per-issue.md) — SDD §3.3's unit-vs-process TP split; don't write TEST_METHODs for TP-401+.
 - [RTVM-500 needed no code](rtvm-500-no-code-needed.md) — recognising a genuine measurement-only issue, and what to still verify before saying so.
 - [RTVM-506 needed no code](rtvm-506-no-code-needed.md) — static-CRT settings and dumpbin evidence already landed at #5; #14 was a verification pass, not new implementation.
+- [TP-202 instrumentation needs P-BLANK](tp202-instrumentation-needs-p-blank.md) — P-NONUNIQUE's tree is exhausted regardless of the solution cap, so the "did not continue" proof has to run on P-BLANK instead.
 - [PowerShell Mandatory/List gotchas](powershell-mandatory-and-list-gotchas.md) — `return $list` unrolls to `$null`; `Mandatory` rejects empty input; `-RedirectStandardInput 'NUL'` throws on real Windows and can produce false PASSes downstream.
 
 ## Process
