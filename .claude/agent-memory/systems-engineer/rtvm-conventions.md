@@ -204,3 +204,28 @@ rather than editing the older row's prose in place, so the older section
 stays a true record of what was known when it was written. State explicitly
 that the row's own Status/Commit(s) is unchanged, or the next reader assumes
 the discharge implies a promotion.
+
+## A discharge must be checked against which *tree* produced the evidence, not just which rows cite the closing issue (2026-08-14, #24)
+
+#24's harness produced the first genuine `vstest.console.exe`
+discovery-and-execution pass on the project — a "V-1/DW-1 resolved" fact
+that, read carelessly, looks like it should close every In-Test row whose
+sole outstanding item was that clause (by #10, that's five rows plus
+RTVM-400). It doesn't. #24 branched from trunk `62cbb1e` *before* #10
+merged, so its 30-method vstest evidence covers only the 25 methods present
+at `62cbb1e` plus #24's own 5 — not the 23 more methods #10 added on a
+branch #24 never merged. Crediting RTVM-009/102…105/403 from #24's evidence
+would be exactly the mistake **W-9** (§9.8.6.2) names: quoting a fact from a
+run that didn't produce it.
+
+**How to apply:** before extending a "the mechanism now works" discharge to
+a row beyond the one under direct test, check whether that row's own test
+methods were actually part of the discovered/executed set on *this* tree —
+not just whether the row cites the same blocking defect. `git merge-base`
+or a plain count comparison (here: 30 discovered vs. the 53 another
+in-flight branch reports) is enough to tell. Where it does hold — RTVM-400
+here, because `GridFormatTests`' six methods are unchanged since the same
+`62cbb1e` this branch forked from — discharge it explicitly and name why
+the tree comparison holds, not just that the defect class is the same.
+
+See [[verification-platform-trap]].
