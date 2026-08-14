@@ -358,6 +358,39 @@ second merge. Also resolved on this pass: the open W-10 authorship question
 worth checking that entry before assuming `tests/windows/*.ps1` is Test
 Engineer's to write just because it's outside `.github/`.
 
+## Caught myself defaulting to "record SHA → set Verified" on #10's own commit-confirmation (2026-08-14)
+
+Almost promoted RTVM-009/102/103/104/105/403 straight to Verified on CI/CD's
+`139d41a` hand-back, because the role instructions' literal text for this step
+says "record the SHA... and set status to Verified". Caught it *before*
+handing off (but after one push to trunk, requiring a second corrective
+commit) by grepping the doc for `| Verified |`: only two rows in the whole
+project carry it, both pure-inspection `DELIV` items (RTVM-902/906). Every
+other In-Test row — including ones with a SHA recorded issues ago
+(RTVM-002/003 `62cbb1e`, RTVM-100 `3bc1b22`, RTVM-200 `fdd9cea`) — stays In
+Test, because project-wide V-1/DW-1 (MSVC `vstest` discovery) is still
+outstanding. §9.10.1, already on trunk (written by a *later*-completing
+issue, #24, whose tree forked before #10 merged), had explicitly named these
+same six rows as still owing their own discharge on a tree containing #10's
+new tests — direct, in-document proof, not an inference.
+
+**Why:** the role file's per-step instruction is written for the common case
+and can't encode a project-specific policy like "there's a standing platform
+blocker nearly every row is waiting on" — that policy lives in the RTVM's own
+§9.2, which the role file correctly defers to via "set... to Verified" being
+the *default*, not an override. Reading only the step instruction and not
+cross-checking the doc's own established pattern is how the default wins by
+accident.
+
+**How to apply:** before writing a Verified status on a fast-path or
+commit-confirmation update, `grep -n '| Verified |'` (or the project's
+equivalent status marker) first. If the project has a standing partial-
+verification policy (§9.x, [[verification-platform-trap]]'s "V-1…V-7"), the
+grep count for Verified will be small and mostly inspection-only items — that
+mismatch against "every other row here has a SHA and stays In Test" is the
+signal to check for an unexecuted clause before trusting the literal
+instruction text. Cheaper to grep once than to push wrong and correct it.
+
 ## DW/A/I/V/W numbers: allocate from trunk, and check for the collision pattern
 
 Confirmed again on #23 that new evidence defects continue the *trunk* DW
