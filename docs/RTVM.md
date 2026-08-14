@@ -71,7 +71,7 @@ Blocked / Withdrawn.
 | **CORE — solver (§4.4, §4.5, §5)** | | | | | |
 | RTVM-200 | Given a valid, uniquely-solvable standard 9×9 puzzle, the solver produces the grid's unique solution: all 81 cells filled with 1–9, with no digit repeated in any row, column, or 3×3 box, and every given preserved in place. | SN-2 | Test (TP-200) | In Test | `fdd9cea` |
 | RTVM-201 | Given a well-formed, non-contradictory puzzle that admits no completion, the solver reports "no solution" and terminates. It does not loop, guess indefinitely, or emit a partial grid. | SN-2, SN-4 | Test (TP-201) | In Test | `481c726` |
-| RTVM-202 | The solver determines whether a puzzle has more than one solution by searching for at most two solutions and stopping. Where two are found it yields the first found together with a "not unique" indication. It does not enumerate or count all solutions. | SN-2, SN-3 | Test (TP-202) | Approved | |
+| RTVM-202 | The solver determines whether a puzzle has more than one solution by searching for at most two solutions and stopping. Where two are found it yields the first found together with a "not unique" indication. It does not enumerate or count all solutions. | SN-2, SN-3 | Test (TP-202) | In Test | |
 | RTVM-203 | The solve is cooperatively interruptible: once an abort is requested the solver stops and yields the "aborted" outcome within 1.0 s, leaving the process free to exit cleanly. | SN-5 | Test (TP-203) | Approved | |
 | RTVM-204 | The solver maintains a monotonically increasing count of search steps taken, readable by the rest of the application and by the test suite while the solve is in flight. This is what makes "the solve is still making progress" (§7 acceptance #6) an observable fact rather than an assertion. | SN-5 | Test (TP-204) | Approved | |
 | **DATA-OUT — internal representation of output (§4.1, §4.3)** | | | | | |
@@ -80,7 +80,7 @@ Blocked / Withdrawn.
 | RTVM-302 | The `InvalidInput` outcome carries structured fault detail (fault kind, line/row/column, digit or character involved) rather than a pre-formatted message, so that all wording lives in the output layer. | SN-4, SN-7 | Test (TP-302) | In Test | `668f9a4` |
 | **OUT — presentation (§4.1, §4.3)** | | | | | |
 | RTVM-400 | A solved grid is written to stdout pretty-printed with box separators, in exactly the 13-line ASCII format given in §6.2. | SN-3 | Test (TP-400) | In Test | `62cbb1e` |
-| RTVM-401 | For the `SolvedNotUnique` outcome the grid is followed on stdout by a statement that the solution shown is not unique. | SN-3 | Test (TP-401) | Approved | |
+| RTVM-401 | For the `SolvedNotUnique` outcome the grid is followed on stdout by a statement that the solution shown is not unique. | SN-3 | Test (TP-401) | In Test | |
 | RTVM-402 | For the `NoSolution` outcome a plain statement that the puzzle has no solution is written to stdout, and no grid is written. | SN-3, SN-4 | Test (TP-402) | In Test | `481c726` |
 | RTVM-403 | For the `InvalidInput` outcome a specific human-readable diagnostic naming the fault is written to **stderr**, and nothing is written to stdout. | SN-4 | Test (TP-403) | Verified | `139d41a` |
 | RTVM-404 | For the `Aborted` outcome a message stating the solve was abandoned at the user's request is written to **stderr**, and nothing is written to stdout. | SN-5 | Test (TP-404) | Approved | |
@@ -289,9 +289,12 @@ exactly two solutions, `S-NONUNIQUE-A` and `S-NONUNIQUE-B`, differing
 only in cells `r4c6`, `r4c9`, `r5c6`, `r5c9`. Expect the outcome
 `SolvedNotUnique`, and the printed grid to equal **either** `A` **or**
 `B` — the procedure must not assert which, since that depends on search
-order. Also assert via instrumentation that the solver stopped after
-finding the second solution and did not continue searching. Control
-case: solve `P-EASY`, expect outcome `Solved` (not `SolvedNotUnique`).
+order. Also assert via instrumentation, **against `P-BLANK` (§6.1), not
+`P-NONUNIQUE`** — §7 I-20 — that raising `SolveOptions::maxSolutions`
+from 2 to 3 makes the search explore strictly more nodes, proving the
+two-solution cap genuinely bounds the search rather than the tree
+happening to end on its own. Control case: solve `P-EASY`, expect
+outcome `Solved` (not `SolvedNotUnique`).
 
 **TP-203 — interruptibility latency.** Unit test the solver directly:
 start a solve on the RTVM-507 long-running workload, wait 2 s, request
@@ -746,6 +749,7 @@ withdrawn interpretation stays in the table marked so.
 | I-17 | Whether a **blocking** read of standard input is ever permissible, given that `docs/SDD.md` §3.7 bans "any call that can block … under any circumstance" while RTVM-003 requires reading a puzzle a user may still be typing | **The ban binds the solve path, not puzzle acquisition.** From the moment the solver is entered until it returns, nothing may block — that is what RTVM-006 and RTVM-008 actually assert, and §3.7's absolute wording was written about the *prompt* read. Before the solve starts there is no prompt, no elapsed-time bound and no result to deliver, and a program that refused to wait for line 4 of an interactively typed puzzle would fail RTVM-003 outright. A bounded blocking read is therefore permitted **only** during acquisition, and only through `StdinChannel` (§1.3's single-owner rule is unaffected — the same buffer continues into the control channel). "Bounded" is the existing bounds, not new ones: acquisition stops at 9 logical lines (I-2) and never scans past 4096 bytes on one line (I-13), so no input can hold the process open without producing either a puzzle or a fault. Redirected or closed stdin reaches EOF, which ends the read — so RTVM-008's non-interactive guarantee is untouched. An interactive user who types four lines and walks away does leave the process waiting, indefinitely and by design: no requirement bounds that, and it is what every stdin-reading tool does. Raised on issue #9 by the Software Engineer (who implemented this reading as a `readLineBlocking` used pre-solve only) and seconded by the Test Engineer; ruled 2026-08-13. No scope change and no behaviour change against the delivered build. `docs/SDD.md` §1.3 and §3.7 both reworded to say this. | RTVM-003, RTVM-006, RTVM-008 |
 | I-18 | Which error domain `InputFault::systemError` carries, given `docs/SDD.md` §2.5 documented it as a `GetLastError` code while the delivered `InputSource` opens files with `std::ifstream` and populates it from `errno` | **`errno`, on every platform — one domain, no tag.** The MSVC CRT sets `errno` on a failed `std::ifstream` open just as glibc does, while `GetLastError` after a CRT call is incidental rather than specified; carrying whichever of the two the calling path happened to set would make the number uninterpretable without a provenance flag, and a flag is cost for no requirement. Nothing asserts the field numerically — TP-009 asks only that stderr *names the path* and *states it could not be opened* — so the field exists solely to let `Messages` render a reason. Two consequences that are binding on **#10**: (a) the reason text is produced by one helper in `Messages` over the `strerror` family, and CRT/locale-supplied text does not breach RTVM-302's "no English outside `Messages`" (it is not a literal in the fault) — accordingly TP-009 and TP-403 must not pin an exact CRT phrase; (b) `SourceUnreadable` covers a failed **read** as well as a failed **open**, because TP-009's second case is an existing *directory*, which fails at open on Windows but opens and then fails to read on a POSIX runner. Raised on issue #9 by the Software Engineer; ruled 2026-08-13 before #10 starts, while it is still cheap. No scope change; `docs/SDD.md` §2.5 and §2.7 reworded. | RTVM-009, RTVM-302, RTVM-403 |
 | I-19 | **Renumbered from `I-17` on 2026-08-13, at the merge of `issue-9` (`62cbb1e`); the text below is unchanged.** Issue #23's branch and issue #9's branch both allocated `I-17` concurrently and CI/CD merged both rows verbatim rather than pick a renumbering. This row is the one that moved, because nothing else in `docs/` or `docs/SDD.md` cited it while the other `I-17` had six inbound citations. **A citation of “§7 I-17” written before `62cbb1e` that concerns VS 2022, `D-1`/`D-3`, or the runner's toolset means this row (I-19); one that concerns blocking reads or `StdinChannel` means I-17 as it now stands.** Original question: What "VS 2022" in `D-1`/`D-3` constrains: the **artifact**, or the **machine that builds it** | **The artifact.** RTVM-900/901/906 are satisfied by a solution and project files that Visual Studio 2022 opens and builds with the `v143` toolset and ISO C++17 — the *delivered thing* is what carries the constraint. It does not follow that every build taken as evidence must be performed by a VS 2022 installation. Consequences, and they cut both ways: (a) the `Debug\|x64` / `Release\|x64` builds on the `win25-vs2026` runner **are** valid evidence for RTVM-901's "builds clean" and RTVM-906's language-standard clause, because the compiler actually invoked is `PlatformToolset=v143` / MSVC 14.44 — the VS 2022 toolset, shipped side-by-side in the newer install; (b) they are **not** evidence for TP-900's *"opens in VS 2022 with no migration prompt"*, which is a claim about the VS 2022 solution loader and can only be discharged by a VS 2022 loader — a newer IDE opening the solution demonstrates forward compatibility, and the requirement runs the other way. The committed artifacts remain pinned to VS 2022 form (`.sln` `Format Version 12.00` / `# Visual Studio Version 17` / `VisualStudioVersion = 17.0.31903.59`; `PlatformToolset=v143`; `WindowsTargetPlatformVersion=10.0`), and **no project file may be retargeted to satisfy a runner** — that is V-7 applied to MSVC exactly as it already applies to `g++`. Raised by the Systems Engineer on issue #23 after reading the first Windows run (§9.1.5); it is scope-adjacent, so it is **flagged to the Solutions Architect for confirmation** as I-14 was. No scope change and no change to any delivered file. | RTVM-900, RTVM-901, RTVM-906, §9.4 A-2 |
+| I-20 | Which fixture TP-202's instrumentation clause ("assert ... the solver stopped after finding the second solution and did not continue searching") should run against, given the clause as originally worded ties it to `P-NONUNIQUE` in the same sentence as the outcome/grid checks | **`P-BLANK`, not `P-NONUNIQUE`.** Measured directly (Software Engineer, independently re-derived by the Test Engineer against the live solver, not taken on trust): on `P-NONUNIQUE`, `nodesExplored()` is exactly 3 whether `SolveOptions::maxSolutions` is 2 or 1,000,000 — after propagation the puzzle has exactly one branch cell with exactly two candidates, so the search tree is naturally exhausted at the same point regardless of the cap. A node-count comparison on that fixture cannot distinguish "stopped after two" from "kept going and found nothing more because there was nothing more" — it is unfalsifiable by construction, not a gap in the test. `P-BLANK` (§6.1) has a large enough branching factor that raising the cap from 2 to 3 measurably grows the search (49 nodes vs. 51, `-O0`, confirmed independently by both roles), which is what actually proves the cap bounds the work. TP-202's wording in §3 is amended to name `P-BLANK` for this clause; the outcome/grid clause is unaffected and stays on `P-NONUNIQUE`. Raised on issue #12 by the Software Engineer, seconded by the Test Engineer; ruled 2026-08-14. No scope change and no behaviour change against the delivered solver — this corrects which fixture the procedure names, not what the requirement asks for. | RTVM-202 |
 
 ## 8. Carried forward to the SDD — **CLOSED 2026-08-07 (issue #3)**
 
@@ -1727,16 +1731,26 @@ before being written here: `P-SEARCH` → `Solved`, grid equal to
 `S-EASY`, 5 nodes. **The code is not suspected and needs no change** —
 only the test project gains a fixture and a method.
 
-**Ascending candidate order remains unevidenced by test.** It is
-normative in §1.5 because RTVM-202 and RTVM-401 depend on "the first
-solution found" being reproducible, it is implemented as written
-(`Solver.cpp`), and it has been confirmed by reading — but no procedure
-here can detect it, since a uniquely-solvable puzzle has the same
-answer whatever order the digits are tried in. **TP-202 (#12) is the
-only place it becomes provable**, and that is stated so nobody later
-mistakes RTVM-200's pass for evidence of it. `P-SEARCH` does not close
-this either: it proves a branch was taken, not which branch was taken
-first.
+**Ascending candidate order remains unevidenced by test — corrected at
+#12, not resolved by it.** It is normative in §1.5 because RTVM-202 and
+RTVM-401 depend on "the first solution found" being reproducible, it is
+implemented as written (`Solver.cpp`), and it has been confirmed by
+reading — but no procedure here can detect it, since a uniquely-solvable
+puzzle has the same answer whatever order the digits are tried in. This
+paragraph originally said TP-202 (#12) would be "the only place it
+becomes provable"; that turned out to be wrong, and is left struck
+through rather than silently fixed. ~~TP-202 (#12) is the only place it
+becomes provable.~~ TP-202's own wording forbids pinning the
+`P-NONUNIQUE` result to `S-NONUNIQUE-A` or `-B` specifically ("the
+procedure must not assert which, since that depends on search order"),
+precisely because a test written to survive an implementation change to
+the search cannot simultaneously assert which branch that search takes
+first. #12's tests confirm this as delivered: the outcome/grid clause
+accepts either fixture by design (§9.15), so ascending order stays a
+read-and-declared property of `Solver.cpp`, not a test-evidenced one —
+permanently, by the same design choice that keeps TP-202 robust. `P-SEARCH`
+does not close this either: it proves a branch was taken, not which
+branch was taken first.
 
 **Re-run trigger.** TP-200's `P-SEARCH` clause is executed at **#11**
 ([RTVM-201]) — the next issue to touch `tests/SudokuSolver.Tests/
@@ -2764,3 +2778,67 @@ RTVM-100/001/201 above), the row above is recorded as `699abde`, not
 `00d0c38`.
 
 **§7 interpretations raised in this thread: none.**
+
+### 9.15 Non-uniqueness detection and the not-unique note tested ([RTVM-202], [RTVM-401], issue #12)
+
+State at branch `issue-12` (`66dbcd8`, plus two memory-only commits),
+tested by the Test Engineer 2026-08-14 — **PASS**. The stop-at-two
+search itself already existed from #8 ([RTVM-200]); this issue is test
+coverage for RTVM-202 plus the one wiring gap that was actually
+missing, `Messages.cpp::notUniqueNote()` returning real wording instead
+of an empty stub (the `Reporter::report()` concatenation for
+`SolvedNotUnique` was already in place from #9, calling that stub).
+
+**What was exercised.**
+
+| Req | Executed here and passed | Still outstanding |
+| --- | --- | --- |
+| RTVM-202 | TP-202's outcome/grid clause: `P-NONUNIQUE` reports `SolvedNotUnique`, the grid equals exactly `S-NONUNIQUE-A` or `S-NONUNIQUE-B` (not pinned to one, per TP-202's own wording), `hasCompleteGrid()`, well-formed (every row/column/box a permutation of 1–9), every given preserved. Control case: `P-EASY` stays `Solved`. TP-202's instrumentation clause, **run against `P-BLANK` per §7 I-20** (this issue's own ruling — see below): `maxSolutions=2` explores strictly fewer nodes than `maxSolutions=3` (49 vs. 51, `-O0`), both independently re-measured by the Software Engineer and the Test Engineer against the live solver, not read from prose. `P-NONUNIQUE` independently re-confirmed unfalsifiable for this specific clause: `nodesExplored()==3` at both `maxSolutions=2` and `maxSolutions=1,000,000` | The standing MSVC/`vstest` discovery-and-execution clause (V-1/DW-1, #23) — `run-procedures.ps1`'s `runtime-procedures.txt` has carried a `[FAIL]` row for TP-401 since §9.10's run (`cf551b23`, pre-fix); a Windows pass against a tree containing this issue's merge is what flips it, not this update |
+| RTVM-401 | `notUniqueNote()` wired to the pinned wording (`Note: this puzzle has more than one solution; the solution shown is the first one found.\n`). TP-401 run as a full process-level check: `samples/nonunique.txt` → stdout byte-identical (`cmp`) to the 13-line grid plus the reference wording (built by regex-extracting the §6.2 block and the TP-401 line straight out of this document, not transcribed), stderr empty, exit `0`. Grid printed was `S-NONUNIQUE-A`, an acceptable choice per TP-202. Regression: `easy.txt` stdout stays exactly the 338-byte plain grid, no note line leaks in; `hard17.txt`/`unsolvable.txt`/`malformed.txt` exit codes and stub-consistent stderr unchanged | As RTVM-202 — V-1/DW-1 only |
+
+**Environment.** Ubuntu agent runner, no MSVC available (V-1 stands,
+per §9.1) — `g++ -std=c++17 -Wall -Wextra -Wconversion -Wpedantic
+-Wshadow`, the generated-driver harness scanning `TEST_CLASS`/
+`TEST_METHOD` across all test files. 28 methods discovered across 5
+classes, 28/28 pass, including the 3 new `rtvm202_*` methods. Both
+roles independently regenerated the driver and cross-checked every
+`.vcxproj`/`.filters` `ClCompile`/`ClInclude` resolves on disk and is
+registered.
+
+**§7 I-20 ruled here** (table above): TP-202's instrumentation clause
+now names `P-BLANK`, not `P-NONUNIQUE` — the latter's search tree
+exhausts at the same 3 nodes regardless of the cap, so a node-count
+comparison on it cannot be failed by a broken cap. §3's TP-202 text is
+amended accordingly. No scope change, no behaviour change against the
+delivered solver.
+
+**§9.7's forward-looking claim about ascending order corrected, not
+resolved.** §9.7 said TP-202 (#12) would be "the only place [ascending
+candidate order] becomes provable." It is not: TP-202's own wording
+forbids pinning the `P-NONUNIQUE` result to a specific one of `A`/`B`,
+which is exactly what would be needed to prove *which* order the
+solver tried first, and #12's delivered test honours that (accepts
+either fixture). §9.7 is struck through and corrected in place rather
+than silently edited. Ascending order remains a read-and-declared
+property of `Solver.cpp` (§1.5), permanently unevidenced by any test —
+that is a consequence of the deliberate choice to keep TP-202 robust
+against implementation change, not a gap to close later.
+
+**§9.6/§9.9's RTVM-301 outstanding clause — DISCHARGED, not
+promoted.** §9.6 deferred TP-301's "solved results of `P-EASY` and
+`P-NONUNIQUE`" clause to "the solver (#8) and non-uniqueness detection
+(#12)"; §9.9.3 restated it as "#8/#12" still owing. Both halves are now
+on this tree: `SolverTests.cpp`'s `assertSolvesTo()` helper has
+asserted `report.hasCompleteGrid()` on `P-EASY`'s real `solve()` result
+since #8, and this issue's `rtvm202_solvesPNonUniqueToOneOfItsTwoKnownSolutions`
+adds the same assertion on `P-NONUNIQUE`'s `SolvedNotUnique` result.
+**RTVM-301 stays In Test**, Commit(s) unchanged at `668f9a4` — its own
+implementation didn't move, only its last content-level outstanding
+clause closed. V-1/DW-1 remains, same as every row in this table.
+
+**No status promotion to Verified.** Per standing convention, Verified
+needs a trunk commit SHA in addition to full clause execution, and this
+evidence is all on branch `issue-12`. **RTVM-202 and RTVM-401 move
+Approved → In Test** (§5), Commit(s) left blank pending CI/CD.
+
+Handed to CI/CD next with `status:ready-for-commit`.
