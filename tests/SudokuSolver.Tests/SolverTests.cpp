@@ -125,6 +125,28 @@ public:
         assertSolvesTo(kPuzzleHard17, kSolvedHard17, L"P-HARD17 must solve to S-HARD17");
     }
 
+    // TP-200, third case (docs/RTVM.md 9.7, added 2026-08-13): P-SEARCH is dug
+    // from S-EASY, so its expected solution is S-EASY itself, but unlike
+    // P-EASY and P-HARD17 it is not solvable by naked and hidden singles
+    // alone — both of those solve at nodesExplored() == 1, leaving the
+    // docs/SDD.md 1.5 MRV branch/backtrack path un-exercised by TP-200's
+    // original two cases. This case forces that path to run.
+    TEST_METHOD(rtvm200_solvesPSearchToSEasyViaBranchAndBacktrack)
+    {
+        assertSolvesTo(kPuzzleSearch, kSolvedEasy, L"P-SEARCH must solve to S-EASY");
+
+        // Asserted as an inequality, not a pinned node count: the count is an
+        // implementation property, and pinning it would fail on any
+        // legitimate propagation improvement. > 1 is what distinguishes a
+        // search that branched from one that finished on deduction alone.
+        NullSolveControl control;
+        const SolveReport report =
+            solve(gridFromCompactForm(kPuzzleSearch), SolveOptions{}, control);
+        Assert::IsTrue(report.nodesExplored() > 1ULL,
+            L"P-SEARCH is not solvable by singles alone; a search that "
+            L"branched must explore more than the one deduced node");
+    }
+
     // The given-preservation half of TP-200 stated the other way round: the
     // solution of a puzzle must agree with the puzzle everywhere the puzzle
     // has a digit, and the check must be able to notice when it does not.

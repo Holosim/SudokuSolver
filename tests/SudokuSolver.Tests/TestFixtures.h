@@ -67,6 +67,22 @@ inline constexpr std::string_view kSolvedHard17 =
     "856129743"
     "274836159";
 
+// P-SEARCH (docs/RTVM.md 6.1) — 25 givens, dug from S-EASY, so its unique
+// solution is S-EASY itself and no new solution fixture is needed. Unlike
+// P-EASY and P-HARD17 it is not solvable by naked and hidden singles alone:
+// it is the fixture that forces the docs/SDD.md 1.5 MRV branch/backtrack
+// path to run (docs/RTVM.md 9.7, TP-200's third case).
+inline constexpr std::string_view kPuzzleSearch =
+    "504000910"
+    "002000040"
+    "090000000"
+    "050700400"
+    "000003000"
+    "700020806"
+    "960037000"
+    "080400600"
+    "000200170";
+
 // P-UNSOLVABLE (docs/RTVM.md 6.1) — P-EASY with r1c3 set to 1. Its givens are
 // mutually consistent (no row, column or box duplicate), so RTVM-104 must not
 // reject it at the parser; the solver itself has to discover it has no
