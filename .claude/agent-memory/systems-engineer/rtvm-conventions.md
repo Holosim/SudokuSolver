@@ -186,3 +186,21 @@ here.
 - Write the numbering rule into the document itself (§7's preamble here) rather
   than only into memory, so the next agent to append a row obeys it without
   having read this.
+
+## A fast-path update can discharge outstanding clauses recorded on *other* rows (2026-08-14, #10)
+
+#10's PASS closed its own six rows (RTVM-009/102/103/104/105/403 → In Test,
+new §9.9) but also discharged two clauses §9.5 and §9.6 had left open on
+*earlier* requirements while waiting for #10: RTVM-106's negative-wording
+clause and RTVM-302's parse-driven-half clause. Neither of those rows'
+Status/Commit(s) moved — #10 didn't touch their implementation, only closed
+the last thing their own procedure was waiting on.
+
+**How to apply:** before writing the new §9.x section, grep the whole doc for
+the closing issue's number (`grep -n '#10'` here) — every "→ #N" and "needs
+#N" is a clause that may now be discharged. Record the discharge as its own
+subsection (mirroring §9.8.6.1's "re-run trigger — DISCHARGED" pattern)
+rather than editing the older row's prose in place, so the older section
+stays a true record of what was known when it was written. State explicitly
+that the row's own Status/Commit(s) is unchanged, or the next reader assumes
+the discharge implies a promotion.
