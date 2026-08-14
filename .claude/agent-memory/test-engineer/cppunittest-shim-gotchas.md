@@ -29,3 +29,17 @@ Linux runner. Link the driver against `src/SudokuCore/*.cpp` **only** — that
 link succeeding with no console-layer object file is the actual RTVM-903
 demonstration, and supplying `src/SudokuSolver/*.cpp` would destroy the point
 of the exercise.
+
+**The core-only driver also needs its own generated `.cpp` file, not just a
+different link line.** The generated driver `#include`s every test `.cpp` it
+discovers methods in; if `MessagesTests.cpp`/`ReporterTests.cpp` (the two
+files that `#include "Messages.h"`/`"Reporter.h"`, console-layer headers) are
+left in that `#include` list, the *compile* fails with a missing-header error
+before the link line matters at all — a red herring that looks like a build
+regression. Regenerate a second driver source excluding those two files
+(grep each test `.cpp` for `#include "<ConsoleLayerHeader>.h"` to find them
+programmatically rather than hard-coding the two names, since a future issue
+could add more console-layer test files) for the RTVM-903 core-only run,
+and keep the full 8-file driver for the regular full-suite run. Confirmed
+on #11's regression pass (2026-08-14): full driver 56/56, core-only driver
+40/40 (6 classes, `MessagesTests`/`ReporterTests` excluded).

@@ -98,3 +98,12 @@ spinning a fresh Windows run out of caution when the compare is empty and
 the hand-off has already named the lighter route as acceptable — read the
 hand-off for which routes it explicitly sanctions before picking the more
 expensive one.
+
+**#11's regression pass (2026-08-14)** had no explicit lighter-route offer
+in the hand-off (unlike #23), so I ran the full Linux substitute suite
+(56/56 full, 40/40 core-only) plus TP-402 process-level and the two cheap
+checks anyway, even though `compare/481c726...main` was product-empty
+(only `docs/RTVM.md` + CI/CD memory changed, 2 commits ahead). Treat "no
+explicit lighter route named" as the default case requiring the full
+substitute-harness run, not just the compare — #23's shortcut was
+Systems-Engineer-sanctioned, not a standing default.
