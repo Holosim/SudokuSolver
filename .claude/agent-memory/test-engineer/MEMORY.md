@@ -33,6 +33,7 @@
 ## Verified requirements (context worth keeping)
 
 - [RTVM-500 verified](rtvm-500-verified.md) — 2026-08-14 PASS with real exit-code-gated timing data; why TP-501-504 staying open doesn't block it, and to re-check inertness once #13 wires up the RTVM-507 hook.
+- [RTVM-506 verified](rtvm-506-verified.md) — 2026-08-14 PASS; static-CRT confirmed by direct grep + clean dumpbin on the exact branch tip; the A-1 clean-machine residue is pre-accepted, not a fresh gap.
 
 ## Recurring failure patterns
 
