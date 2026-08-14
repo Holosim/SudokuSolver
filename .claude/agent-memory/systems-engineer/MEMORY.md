@@ -12,6 +12,7 @@
 - [Doc state across branches](doc-state-across-branches.md) — an RTVM/SDD section may live only on an unmerged `issue-N` branch; check before rewriting it.
 - [Implementation plan decomposition](implementation-plan-decomposition.md) — vertical-slice ordering, when to group RTVM items into one issue, and why no-work requirements still need one.
 - [Pipeline label traps](pipeline-label-traps.md) — a hand-removed `status:on-hold` orphans an issue from the dependency sweep; how to handle a feature issue with an empty thread.
+- [Fast-path promotion after SHA recorded](fast-path-promotion-after-sha-recorded.md) — SHA already in Commit(s), later regression PASS on a tree containing it promotes In Test → Verified immediately; still hand off to CI/CD even for a docs-only diff.
 
 ## Project context
 
