@@ -16,6 +16,7 @@
 - [Parser fault precedence](parser-precedence-reading.md) — why `parseGrid` is two passes, and the one RTVM self-conflict (TP-106's interior space) awaiting a ruling.
 - [Making invariants compile-time](making-invariants-compile-time.md) — the enum/static_assert/exhaustive-switch tricks this project uses instead of runtime checks.
 - [Solver search shape](solver-search-shape.md) — one search covers RTVM-200/201/202; measured margins and which mutations TP-200 can't catch.
+- [TP-202 instrumentation needs P-BLANK](tp202-instrumentation-needs-p-blank.md) — P-NONUNIQUE's tree is exhausted regardless of the solution cap, so the "did not continue" proof has to run on P-BLANK instead.
 - [PowerShell Mandatory/List gotchas](powershell-mandatory-and-list-gotchas.md) — `return $list` unrolls to `$null`; `Mandatory` rejects empty input; `-RedirectStandardInput 'NUL'` throws on real Windows and can produce false PASSes downstream.
 
 ## Process
