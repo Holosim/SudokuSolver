@@ -37,3 +37,22 @@ docs+memory-only shape gets the waiver.
 Engineer with an accurate regression flag is so nothing skips a real
 Windows/Test-Engineer pass on the assumption that "no prod code" is the same
 test as "no code."
+
+**Two more things that went wrong fixing the comment on this same issue,
+worth recording so they don't repeat:**
+
+1. `gh api ... -f body=@/tmp/file.md` does **not** read the file — `-f` is a
+   literal string field, so the comment body became the literal text
+   `@/tmp/file.md`. The flag that reads file content is `-F body=@/tmp/file.md`
+   (capital F, "typed" field). Caught by checking the posted body afterward;
+   always re-fetch and read back a PATCHed comment body rather than trusting
+   the command exited 0.
+2. Confirmed the [[no-windows-build-verification]] "push the merge LAST"
+   warning is not paranoia: pushing this issue's memory commit
+   (`48fd759`) right after the merge (`ce15599`) did cancel that
+   `windows-verification` run via the workflow's `cancel-in-progress`
+   concurrency group. Since the memory commit is required by this role's own
+   process and has to happen after the main commit, the practical fix is what
+   that memory already says — cite the *final* trunk SHA to the next role,
+   not the merge SHA, and prove tree-equality with
+   `git diff --stat <merge-sha> <final-sha> -- . ':!.claude/agent-memory'`.
