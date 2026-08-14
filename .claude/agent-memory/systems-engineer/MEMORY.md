@@ -19,6 +19,7 @@
 - [Verified on first commit confirmation, not gated by V-1](verified-on-first-commit-confirmation-not-gated-by-v1.md) — the first commit-confirmation hand-back promotes straight to Verified even with regression testing still pending; don't hold at In Test the way older precedent did.
 - `rtvm-conventions.md` also covers: §9 subsection numbers collide across branches just like I-/W-/V-/DW- IDs (allocate from trunk); a regression pass on an already-Verified row has nothing to discharge — record fresh evidence as a pointer, not a promotion.
 - [Shallow clone / unrelated histories](shallow-clone-unrelated-histories.md) — `git fetch --unshallow` before merging trunk into an issue branch, or a stale-branch artifact looks like a real conflict.
+- [Commit-confirmation bookkeeping pushes direct to main](commit-confirmation-pushes-direct-to-main.md) — the RTVM.md update that records CI/CD's merge SHA is a single-parent commit straight on `main`, not another `issue-N` branch + CI/CD merge cycle.
 
 ## Project context
 
