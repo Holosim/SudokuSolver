@@ -99,7 +99,7 @@ Blocked / Withdrawn.
 | RTVM-900 | The repository contains a committed, openable Visual Studio 2022 solution and project file(s) — not source files alone. (D-1) | SN-7 | Inspection (TP-900) | In Test | `85bab27` |
 | RTVM-901 | A client engineer can clone, open, build, and run the solution in VS 2022 with no setup step that is not written down in the README. (D-2) | SN-7 | Inspection (TP-901) | In Implementation | `85bab27` |
 | RTVM-902 | The solution builds with the stock VS 2022 toolchain and the C++ standard library alone. No third-party library, package manager, or downloaded dependency of any kind. (D-3) | SN-7 | Inspection (TP-902) | Verified | `85bab27` |
-| RTVM-903 | The solver core is a separate compilation unit / module from the console I/O layer and has no dependency on stdin, stdout, stderr, or command-line parsing. The grid dimension appears as a single named constant, not as literal `9`s scattered through the code. (D-4) | SN-7 | Inspection (TP-903) | In Test | `85bab27` |
+| RTVM-903 | The solver core is a separate compilation unit / module from the console I/O layer and has no dependency on stdin, stdout, stderr, or command-line parsing. The grid dimension appears as a single named constant, not as literal `9`s scattered through the code. (D-4) | SN-7 | Inspection (TP-903) | Verified | `85bab27` |
 | RTVM-904 | The repository carries a README covering how to build, how to run, and the puzzle input format. (D-5) | SN-7 | Inspection (TP-904) | In Implementation | `85bab27` |
 | RTVM-905 | Automated tests are part of the delivered solution and are runnable by the client through a documented command or VS action. (D-6) | SN-7 | Inspection (TP-905) | In Implementation | `85bab27` |
 | RTVM-906 | The solution targets C++17 and x64, and is a Visual Studio solution only — the repository contains no CMake or other cross-platform build files. (D-7) | SN-7 | Inspection (TP-906) | Verified | `85bab27` |
@@ -3304,3 +3304,55 @@ CI/CD for a third round trip on the same content; it closes here.
 `ce15599` (§5). **§7 interpretations raised in this thread: none.**
 
 Closing issue #16 directly — no further hand-off.
+
+### 9.25 RTVM-903's outstanding MSVC link clause discharged, promoted to Verified; RTVM-900 stays In Test (issue #21)
+
+Issue #21 was a deliverable-inspection pass, not a feature build — no
+`agent:software-engineer` dependency chain, no product code expected to
+move. Software Engineer confirmed on `issue-21` @ `9d8663d` that no
+source change was needed and re-executed TP-900/902/903/906 by
+grep/XML-parse/`g++` compile check; Test Engineer independently
+reconfirmed the same four on the same SHA, plus a real Windows
+evidence run (`31839960733`, `win25-vs2026`) read at the raw-log
+level.
+
+**RTVM-903 — this run closes the one clause §9.2's table left
+outstanding** ("re-confirm the link clause under MSVC rather than
+`g++`"). The Windows build's `link.exe` invocation for
+`SudokuSolver.Tests.dll` pulls in only the six core object files
+(`Grid`/`GridFormat`/`Parser`/`SolveControl`/`SolveReport`/`Solver`)
+plus `Messages.obj`/`Reporter.obj` — console-layer files that take
+`std::ostream&` by injection and contain zero `std::cin`/`cout`/`cerr`
+themselves — and **no** `main.obj`, `CommandLine.obj`,
+`InputSource.obj`, `SolveSession.obj` or `StdinChannel.obj` anywhere in
+the link. `tests.trx` carries both
+`rtvm903_coreIsUsableWithoutTheConsoleLayer` and
+`rtvm905_testProjectRunsAndLinksTheCore` as `outcome="Passed"` at the
+per-method level (63/63 total). Per
+[[fast-path-promotion-after-sha-recorded]] — the SHA (`85bab27`) was
+already recorded against an In Test row with exactly this one clause
+outstanding — this evidence promotes it straight to **Verified** (§5),
+**Commit(s) unchanged at `85bab27`**: no code has moved since that
+scaffold commit, the diff since then is `docs/RTVM.md` and
+`.claude/agent-memory/**` only.
+
+**RTVM-900 — stays In Test, not a new gap.** The one outstanding
+clause (§9.4 A-2: the `.sln` opening in the actual VS 2022 IDE with no
+migration prompt) remains unautomatable on this runner image —
+`vswhere-instances.json` on this exact Windows run shows only `Visual
+Studio Enterprise 2026` (`18.8.12023.21`), no `17.x` instance, the same
+finding as issue #23's I-19 (§7). Nothing in this issue's evidence
+changes that; not reported as a fresh defect.
+
+**RTVM-902 and RTVM-906 — reconfirmed Verified, no change.** No
+third-party dependency, package manager, or cross-platform build file
+found; `stdcpp17`/`x64` confirmed in every configuration of all three
+projects.
+
+**§7 interpretations raised in this thread: none.**
+
+Per the fast-path instruction, this promotion is handed to CI/CD with
+`status:ready-for-commit` even though the only diff is
+`docs/RTVM.md`/memory — see
+[[fast-path-promotion-after-sha-recorded]]'s "why this still routes to
+CI/CD" reasoning.

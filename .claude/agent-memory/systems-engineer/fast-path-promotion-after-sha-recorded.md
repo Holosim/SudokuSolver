@@ -6,6 +6,16 @@ metadata:
 ---
 
 Learned 2026-08-14 (issue #10, `[RTVM-102]` group: RTVM-009/102/103/104/105/403).
+Reconfirmed 2026-08-14 on issue #21 (§9.25): RTVM-903 carried SHA
+`85bab27` at In Test with exactly one clause outstanding ("re-confirm
+the link clause under MSVC, not `g++`") since the DELIV scaffold
+(§9.2). A no-source-change inspection issue (Software Engineer found
+nothing to fix; Test Engineer supplied a real Windows `link.exe`/`trx`
+run on the same branch tip) discharged that one clause, promoting
+straight to Verified with Commit(s) left at `85bab27`. Same shape even
+though the *triggering* issue was itself an inspection pass with no
+feature branch merge behind it — the pattern is about the RTVM row's
+state, not about what kind of issue produced the new evidence.
 
 ## The sequence that produces this situation
 
