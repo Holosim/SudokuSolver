@@ -3,32 +3,41 @@
 // docs/SDD.md 1.3, 2.7. RTVM-003, RTVM-006, RTVM-008.
 //
 // What is implemented here: handle acquisition, the GetFileType dispatch of
-// docs/SDD.md 1.3, the shared byte buffer, EOF latching, and the *waiting*
-// read that acquires the puzzle before the solve starts (RTVM-003).
+// docs/SDD.md 1.3, the shared byte buffer, EOF latching, the *waiting* read
+// that acquires the puzzle before the solve starts (RTVM-003), and — landed
+// at [RTVM-004] (issue #17) — the four non-blocking availability tests that
+// let tryReadLine pull bytes that arrived after the puzzle was read, without
+// ever waiting for them.
 //
-// What is deliberately still a stub: tryReadLine only ever hands back a line
-// that is already in the buffer. The four non-blocking availability tests
-// (GetNumberOfConsoleInputEvents + PeekConsoleInput, PeekNamedPipe, the disk
-// case) belong to [RTVM-004] (#17) together with the prompt and the abort.
-// Until they land, the poll path reports "nothing available", which cannot
-// violate RTVM-006 or RTVM-008 by accident.
-//
-// TODO(RTVM-006, RTVM-008, issue #17): the availability tests, so that
-//      tryReadLine can pull bytes that arrived after the puzzle was read.
-//
-// Whatever lands there, it must never call anything that can block from
-// inside the solve: std::getline(std::cin, ...), a bare ReadFile on a
-// console handle, and std::cin >> are all out, permanently. readLineBlocking
-// below is not an exception to that rule — it runs before the solve exists.
+// tryNonBlockingRead below is the fourth seam function (see the platform
+// note further down): one non-blocking read attempt, dispatched on the
+// handle kind exactly as docs/SDD.md 1.3's table specifies --
+//   Console — GetNumberOfConsoleInputEvents, then PeekConsoleInput looking
+//             for a VK_RETURN key-down record, only then ReadConsoleA.
+//   Pipe    — PeekNamedPipe for a byte count, then ReadFile for at most
+//             that many bytes.
+//   File    — ReadFile directly; a disk read does not block indefinitely.
+//   Null    — never available, never read.
+// It must never call anything that can block from inside the solve:
+// std::getline(std::cin, ...), a bare ReadFile on a console handle, and
+// std::cin >> are all out, permanently. readLineBlocking is not an
+// exception to that rule -- it runs before the solve exists.
 //
 // PLATFORM. The delivered build is the _WIN32 branch; that is the only one
 // SudokuSolver.vcxproj ever compiles (RTVM-906). The POSIX branch exists so
 // the console layer can be built and exercised end to end on the pipeline's
 // Linux agents, which have no MSVC (docs/RTVM.md 9.1). It ships no behaviour
-// to the client and is confined to this file's seam functions.
+// to the client and is confined to this file's seam functions. On POSIX,
+// select() with a zero timeout stands in for the four Win32 availability
+// tests: it is genuinely non-blocking, and against a canonical-mode tty it
+// reports "ready" only once a complete line has been entered -- exactly the
+// property the Console row above gets from peeking for VK_RETURN -- so one
+// mechanism covers the Console and Pipe cases and a File read is issued
+// unconditionally, matching the Win32 side's per-kind shape.
 
 #include "StdinChannel.h"
 
+#include <algorithm>
 #include <cstdint>
 
 #if defined(_WIN32)
@@ -37,8 +46,10 @@
     // uses (docs/SDD.md 2.1 forbids macros in the code itself, not this).
 #   define WIN32_LEAN_AND_MEAN
 #   include <windows.h>
+#   include <vector>
 #else
 #   include <cerrno>
+#   include <sys/select.h>
 #   include <sys/stat.h>
 #   include <unistd.h>
 #endif
@@ -136,6 +147,134 @@ inline constexpr std::size_t kReadChunkBytes = 512;
 #endif
 }
 
+// The outcome of one non-blocking read attempt.
+enum class ReadAttempt : std::uint8_t {
+    NoDataAvailable,   // nothing was ready; no read was even issued
+    DataRead,          // bytes were appended to the buffer
+    Eof                // the channel is closed; latch it
+};
+
+#if defined(_WIN32)
+
+// True once a key-down VK_RETURN record is pending, i.e. the console line
+// editor has a completed line ready. Only then can ReadConsoleA (which reads
+// a full line) be called without it blocking (docs/SDD.md 1.3).
+[[nodiscard]] bool consoleLineReady(void* handle) noexcept
+{
+    DWORD pending = 0;
+    if (GetNumberOfConsoleInputEvents(handle, &pending) == 0 || pending == 0) {
+        return false;
+    }
+
+    std::vector<INPUT_RECORD> records(pending);
+    DWORD peeked = 0;
+    if (PeekConsoleInput(handle, records.data(), pending, &peeked) == 0) {
+        return false;
+    }
+
+    for (DWORD i = 0; i < peeked; ++i) {
+        const INPUT_RECORD& record = records[i];
+        if (record.EventType == KEY_EVENT
+            && record.Event.KeyEvent.bKeyDown
+            && record.Event.KeyEvent.wVirtualKeyCode == VK_RETURN) {
+            return true;
+        }
+    }
+    return false;
+}
+
+[[nodiscard]] ReadAttempt tryNonBlockingRead(void* handle, StdinKind kind, std::string& buffer)
+{
+    switch (kind) {
+    case StdinKind::Console: {
+        if (!consoleLineReady(handle)) {
+            return ReadAttempt::NoDataAvailable;
+        }
+        char chunk[kReadChunkBytes];
+        DWORD read = 0;
+        // A completed line is already pending, so this cannot block.
+        if (ReadConsoleA(handle, chunk, static_cast<DWORD>(sizeof chunk), &read, nullptr) == 0
+            || read == 0) {
+            return ReadAttempt::NoDataAvailable;
+        }
+        buffer.append(chunk, read);
+        return ReadAttempt::DataRead;
+    }
+    case StdinKind::Pipe: {
+        DWORD available = 0;
+        if (PeekNamedPipe(handle, nullptr, 0, nullptr, &available, nullptr) == 0) {
+            // The writing end is gone; there is nothing left to arrive.
+            return ReadAttempt::Eof;
+        }
+        if (available == 0) {
+            return ReadAttempt::NoDataAvailable;
+        }
+        char chunk[kReadChunkBytes];
+        const DWORD toRead =
+            static_cast<DWORD>(std::min<std::size_t>(available, sizeof chunk));
+        DWORD read = 0;
+        if (ReadFile(handle, chunk, toRead, &read, nullptr) == 0 || read == 0) {
+            return ReadAttempt::Eof;
+        }
+        buffer.append(chunk, read);
+        return ReadAttempt::DataRead;
+    }
+    case StdinKind::File: {
+        // A disk read never blocks indefinitely, so it is issued directly.
+        char chunk[kReadChunkBytes];
+        DWORD read = 0;
+        if (ReadFile(handle, chunk, static_cast<DWORD>(sizeof chunk), &read, nullptr) == 0
+            || read == 0) {
+            return ReadAttempt::Eof;
+        }
+        buffer.append(chunk, read);
+        return ReadAttempt::DataRead;
+    }
+    case StdinKind::Null:
+    default:
+        return ReadAttempt::NoDataAvailable;
+    }
+}
+
+#else // POSIX
+
+[[nodiscard]] ReadAttempt tryNonBlockingRead(void* handle, StdinKind kind, std::string& buffer)
+{
+    if (kind == StdinKind::Null) {
+        return ReadAttempt::NoDataAvailable;
+    }
+
+    const int fd = static_cast<int>(reinterpret_cast<std::intptr_t>(handle)) - 1;
+
+    if (kind != StdinKind::File) {
+        // File reads never block on POSIX either. For a console (tty) or a
+        // pipe, select() with a zero timeout is the readiness test: against
+        // a canonical-mode tty the kernel's line discipline only reports
+        // "readable" once Enter has completed a line, which is this
+        // platform's equivalent of peeking for VK_RETURN; against a pipe it
+        // reports readable as soon as any byte has arrived, matching
+        // PeekNamedPipe's byte-count test.
+        fd_set readSet;
+        FD_ZERO(&readSet);
+        FD_SET(fd, &readSet);
+        timeval timeout{0, 0};
+        const int ready = ::select(fd + 1, &readSet, nullptr, nullptr, &timeout);
+        if (ready <= 0) {
+            return ReadAttempt::NoDataAvailable;
+        }
+    }
+
+    char chunk[kReadChunkBytes];
+    const std::size_t got = readSome(handle, chunk, sizeof chunk);
+    if (got == 0) {
+        return ReadAttempt::Eof;
+    }
+    buffer.append(chunk, got);
+    return ReadAttempt::DataRead;
+}
+
+#endif
+
 // Removes the first line from 'buffer' if a terminator is present, stripping
 // one trailing CR with the LF (docs/RTVM.md 7 I-1). Returns false when the
 // buffer holds no complete line.
@@ -177,9 +316,22 @@ bool StdinChannel::isClosed() const
 
 bool StdinChannel::tryReadLine(std::string& line)
 {
-    // Buffer only. See the TODO at the top of this file: issuing a read here
-    // before the availability tests of docs/SDD.md 1.3 exist would be exactly
-    // the blocking call RTVM-006 and RTVM-008 forbid.
+    // A line already sitting in the buffer needs no read at all -- the
+    // common case once the puzzle's trailing bytes are still unconsumed.
+    if (takeCompleteLine(m_buffer, line)) {
+        return true;
+    }
+    if (m_closed) {
+        return false;
+    }
+
+    // At most one non-blocking read attempt per call. It either appends
+    // bytes (which may or may not complete a line -- the caller polls
+    // again) or reports nothing was available; either way this returns
+    // without waiting, on every handle kind (RTVM-006, RTVM-008).
+    if (tryNonBlockingRead(m_handle, m_kind, m_buffer) == ReadAttempt::Eof) {
+        m_closed = true;
+    }
     return takeCompleteLine(m_buffer, line);
 }
 

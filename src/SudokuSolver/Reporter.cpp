@@ -1,12 +1,9 @@
 // Reporter.cpp — see Reporter.h.
 //
 // The outcome-to-exit-code mapping of RTVM-405 is wired now because
-// everything downstream branches on it. The wording each case writes is
-// filled in with Messages under the output issues; RTVM-400 (formatGrid) and
-// RTVM-401 (the non-unique note) are real as of #9 and #12 respectively.
-//
-// TODO(RTVM-402, RTVM-403, RTVM-404): write the no-solution line and the
-//      diagnostics once Messages carries their real text.
+// everything downstream branches on it. The wording each case writes comes
+// from Messages: RTVM-400 (formatGrid) and RTVM-401 landed at #9 and #12,
+// RTVM-402/RTVM-403 at #11/#10, and RTVM-404 (the abort message) at #17.
 
 #include "Reporter.h"
 
