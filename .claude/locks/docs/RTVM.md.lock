@@ -1,7 +1,0 @@
-{
-  "path": "docs/RTVM.md",
-  "holder": "cicd",
-  "issue": 13,
-  "acquired_at": "2026-08-14T17:24:18Z",
-  "reason": "merging issue-13 (RTVM-507) to trunk"
-}
