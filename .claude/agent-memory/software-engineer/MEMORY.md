@@ -23,6 +23,7 @@
 - [RTVM-500 needed no code](rtvm-500-no-code-needed.md) — recognising a genuine measurement-only issue, and what to still verify before saying so.
 - [RTVM-506 needed no code](rtvm-506-no-code-needed.md) — static-CRT settings and dumpbin evidence already landed at #5; #14 was a verification pass, not new implementation.
 - [TP-202 instrumentation needs P-BLANK](tp202-instrumentation-needs-p-blank.md) — P-NONUNIQUE's tree is exhausted regardless of the solution cap, so the "did not continue" proof has to run on P-BLANK instead.
+- [RTVM-203/204 wall-clock tests](rtvm203-204-wallclock-tests.md) — literal TP-203/204 numbers kept as-is, and the mutation trap: `m_aborted` isn't what decides the outcome during the RTVM-507 extension, the loop's own return-value check is.
 - [PowerShell Mandatory/List gotchas](powershell-mandatory-and-list-gotchas.md) — `return $list` unrolls to `$null`; `Mandatory` rejects empty input; `-RedirectStandardInput 'NUL'` throws on real Windows and can produce false PASSes downstream.
 
 ## Process
