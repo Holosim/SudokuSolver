@@ -72,8 +72,8 @@ Blocked / Withdrawn.
 | RTVM-200 | Given a valid, uniquely-solvable standard 9×9 puzzle, the solver produces the grid's unique solution: all 81 cells filled with 1–9, with no digit repeated in any row, column, or 3×3 box, and every given preserved in place. | SN-2 | Test (TP-200) | In Test | `fdd9cea` |
 | RTVM-201 | Given a well-formed, non-contradictory puzzle that admits no completion, the solver reports "no solution" and terminates. It does not loop, guess indefinitely, or emit a partial grid. | SN-2, SN-4 | Test (TP-201) | In Test | `481c726` |
 | RTVM-202 | The solver determines whether a puzzle has more than one solution by searching for at most two solutions and stopping. Where two are found it yields the first found together with a "not unique" indication. It does not enumerate or count all solutions. | SN-2, SN-3 | Test (TP-202) | Verified | `7ef04ce` |
-| RTVM-203 | The solve is cooperatively interruptible: once an abort is requested the solver stops and yields the "aborted" outcome within 1.0 s, leaving the process free to exit cleanly. | SN-5 | Test (TP-203) | Approved | |
-| RTVM-204 | The solver maintains a monotonically increasing count of search steps taken, readable by the rest of the application and by the test suite while the solve is in flight. This is what makes "the solve is still making progress" (§7 acceptance #6) an observable fact rather than an assertion. | SN-5 | Test (TP-204) | Approved | |
+| RTVM-203 | The solve is cooperatively interruptible: once an abort is requested the solver stops and yields the "aborted" outcome within 1.0 s, leaving the process free to exit cleanly. | SN-5 | Test (TP-203) | In Test | |
+| RTVM-204 | The solver maintains a monotonically increasing count of search steps taken, readable by the rest of the application and by the test suite while the solve is in flight. This is what makes "the solve is still making progress" (§7 acceptance #6) an observable fact rather than an assertion. | SN-5 | Test (TP-204) | In Test | |
 | **DATA-OUT — internal representation of output (§4.1, §4.3)** | | | | | |
 | RTVM-300 | Every run produces exactly one outcome drawn from the closed set: `Solved`, `SolvedNotUnique`, `InvalidInput`, `NoSolution`, `Aborted`. There is no run that produces none and no run that produces two. | SN-3, SN-4, SN-8 | Test (TP-300) | In Test | `668f9a4` |
 | RTVM-301 | The `Solved` and `SolvedNotUnique` outcomes carry a complete 9×9 grid of digits 1–9 with no empty cell. | SN-3 | Test (TP-301) | In Test | `668f9a4` |
@@ -3176,3 +3176,64 @@ commit→regression→RTVM loop for this issue
 on trunk, RTVM-507 is already Verified, and this regression pass
 changes no status — routing it to CI/CD would only produce a third
 round trip over a docs-only, no-op change.
+
+### 9.22 Abort latency and search-step counter tested ([RTVM-203], [RTVM-204], issue #16)
+
+State at branch `issue-16` (tip `4694387`), tested by the Test Engineer
+2026-08-14 — **PASS**. This is the pair of TPs §9.17 flagged as
+downstream-unblocked-but-not-yet-exercised once the RTVM-507 hook
+landed: TP-203 and TP-204 needed a workload slow enough to observe a
+mid-search abort and a rising node count, which only exists via
+`SolveOptions::minSolveDuration` against `P-HARD17`.
+
+**What was exercised.** No production code changed on this branch —
+`SolveControl::onPoll`, `SolveProgress::nodesExplored`, and the
+RTVM-507 `minSolveDuration` hook were already delivered at #8/#13; this
+issue is pure test-writing against `docs/SDD.md` §3.5's specified
+shape, added to `tests/SudokuSolver.Tests/SolverTests.cpp`:
+
+- `rtvm203_abortLatencyStaysUnderOneSecondOverTenConsecutiveRepetitions`
+  — an `AbortAfterWallClockControl` lets the solve run against
+  `P-HARD17` + `minSolveDuration` until 2 s of real wall clock have
+  elapsed, then requests abort and measures the interval to `solve()`
+  returning, repeated 10 times. Asserts `Outcome::Aborted` and
+  `< 1.0 s` worst case each rep — TP-203 literally, no scaling-down.
+- `rtvm204_progressCounterProducesTenStrictlyIncreasingOneSecondSamples`
+  — a `WallClockSampleControl` samples `progress.nodesExplored` once
+  per elapsed second (up to 10 samples) against the same workload
+  without ever requesting abort. Asserts exactly 10 samples, the first
+  `> 0`, each strictly greater than the last — TP-204 literally.
+
+Both the Software Engineer and the Test Engineer independently
+confirmed each test is falsifiable by mutation, on separate throwaway
+`/tmp` copies of `Solver.cpp`/`Search.cpp`, reverted with `git status`
+clean: ignoring `search.explore()`'s abort signal inside the RTVM-507
+extension loop breaks exactly `rtvm203_*` plus the existing
+`rtvm507_anAbortDuringTheExtensionStopsTheSolveRatherThanRunningToDuration`
+and nothing else; making `Search::beginNewPass()` also reset
+`m_nodesExplored` breaks exactly `rtvm204_*` plus the existing
+`rtvm507_hookKeepsPollingAndAdvancingTheNodeCounterDuringExtension` and
+nothing else.
+
+**Environment.** `g++ -std=c++17 -Wall -Wextra` (Ubuntu, no MSVC) —
+65/65 discovered methods pass, both new methods included. **Real
+Windows/MSVC evidence**, `windows-verification` run `31838394793` for
+this exact commit (`evidence/machine.md` matches tip `4694387`): Debug
+and Release both `0 Error(s)`; `vstest.console.exe` via
+`tests/windows/run-procedures.ps1` (the DW-1 fix from #23/#24) — real
+`tests.trx`, 65 Passed, 0 Failed. Per-method: `rtvm203_*` `Passed`,
+duration `00:00:20.00…` (10 reps × 2 s wait, as specified); `rtvm204_*`
+`Passed`, duration `00:00:11.00…` (matches the 11 s `minSolveDuration`
+margin the Software Engineer's design note describes). Both roles
+agree this is a genuine, unscaled execution of TP-203/TP-204 in full —
+not a partial run, unlike most other NFR procedures still gated on
+V-1/DW-1 (§9.4).
+
+**No status promotion to Verified.** Per standing convention, Verified
+needs a trunk commit SHA in addition to full clause execution, and
+this evidence is all on branch `issue-16`. **RTVM-203 and RTVM-204
+move Approved → In Test** (§5), Commit(s) left blank pending CI/CD.
+
+**§7 interpretations raised in this thread: none.**
+
+Handed to CI/CD next with `status:ready-for-commit`.

@@ -15,7 +15,9 @@
 //
 // RTVM-201 (no solution, TP-201) and RTVM-202 (non-uniqueness, TP-202) both
 // run on the same search, and are both verified below (#11 and #12
-// respectively).
+// respectively). RTVM-203 (abort latency, TP-203) and RTVM-204 (progress
+// counter, TP-204) are also verified below (#16), both directly against the
+// RTVM-507 long-running workload as their procedures specify.
 
 #include "CppUnitTest.h"
 
@@ -129,6 +131,80 @@ public:
 private:
     int m_pollsBeforeAbort;
     int m_pollCount = 0;
+};
+
+// TP-203's shape exactly (docs/SDD.md 3.5): a control that lets the solve run
+// until `waitBeforeAbort` of real wall clock has elapsed since it was
+// constructed, then requests an abort and records the instant it did so.
+// Timed against std::chrono::steady_clock, sampled from inside onPoll --
+// no thread, no sleep, no timing race in the test itself.
+class AbortAfterWallClockControl final : public SolveControl
+{
+public:
+    explicit AbortAfterWallClockControl(std::chrono::steady_clock::duration waitBeforeAbort)
+        : m_start(std::chrono::steady_clock::now())
+        , m_waitBeforeAbort(waitBeforeAbort)
+    {
+    }
+
+    bool onPoll(const SolveProgress&) override
+    {
+        if (std::chrono::steady_clock::now() - m_start < m_waitBeforeAbort) {
+            return true;
+        }
+        m_abortRequestedAt = std::chrono::steady_clock::now();
+        return false;
+    }
+
+    // Precondition: onPoll has returned false at least once.
+    [[nodiscard]] std::chrono::steady_clock::time_point abortRequestedAt() const
+    {
+        return m_abortRequestedAt;
+    }
+
+private:
+    std::chrono::steady_clock::time_point m_start;
+    std::chrono::steady_clock::duration   m_waitBeforeAbort;
+    std::chrono::steady_clock::time_point m_abortRequestedAt{};
+};
+
+// TP-204's shape exactly (docs/SDD.md 3.5): a control that records
+// progress.nodesExplored once per elapsed second of real wall clock, up to
+// `sampleCount` samples, then stops sampling (but keeps letting the solve
+// run -- it never requests an abort). The samples are taken from inside
+// onPoll against std::chrono::steady_clock, so there is no thread, no
+// sleep and no timing race in the test itself.
+class WallClockSampleControl final : public SolveControl
+{
+public:
+    explicit WallClockSampleControl(int sampleCount)
+        : m_start(std::chrono::steady_clock::now())
+        , m_sampleCount(sampleCount)
+    {
+    }
+
+    bool onPoll(const SolveProgress& progress) override
+    {
+        if (static_cast<int>(m_samples.size()) >= m_sampleCount) {
+            return true;
+        }
+        const auto elapsedSeconds = std::chrono::duration_cast<std::chrono::seconds>(
+            std::chrono::steady_clock::now() - m_start).count();
+        // Sample once elapsedSeconds reaches 1, 2, 3, ... -- one second per
+        // sample, matching "at 1 s intervals" without depending on onPoll
+        // landing on an exact second boundary.
+        if (elapsedSeconds >= static_cast<long long>(m_samples.size()) + 1) {
+            m_samples.push_back(progress.nodesExplored);
+        }
+        return true;
+    }
+
+    [[nodiscard]] const std::vector<std::uint64_t>& samples() const { return m_samples; }
+
+private:
+    std::chrono::steady_clock::time_point m_start;
+    int                                   m_sampleCount;
+    std::vector<std::uint64_t>            m_samples;
 };
 
 // Runs one TP-200 case end to end against the core: solve, then assert the
@@ -454,6 +530,79 @@ public:
         Assert::IsTrue(elapsed < std::chrono::seconds(1),
             L"RTVM-203: abort latency stays under 1.0 s even with "
             L"minSolveDuration set far beyond it");
+    }
+
+    // TP-203 (docs/RTVM.md 3, issue #16): start a solve on the RTVM-507
+    // long-running workload, wait 2 s, request abort, measure the interval
+    // until the solver returns. Expect < 1.0 s over 10 consecutive
+    // repetitions, worst case reported.
+    //
+    // pollNodeInterval is set to 1 -- as
+    // rtvm507_anAbortDuringTheExtensionStopsTheSolveRatherThanRunningToDuration
+    // does above -- so onPoll fires on every node/pass rather than every
+    // 1024, keeping the 2 s wait-threshold check fine-grained regardless of
+    // how slow or fast the build is. minSolveDuration (3 s) only has to
+    // outlast the 2 s wait; the RTVM-507 hook is what supplies genuine,
+    // uninterrupted search work to abort out of, in place of P-HARD17's own
+    // near-instant (~1 node) solve.
+    TEST_METHOD(rtvm203_abortLatencyStaysUnderOneSecondOverTenConsecutiveRepetitions)
+    {
+        const Grid puzzle = gridFromCompactForm(kPuzzleHard17);
+        auto worstLatency = std::chrono::steady_clock::duration::zero();
+
+        for (int repetition = 0; repetition < 10; ++repetition) {
+            AbortAfterWallClockControl control(std::chrono::seconds(2));
+            SolveOptions options{};
+            options.pollNodeInterval = 1;
+            options.minSolveDuration = std::chrono::seconds(3);
+
+            const SolveReport report = solve(puzzle, options, control);
+            const auto        returnedAt = std::chrono::steady_clock::now();
+
+            Assert::IsTrue(report.outcome() == Outcome::Aborted,
+                L"a solve that received an abort request must report Aborted, "
+                L"not run to completion or to minSolveDuration");
+
+            const auto latency = returnedAt - control.abortRequestedAt();
+            worstLatency = std::max(worstLatency, latency);
+        }
+
+        Assert::IsTrue(worstLatency < std::chrono::seconds(1),
+            L"RTVM-203: the solver must return within 1.0 s of an abort "
+            L"request, worst case measured over 10 consecutive repetitions");
+    }
+
+    // TP-204 (docs/RTVM.md 3, issue #16): start a solve on the RTVM-507
+    // long-running workload. Sample the search-step count at 1 s intervals
+    // for 10 s. Expect 10 strictly increasing samples, and the first sample
+    // > 0.
+    //
+    // minSolveDuration (11 s) outlasts the full 10 s sampling window with a
+    // margin, so the search is still genuinely running -- and therefore
+    // still genuinely advancing nodesExplored -- when the tenth sample is
+    // taken; a shorter duration risks the extension loop exiting mid-window
+    // and the last sample(s) never being collected.
+    TEST_METHOD(rtvm204_progressCounterProducesTenStrictlyIncreasingOneSecondSamples)
+    {
+        WallClockSampleControl control(/*sampleCount=*/10);
+        SolveOptions           options{};
+        options.pollNodeInterval = 1;
+        options.minSolveDuration = std::chrono::seconds(11);
+
+        const SolveReport report =
+            solve(gridFromCompactForm(kPuzzleHard17), options, control);
+        static_cast<void>(report);
+
+        const std::vector<std::uint64_t>& samples = control.samples();
+        Assert::AreEqual(std::size_t{10}, samples.size(),
+            L"expected exactly 10 samples, one per elapsed second over 10 s");
+        Assert::IsTrue(samples.front() > 0ULL,
+            L"RTVM-204: the first sample must already be positive");
+        for (std::size_t i = 1; i < samples.size(); ++i) {
+            Assert::IsTrue(samples[i] > samples[i - 1],
+                L"RTVM-204: the node counter must be strictly increasing "
+                L"from one 1 s sample to the next");
+        }
     }
 };
 
