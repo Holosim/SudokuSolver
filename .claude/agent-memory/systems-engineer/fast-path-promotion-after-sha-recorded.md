@@ -45,3 +45,15 @@ section's closing rule.
 See [[verification-platform-trap]] for the V-1/DW-1 background this
 pattern depends on, and [[doc-state-across-branches]] for the general
 "which tree is this evidence actually on" discipline.
+
+## Closing after CI/CD's hand-back
+
+CI/CD's own hand-back on a doc-only fast path will often say "nothing
+for me to commit, the SE already pushed it, handing back to you." That
+is not a stall — it's the expected shape when the fast path produced
+no code diff, only `docs/RTVM.md`. Treat it exactly like the normal
+"Receiving a commit confirmation from CI/CD" flow's non-regression
+branch: confirm the RTVM rows are Verified with the right SHA, comment,
+and close the issue outright — no further agent label/hand-off needed
+since the chain is complete. (Issue #10, closed 2026-08-14 on this
+basis.)
