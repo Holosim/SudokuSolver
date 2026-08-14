@@ -2896,14 +2896,15 @@ question.
 **§7 interpretations raised in this thread: none** — this round is
 merge bookkeeping and status promotion, not new scope.
 
-### 9.16 The long-solve diagnostic hook lands ([RTVM-507], issue #13)
+### 9.17 The long-solve diagnostic hook lands ([RTVM-507], issue #13)
 
-**Duplicate section number, deliberate:** this section and the §9.16
-immediately above it (#12's merge-recorded note) were appended
-independently by two branches that both picked the next free number.
-Per standing convention this is an ID collision, not a content clash —
-both are kept verbatim, trunk's (#12) first, and renumbering is left to
-the Systems Engineer rather than decided here by CI/CD.
+**Renumbered from a duplicate §9.16.** This section and #12's
+merge-recorded note above it were appended independently by two
+branches that both picked the next free number (§9.16). Resolving that
+collision, as the prior note said was the Systems Engineer's to do:
+trunk's (#12) keeps §9.16; this section becomes §9.17, and #12's own
+regression-close-out note (concurrently drafted under the same
+free-number collision) becomes §9.18 below.
 
 State at branch `issue-13` (`37d0208`, plus two memory-only commits),
 tested by the Test Engineer 2026-08-14 — **PASS**. This is the
@@ -2965,3 +2966,57 @@ this evidence is all on branch `issue-13`. **RTVM-507 moves Approved →
 In Test** (§5), Commit(s) left blank pending CI/CD.
 
 Handed to CI/CD next with `status:ready-for-commit`.
+
+### 9.18 Post-merge regression pass, no promotion possible — issue #12 closes without further action
+
+§9.16 already moved RTVM-202 and RTVM-401 **In Test → Verified** at
+`7ef04ce` on CI/CD's commit confirmation, independent of whether
+V-1/DW-1 evidence existed yet against that tree — per the standing
+"first commit-confirmation promotes immediately" rule
+([[verified-on-first-commit-confirmation-not-gated-by-v1]]). The
+regression pass CI/CD asked for is now in, and this is the second
+`status:ready-for-rtvm-update` on this issue.
+
+**Scope check.** `compare/83ec82d...main` (the merge SHA's tree-identical
+follow-up → trunk tip at the time) showed only `docs/RTVM.md` and
+Systems Engineer memory changed since the merge — no product-path diff.
+The Test Engineer ran the full substitute-harness pass anyway per
+standing practice on an unqualified hand-off: 59/59 methods pass
+(Linux/g++), all 14 sample files exit as expected, `nonunique.txt`
+byte-identical to the §6.2/TP-401 reference.
+
+**Bonus finding, not required for this issue's own rows.** A
+`windows-verification.yml` run already existed for the exact trunk tip
+under test (`1d716e69`, run `31823099652`, `success`) — genuine
+MSVC/`vstest.console.exe` discovery-and-execution evidence, not the
+discovery-only failure mode DW-1 used to produce: `discovered-tests.txt`
+lists 59 `rtvm*` methods (matching the Linux count exactly), `tests.trx`
+shows 59 Passed / 0 Failed, including all three `rtvm202_*` methods and
+the TP-401 process check individually. Two pre-existing `C4996`
+warnings on `strerror` in `Messages.cpp::errnoReason()` are unrelated
+to this issue (§7 I-18) and not a new regression. `dumpbin-dependents.txt`
+still shows only `KERNEL32.dll` (TP-506's static-CRT claim holds).
+
+**Status outcome: no change possible.** RTVM-202 and RTVM-401 have no
+outstanding clause left to discharge — §9.16 already reached the
+terminal Verified state on both rows without waiting on this evidence,
+so there is nothing left for this pass to promote. The fresh
+Windows/`vstest` evidence is genuine and welcome, but it is not this
+issue's to spend: several *other* rows across the matrix are still
+**In Test** with V-1/DW-1 as their sole outstanding item (e.g.
+RTVM-001/002/003/100/101/106/200/201/300/301/302/400/402/903/907), and
+whether run `31823099652` covers each of those rows' own specific test
+methods with the same per-method rigor §9.12 applied has not been
+checked here — that is a distinct, larger sweep belonging to whichever
+issue next touches V-1/DW-1 project-wide (in the shape of the earlier
+process issue **#23**), not a side effect of closing out #12. Recorded
+here only as a pointer so the evidence isn't lost.
+
+**§7 interpretations raised in this thread: none.**
+
+**Issue #12 closes here.** This is the terminus of the
+commit→regression→RTVM loop for this issue
+([[second-ready-for-rtvm-update-closes-directly]]): the code is already
+on trunk, both of this issue's own rows are already Verified, and this
+regression pass changes no status — routing it to CI/CD would only
+produce a third round trip over a docs-only, no-op change.
