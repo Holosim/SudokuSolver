@@ -67,6 +67,20 @@ Deliverable Requirements you noted during the RTVM issue — that's what
 actually determines whether the result is something a client's own
 engineers could pick up and extend.
 
+When the target platform differs from the platform this pipeline
+actually executes on (agents run on Ubuntu; a deliverable targeting
+Windows/MSVC, a game console, or embedded hardware is common),
+decide deliberately whether target-platform verification needs to
+gate every individual feature, or whether building and iterating in
+the pipeline's native environment first — then verifying against the
+real target once, in a consolidation phase — is cheaper. The latter is
+often true and easy to underestimate the cost of not doing: requiring
+cross-platform verification on every atomic feature multiplies a
+one-time integration cost by however many features exist, and adds a
+second execution environment's own setup and permission questions to
+every one of them. Record this as an explicit decision in
+`docs/SDD.md`, not a default.
+
 For any project with more than one communicating component —
 networked, distributed, or multi-process — also capture how data moves
 between them: transfer method, ordering guarantees, storage. These
