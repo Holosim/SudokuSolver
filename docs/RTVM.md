@@ -94,7 +94,7 @@ Blocked / Withdrawn.
 | RTVM-504 | The application is never silent while working. From launch to exit the user always has either a result, a diagnostic, or a prompt. The longest permitted interval with no output on either stream is bounded by the RTVM-501 first-prompt threshold **before** the first prompt (15 s + 1.0 s tolerance = 16.0 s) and by the RTVM-502 repeat interval **thereafter** (10 s + 1.0 s tolerance = 11.0 s). See §7 I-12. | SN-5 | Test (TP-504) | Approved | |
 | RTVM-505 | No input causes an unhandled exception, an access violation, an assertion dialog, or a non-zero exit code outside the set in RTVM-405. Every run terminates. | SN-4 | Test (TP-505) | Approved | |
 | RTVM-506 | The delivered executable is a self-contained x64 Windows console application that runs on a clean Windows machine with no installed runtime or third-party component beyond what a stock Windows install provides. | SN-6, SN-7 | Test (TP-506) | In Implementation | `85bab27` |
-| RTVM-507 | The build provides a documented diagnostic means of forcing a solve to run past the prompt thresholds without altering ordinary behaviour, so that RTVM-004…008 and RTVM-501…504 are verifiable end-to-end. It is documented in `docs/SDD.md`, not in the user-facing README, and is inert in normal use. | SN-5 | Test (TP-507) | In Test | |
+| RTVM-507 | The build provides a documented diagnostic means of forcing a solve to run past the prompt thresholds without altering ordinary behaviour, so that RTVM-004…008 and RTVM-501…504 are verifiable end-to-end. It is documented in `docs/SDD.md`, not in the user-facing README, and is inert in normal use. | SN-5 | Test (TP-507) | Verified | `d39eacd` |
 | **DELIV — deliverable requirements (§6). Verified by inspection.** | | | | | |
 | RTVM-900 | The repository contains a committed, openable Visual Studio 2022 solution and project file(s) — not source files alone. (D-1) | SN-7 | Inspection (TP-900) | In Test | `85bab27` |
 | RTVM-901 | A client engineer can clone, open, build, and run the solution in VS 2022 with no setup step that is not written down in the README. (D-2) | SN-7 | Inspection (TP-901) | In Implementation | `85bab27` |
@@ -3020,3 +3020,44 @@ commit→regression→RTVM loop for this issue
 on trunk, both of this issue's own rows are already Verified, and this
 regression pass changes no status — routing it to CI/CD would only
 produce a third round trip over a docs-only, no-op change.
+
+### 9.19 CI/CD merge recorded, RTVM-507 promoted to Verified (issue #13, commit confirmation)
+
+CI/CD merged `issue-13` into `main` `--no-ff` at **`d39eacd`**
+(parents: trunk tip `e5119a0`, branch head `371b4b9`), resolving two
+real conflicts: a §9.16 heading-number collision with #12's
+independently-appended section (both branches picked the same next
+free number — resolved as trunk-first, this branch renumbered to
+§9.17, per that section's own note above), and a shared closing-brace
+suffix in `tests/SudokuSolver.Tests/SolverTests.cpp` where both
+branches appended new `TEST_METHOD`s at the same tail location.
+CI/CD's own pre-merge verification on the merged tree: clean
+`g++ -std=c++17 -Wall -Wextra -pedantic` compile/link, generated-driver
+harness 63/63 pass full / 47/47 core-only (RTVM-903 intact), TP-903
+grep clean, and both the inert- and active-path (`=1500` ms) end-to-end
+runs byte-identical / genuine-work as in §9.17.
+
+**Which SHA is recorded.** Per the standing "record the merge commit"
+convention ([[commit-sha-recorded-is-the-merge-commit]]), `d39eacd` is
+recorded as RTVM-507's Commit(s) — not `b7dce7e`, the immediately
+following `docs/RTVM.md` lock-release commit that CI/CD flagged as the
+one carrying the *live* `windows-verification.yml` run (the merge's own
+run was cancelled by the standing concurrency-cancellation pattern once
+`b7dce7e` pushed behind it). `git diff --stat d39eacd b7dce7e` touches
+only `.claude/locks/docs/RTVM.md.lock` — the tree is otherwise
+identical, so this is a bookkeeping distinction, not a scope question:
+the Test Engineer should read `b7dce7e`'s workflow run for Windows
+evidence but the row points at `d39eacd`, the actual merge.
+
+**Status outcome.** RTVM-507 **In Test → Verified**
+([[verified-on-first-commit-confirmation-not-gated-by-v1]] — this is
+the first commit confirmation for this row, so it promotes immediately
+regardless of whether the regression sweep below has run yet). §5 row
+updated with Commit(s) `d39eacd`.
+
+**This needs regression testing** per CI/CD's handoff — a real trunk
+merge of new product code (`SolveOptions::minSolveDuration` plus its
+console wiring and tests), not a docs-only or zero-commit fast path.
+Handed to the Test Engineer next.
+
+**§7 interpretations raised in this thread: none.**
