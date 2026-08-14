@@ -305,3 +305,17 @@ check for "is there anything left to discharge" before reaching for either
 the promotion path or the plain reconfirmation path — genuinely new evidence
 that has nowhere to land on *this* issue's own rows is still worth recording
 as a pointer, just not as a promotion.
+
+## The fast-path RTVM-update commit itself lands on the feature branch, not on main (2026-08-14, #16)
+
+For a first-pass `status:ready-for-rtvm-update` (Approved → In Test, no SHA
+yet), the `docs/RTVM.md` edit is committed **on the issue's own branch**
+(`git log` shows `371b4b9` on `issue-13` for the RTVM-507 precedent), then
+pushed there — CI/CD merges it to trunk together with the product/test
+diff in one `--no-ff`. This is the opposite of
+[[commit-confirmation-pushes-direct-to-main]], which is specifically the
+*second* RTVM touch (recording CI/CD's own merge SHA) — that one really is
+single-parent, direct-to-`main`, no branch. Don't conflate the two: check
+whether a SHA is already being recorded (→ direct to main) or whether this
+is the pre-merge promotion to In Test (→ commit on the existing
+`issue-N` branch, same branch Software/Test Engineer already used).
