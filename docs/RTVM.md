@@ -72,8 +72,8 @@ Blocked / Withdrawn.
 | RTVM-200 | Given a valid, uniquely-solvable standard 9×9 puzzle, the solver produces the grid's unique solution: all 81 cells filled with 1–9, with no digit repeated in any row, column, or 3×3 box, and every given preserved in place. | SN-2 | Test (TP-200) | In Test | `fdd9cea` |
 | RTVM-201 | Given a well-formed, non-contradictory puzzle that admits no completion, the solver reports "no solution" and terminates. It does not loop, guess indefinitely, or emit a partial grid. | SN-2, SN-4 | Test (TP-201) | In Test | `481c726` |
 | RTVM-202 | The solver determines whether a puzzle has more than one solution by searching for at most two solutions and stopping. Where two are found it yields the first found together with a "not unique" indication. It does not enumerate or count all solutions. | SN-2, SN-3 | Test (TP-202) | Verified | `7ef04ce` |
-| RTVM-203 | The solve is cooperatively interruptible: once an abort is requested the solver stops and yields the "aborted" outcome within 1.0 s, leaving the process free to exit cleanly. | SN-5 | Test (TP-203) | In Test | |
-| RTVM-204 | The solver maintains a monotonically increasing count of search steps taken, readable by the rest of the application and by the test suite while the solve is in flight. This is what makes "the solve is still making progress" (§7 acceptance #6) an observable fact rather than an assertion. | SN-5 | Test (TP-204) | In Test | |
+| RTVM-203 | The solve is cooperatively interruptible: once an abort is requested the solver stops and yields the "aborted" outcome within 1.0 s, leaving the process free to exit cleanly. | SN-5 | Test (TP-203) | Verified | `ce15599` |
+| RTVM-204 | The solver maintains a monotonically increasing count of search steps taken, readable by the rest of the application and by the test suite while the solve is in flight. This is what makes "the solve is still making progress" (§7 acceptance #6) an observable fact rather than an assertion. | SN-5 | Test (TP-204) | Verified | `ce15599` |
 | **DATA-OUT — internal representation of output (§4.1, §4.3)** | | | | | |
 | RTVM-300 | Every run produces exactly one outcome drawn from the closed set: `Solved`, `SolvedNotUnique`, `InvalidInput`, `NoSolution`, `Aborted`. There is no run that produces none and no run that produces two. | SN-3, SN-4, SN-8 | Test (TP-300) | In Test | `668f9a4` |
 | RTVM-301 | The `Solved` and `SolvedNotUnique` outcomes carry a complete 9×9 grid of digits 1–9 with no empty cell. | SN-3 | Test (TP-301) | In Test | `668f9a4` |
@@ -3237,3 +3237,40 @@ move Approved → In Test** (§5), Commit(s) left blank pending CI/CD.
 **§7 interpretations raised in this thread: none.**
 
 Handed to CI/CD next with `status:ready-for-commit`.
+
+### 9.23 CI/CD merge recorded, RTVM-203/RTVM-204 promoted to Verified (issue #16, commit confirmation)
+
+CI/CD merged `issue-16` into `main` `--no-ff` at **`ce15599`**
+(merging branch head `daa8807`, one commit ahead of the
+Software/Test Engineer's cited `4694387` — the extra two commits are
+the Test Engineer's and Systems Engineer's own memory/RTVM commits,
+no further product or test change). `ce15599` has two parents
+(`2b0941b`, `daa8807`), confirming it is the actual merge commit and
+not a branch tip, per
+[[commit-sha-recorded-is-the-merge-commit]]. **RTVM-203 and RTVM-204
+move In Test → Verified** (§5), Commit(s) recorded as `ce15599` for
+both, per
+[[verified-on-first-commit-confirmation-not-gated-by-v1]]: this is
+the *first* commit confirmation for these two rows, so it promotes
+immediately even though CI/CD flagged this trunk arrival as needing
+regression testing. That regression pass is downstream confirmation,
+not a precondition for Verified.
+
+**Why regression is still needed.** This merge lands two new test
+methods on trunk (`tests/SudokuSolver.Tests/SolverTests.cpp`), not a
+docs-only change — CI/CD ran its own Ubuntu/g++ build+suite check on
+the merged tree (clean, 65/65 including both new methods) but that is
+not a substitute for the pinned-machine regression sweep. CI/CD's
+comment flags one wrinkle worth restating here: the `windows-verification`
+workflow fired on the `ce15599` push but was then cancelled by two
+follow-up memory-only commits (`48fd759`, `3cc6149`) under the
+workflow's `cancel-in-progress` concurrency group. `git diff --stat
+ce15599 3cc6149 -- . ':!.claude/agent-memory'` is empty — the trees
+are identical outside memory bookkeeping — so the Test Engineer
+should read the Windows run for current `main` HEAD (`3cc6149`), not
+`ce15599`, rather than expect a run pinned to `ce15599` itself to
+exist.
+
+**§7 interpretations raised in this thread: none.**
+
+Handed to Test Engineer next for the regression pass CI/CD requested.
