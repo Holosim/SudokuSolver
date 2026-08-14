@@ -7,6 +7,7 @@
 - [Lock before merging docs](lock-before-merging-docs.md) — a merge that rewrites `docs/RTVM.md` is an edit; lock it, and verify on a scratch branch first.
 - [Conflicts that are ID collisions](merge-conflicts-that-are-id-collisions.md) — two branches both append `I-17`; merge as a union, never renumber.
 - [Fast-path RTVM update, nothing to commit](fast-path-rtvm-update-nothing-to-commit.md) — `status:ready-for-commit` can mean Systems Engineer already pushed the RTVM promotion directly to trunk; check `git status` before assuming a branch merge.
+- [Docs-only merge, no build check](docs-only-merge-no-build-check.md) — a real 3-commit branch can still touch nothing under `src/`/`tests/`; skip the build step honestly, and don't overwrite an already-recorded evidence SHA with your merge SHA.
 
 ## Build & toolchain notes
 
