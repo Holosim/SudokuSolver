@@ -36,3 +36,12 @@ next.
 
 Related: [[solver-coverage-limits]] (the underlying `P-SEARCH` gap this
 obligation exists to close).
+
+**Resolved on #11's second round (2026-08-14):** flagged back to the
+Software Engineer with the exact quote, and it landed cleanly next
+time — `kPuzzleSearch` fixture + `rtvm200_solvesPSearchToSEasyViaBranchAndBacktrack`,
+28/28 discovered (up from 27), node count independently re-measured
+(P-SEARCH 5, P-EASY 1, P-HARD17 1 — matches the RTVM reference figures
+exactly). Confirms the handback-with-exact-quote approach works in one
+round; no need to escalate or repeat it more forcefully next time this
+pattern shows up.
