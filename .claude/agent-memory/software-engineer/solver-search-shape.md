@@ -42,5 +42,21 @@ givens, so RTVM-104 doesn't catch it; the search must) and two
 making the zero-solution branch of `Search::report()` return `Solved`
 instead — the new test failed as expected, then reverted.
 
+**Confirmed on issue #11 again (TP-200's P-SEARCH clause, 2026-08-14):**
+`docs/RTVM.md` §9.7 found that both original TP-200 fixtures solve at
+`nodesExplored() == 1` — propagation alone, so the MRV branch/backtrack
+half of the search never ran under test. Fix was test-only: `P-SEARCH`
+(§6.1, 25 givens dug from `S-EASY`, so no new solution fixture — expected
+output is the existing `kSolvedEasy`) plus one `TEST_METHOD` asserting the
+usual TP-200 structural checks and `nodesExplored() > 1`. Re-measured
+independently rather than trusting the RTVM prose: P-SEARCH 5 nodes,
+P-EASY 1, P-HARD17 1 — matched exactly. **Lesson for hand-offs:** when an
+RTVM update adds a clause to an *existing* TP with a named re-run trigger
+issue, that issue's own git branch can be stale relative to trunk/origin
+even though a prior comment claims a commit SHA that "did" the earlier
+half of the work — always `git fetch` and check out the actual remote
+branch before assuming local state matches the issue thread; a shallow
+clone of `main` alone won't have it.
+
 Related: [[unit-tests-are-the-software-engineers-to-write]],
 [[sudoku-module-layout]], [[output-layer-scope-per-issue]]
