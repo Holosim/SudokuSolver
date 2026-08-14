@@ -35,5 +35,12 @@ Four orders of magnitude inside RTVM-500's 10 s.
   over box units re-imposes the constraint. A single-constraint mutation is not
   a reliable coverage probe here.
 
+**Confirmed on issue #11 (RTVM-201):** no solver change was needed. Added
+`P-UNSOLVABLE` (`P-EASY` with `r1c3` forced to `1` — mutually consistent
+givens, so RTVM-104 doesn't catch it; the search must) and two
+`TEST_METHOD`s to `SolverTests.cpp`. Proved falsifiability by temporarily
+making the zero-solution branch of `Search::report()` return `Solved`
+instead — the new test failed as expected, then reverted.
+
 Related: [[unit-tests-are-the-software-engineers-to-write]],
-[[sudoku-module-layout]]
+[[sudoku-module-layout]], [[output-layer-scope-per-issue]]
