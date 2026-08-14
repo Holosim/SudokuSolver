@@ -24,7 +24,8 @@ namespace sudoku::cli::messages {
 // Diagnostic for a rejected input. stderr (RTVM-403).
 [[nodiscard]] std::string inputFault(const InputFault& fault);
 
-// stdout (RTVM-401).
+// stdout (RTVM-401). One line, newline-terminated, appended after the
+// 13-line grid by Reporter — never printed on its own.
 [[nodiscard]] std::string notUniqueNote();
 
 // stdout (RTVM-402).

@@ -2,11 +2,11 @@
 //
 // The outcome-to-exit-code mapping of RTVM-405 is wired now because
 // everything downstream branches on it. The wording each case writes is
-// filled in with Messages under the output issues.
+// filled in with Messages under the output issues; RTVM-400 (formatGrid) and
+// RTVM-401 (the non-unique note) are real as of #9 and #12 respectively.
 //
-// TODO(RTVM-400, RTVM-401, RTVM-402, RTVM-403, RTVM-404): write the
-//      formatted grid, the non-unique note, the no-solution line and the
-//      diagnostics once Messages and formatGrid carry their real text.
+// TODO(RTVM-402, RTVM-403, RTVM-404): write the no-solution line and the
+//      diagnostics once Messages carries their real text.
 
 #include "Reporter.h"
 

@@ -25,6 +25,7 @@
 - [Parser test scope + I-15 ruling](parser-test-scope-and-open-ruling.md) — TP-101/106 half-runnable until #8/#9; whitespace-precedence now settled as IllegalCharacter.
 - [Solver coverage limits](solver-coverage-limits.md) — TP-200's fixtures never reach the DFS; mutants it can't see, and the randomised-oracle cross-check that covers it.
 - [Console layer runs end-to-end now](console-layer-end-to-end-now-runnable.md) — since #9 the whole binary builds on Linux; how to byte-compare §6.2 stdout without hiding the final newline.
+- [TP-202 non-uniqueness + P-BLANK substitution](tp202-nonuniqueness-and-p-blank-substitution.md) — independently reproduced the SE's node-count claim on #12; how to byte-check TP-401 end to end.
 
 ## How to scope work (cont.)
 

@@ -12,11 +12,15 @@
 // (including the last) carrying its own '\n', so a caller downstream never
 // has to add or guess about a separator (docs/RTVM.md TP-402: "no separator
 // line").
+// #12 ([RTVM-401]) filled in `notUniqueNote` — the reference wording of
+// docs/RTVM.md 6.2, newline-terminated the same way for the same reason.
 //
-// TODO(RTVM-400, RTVM-401, RTVM-404, RTVM-004): real wording.
+// TODO(RTVM-404, RTVM-004): real wording for `aborted` and
+// `progressPrompt`. (RTVM-400 is `GridFormat.cpp::formatGrid`, not a
+// function in this file.)
 //
-// docs/RTVM.md 6.2 pins exact wording only for RTVM-401/402/404 and the
-// progress prompt; RTVM-102..105, RTVM-009 and RTVM-403 are unpinned —
+// docs/RTVM.md 6.2 pins exact wording for RTVM-401, RTVM-402, RTVM-404 and
+// the progress prompt; RTVM-102..105, RTVM-009 and RTVM-403 are unpinned —
 // TP-102..105, TP-009 and TP-403 assert the *elements* a diagnostic must
 // name, not an exact sentence, and docs/RTVM.md 7 I-18 additionally forbids
 // pinning the CRT/errno reason text for RTVM-009. Every sentence below is
@@ -125,7 +129,11 @@ std::string inputFault(const InputFault& fault)
 
 std::string notUniqueNote()
 {
-    return std::string{};
+    // Reference wording, docs/RTVM.md TP-401 and 6.2. Newline-terminated
+    // because Reporter concatenates it directly after formatGrid()'s output,
+    // which is itself a sequence of newline-terminated lines (RTVM-401).
+    return "Note: this puzzle has more than one solution; "
+           "the solution shown is the first one found.\n";
 }
 
 std::string noSolution()
