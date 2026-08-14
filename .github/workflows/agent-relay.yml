@@ -96,8 +96,13 @@ jobs:
                couldn't resolve, or got blocked by something outside
                your control, say that instead, as specifically as you
                can. The comment thread should never go quiet with no
-               record of what was attempted. Prefix it with your role
-               name (e.g. "Software Engineer:").
+               record of what was attempted. Follow the comment
+               structure in .github/AGENT_LABELS.md exactly: first
+               line is "<Addressee>, <Your role>:", last line is a
+               "**Next:**" status line. The Next line isn't
+               decoration — stall-recovery.yml parses it to route a
+               recovered hand-off correctly, so get the exact format
+               right.
             6. Hand off by running exactly one command:
                  gh issue edit ${{ steps.role.outputs.issue }} \
                    --remove-label "agent:${{ steps.role.outputs.role }}" \

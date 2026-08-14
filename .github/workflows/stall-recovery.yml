@@ -66,16 +66,25 @@ jobs:
                   --repo "${{ github.repository }}" \
                   -q '.comments | if length > 0 then .[-1].body else "" end')
 
-                TARGET=$(echo "$LAST_COMMENT_BODY" | grep -oE '`agent:[a-z-]+`' | tr -d '`' | tail -1 || true)
+                NEXT_LINE=$(echo "$LAST_COMMENT_BODY" | grep -i '^\*\*Next:\*\*' | tail -1 || true)
 
-                if [[ -n "$TARGET" && "$TARGET" != "$AGENT_LABEL" ]]; then
+                if echo "$NEXT_LINE" | grep -qE '`agent:[a-z-]+`'; then
+                  TARGET=$(echo "$NEXT_LINE" | grep -oE '`agent:[a-z-]+`' | tr -d '`')
                   gh issue comment "$NUMBER" --repo "${{ github.repository }}" \
-                    --body "Stall recovery: no activity for over an hour. The last comment named $TARGET as the hand-off target but the label never moved -- routing there directly rather than re-running $AGENT_LABEL."
+                    --body "Stall recovery: no activity for over an hour. The Next line declared a hand-off to $TARGET that never took effect -- routing there directly."
                   gh issue edit "$NUMBER" --repo "${{ github.repository }}" \
                     --remove-label "$AGENT_LABEL" --remove-label "status:in-progress"
                   gh issue edit "$NUMBER" --repo "${{ github.repository }}" \
                     --add-label "$TARGET"
+                elif echo "$NEXT_LINE" | grep -qi 'waiting on human reply'; then
+                  gh issue comment "$NUMBER" --repo "${{ github.repository }}" \
+                    --body "Stall recovery: no activity for over an hour. The Next line said this is waiting on a human reply -- clearing status:in-progress only, leaving $AGENT_LABEL in place."
+                  gh issue edit "$NUMBER" --repo "${{ github.repository }}" \
+                    --remove-label "status:in-progress"
                 else
+                  # "Continuing", or no parseable Next line at all -- the
+                  # safest recovery is retriggering whoever currently holds
+                  # the issue.
                   gh issue comment "$NUMBER" --repo "${{ github.repository }}" \
                     --body "Stall recovery: no activity for over an hour. Retriggering $AGENT_LABEL."
                   gh issue edit "$NUMBER" --repo "${{ github.repository }}" \
