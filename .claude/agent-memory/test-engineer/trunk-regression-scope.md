@@ -107,3 +107,18 @@ checks anyway, even though `compare/481c726...main` was product-empty
 explicit lighter route named" as the default case requiring the full
 substitute-harness run, not just the compare — #23's shortcut was
 Systems-Engineer-sanctioned, not a standing default.
+
+**#12's regression pass (2026-08-14), same no-lighter-route default (59/59
+full, 43/43 core-only), plus a free find worth repeating every time:**
+`gh run list --workflow=windows-verification.yml` had a *completed* run
+whose `headSha` was the exact trunk tip I was testing (not just a SHA
+close to it) — [[windows-evidence-reading]]'s "fair game, no need to
+trigger a fresh one" applied literally. Reading its raw `tests.trx` /
+`runtime-procedures.json` (not the green conclusion) gave real MSVC
+`vstest` discovery+execution (59/59, exit-code-gated) for free, which is
+exactly the V-1/DW-1 clause the RTVM rows I was regression-testing list
+as outstanding. **Always check for an existing run at the current trunk
+tip as part of a regression pass, before assuming Windows evidence is out
+of scope for a "Linux substitute" regression** — it can hand you the
+platform-specific clause the substitute harness can never itself close,
+at zero extra cost.
