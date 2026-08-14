@@ -3121,3 +3121,58 @@ This closes RTVM-506's chain for issue #14: CI/CD flagged no
 regression testing, so nothing hands to Test Engineer next.
 
 **§7 interpretations raised in this thread: none.**
+
+### 9.21 Post-merge regression pass, no promotion possible — issue #13 closes without further action
+
+§9.19 already moved RTVM-507 **In Test → Verified** at `d39eacd`
+(recorded on trunk as `a1c7bc3`), independent of whether the regression
+sweep below had run yet, per the standing "first commit-confirmation
+promotes immediately" rule
+([[verified-on-first-commit-confirmation-not-gated-by-v1]]). The
+regression pass CI/CD asked for is now in, and this is the second
+`status:ready-for-rtvm-update` on this issue.
+
+**Scope check.** `compare/e5119a0...main` (trunk tip before this merge
+→ the tip under test) shows product changes limited to exactly
+`src/SudokuCore/Solver.cpp`, `src/SudokuSolver/main.cpp`,
+`tests/SudokuSolver.Tests/SolverTests.cpp`, and `docs/RTVM.md` — this
+issue's own changes and nothing else. No lighter route was offered in
+the hand-off, so the Test Engineer ran the full substitute-harness pass
+per standing practice: `g++ -std=c++17 -Wall -Wextra -pedantic` clean
+compile/link, generated-driver harness 63/63 pass full / 47/47
+core-only (RTVM-903 intact, confirmed by `grep -rn getenv
+src/SudokuCore/` finding nothing), `hard17.txt` inert-path
+byte-identical to baseline, `SUDOKU_DIAG_MIN_SOLVE_MS=2000` genuine-work
+(2.003 s wall / 2.000 s user CPU) with byte-identical stdout, all 14
+`samples/*.txt` exit codes unchanged, and fixture/matrix integrity
+checks all clean.
+
+**Bonus finding, not required for this issue's own row.** A
+`windows-verification.yml` run already existed for the exact trunk tip
+under test (`a1c7bc3`, run `31824148892`) and was polled to completion
+rather than triggering a new one: `tests.trx` shows 63/63 passed
+(exact match to the Linux count, all four `rtvm507_*` methods
+individually `Passed`), `dumpbin-dependents.txt` still shows only
+`KERNEL32.dll` (TP-506 unaffected), and TP-500's timing set passed
+cleanly (well under the 10 s ceiling). TP-501…504 and TP-507's own
+active-hook clause remain correctly `NOT-RUN` — the harness script
+detects the hook going active but doesn't yet drive the interactive
+prompt/abort protocol those procedures need; this is issue #16
+territory (§9.17's own note), not a new regression. `TP-900/901` and
+`TP-405` NOT-RUNs are pre-existing, unrelated limitations.
+
+**Status outcome: no change possible.** RTVM-507 has no outstanding
+clause left to discharge — §9.19 already reached the terminal Verified
+state without waiting on this evidence, so there is nothing left for
+this pass to promote. The fresh Windows/`vstest` evidence is genuine
+and welcome but isn't this issue's to spend against other rows; it's
+recorded here only as a pointer.
+
+**§7 interpretations raised in this thread: none.**
+
+**Issue #13 closes here.** This is the terminus of the
+commit→regression→RTVM loop for this issue
+([[second-ready-for-rtvm-update-closes-directly]]): the code is already
+on trunk, RTVM-507 is already Verified, and this regression pass
+changes no status — routing it to CI/CD would only produce a third
+round trip over a docs-only, no-op change.
