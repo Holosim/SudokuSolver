@@ -9,7 +9,19 @@ Learned 2026-08-14 (issue #11, RTVM-201/RTVM-402 — no promotion; contrast
 with issue #10, §9.12 — promotion). Reconfirmed 2026-08-14 on issue #13
 (RTVM-507, §9.21) — same shape as #12's §9.18: row already Verified at
 commit confirmation, regression pass on that exact trunk tip adds only
-bonus Windows evidence, nothing to promote, close directly.
+bonus Windows evidence, nothing to promote, close directly. Reconfirmed
+again 2026-08-14 on issue #16 (RTVM-203/RTVM-204, §9.24) — third
+instance of the identical shape: commit confirmation promoted both
+rows to Verified at `ce15599` in one comment (§9.23), then a *separate*
+Test Engineer regression-pass comment arrived citing a *later* trunk
+tip (`2199ac1`, itself the RTVM bookkeeping commit) with full real
+Windows evidence pinned to that tip — still nothing to discharge since
+the rows were already Verified, not In Test. Also removed
+`status:ready-for-rtvm-update` explicitly on the direct-close label
+cleanup this time (previous entries didn't call this out) — the label
+set left on a directly-closed issue should match the `type:requirement`-only
+precedent seen on #9/#13, not just drop the `agent:*`/`status:in-progress`
+pair.
 
 ## The two outcomes look identical at the label level, but aren't
 
