@@ -49,3 +49,10 @@ Engineer ratified the implemented reading rather than changing the code.
 expected result for that fixture is fixed — a `LineTooLong` there is now a
 real failure, not an open question. `P-MULTIFAULT` / `P-MULTIFAULT-9`
 behave identically under either reading, so they never settle it.
+
+**Status 2026-08-14: TP-106's negative case end-to-end clause is now
+discharged.** #10 filled in `Messages::inputFault`'s `IllegalCharacter`
+wording, so the deferred half from #9 (`exit 1`, stderr *empty*) now reads
+`illegal character ' ' at r3c4` on stderr as §7 I-15 requires — verified
+against the built console binary, not just the unit level. Nothing left
+outstanding on TP-101/TP-106.

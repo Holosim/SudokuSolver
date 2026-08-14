@@ -8,6 +8,7 @@
 - [Generated test driver](generated-test-driver.md) — scan `TEST_CLASS`/`TEST_METHOD` to build the driver; the discovered count is the regression signal, plus the `.vcxproj` registration check it can't replace.
 
 - [Compile-time invariant testing](compile-time-invariant-testing.md) — `static_assert`/`-Wswitch` "tests" prove nothing unless mutated; how, plus the private-ctor false negative.
+- [Mutation testing runtime logic](mutation-testing-runtime-logic.md) — the same mutate-and-rebuild trick, applied once per brand-new detection pass (e.g. RTVM-104) to prove its tests aren't vacuous.
 
 - [Reading Windows evidence](windows-evidence-reading.md) — reaching `windows-verification` artifacts from Ubuntu, the three surfaces that render a failed step green, and the compile-vs-execute split.
 

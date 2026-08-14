@@ -25,3 +25,9 @@ signal. Pair it with the MSVC-only failure mode it cannot see: a source under
 under `g++` and then never runs under MSVC. Check *all* test sources for
 registration and that every `Include` in all six project files resolves on
 disk, rather than spot-checking the one file the issue added.
+
+**Count history:** 19 on #8, 53 on #10 (`ParserTests` 12, `MessagesTests` 12,
+`ReporterTests` 4, `InputFaultTests` 5 grew, plus `GridFormatTests` 6,
+`ScaffoldTests` 2, `SolveReportTests` 7, `SolverTests` 5 unchanged) — 53/53
+passed. Useful as the next data point rather than re-deriving #9's count,
+which this run did not need to re-measure.
