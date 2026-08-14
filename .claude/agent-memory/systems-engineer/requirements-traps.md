@@ -268,3 +268,60 @@ for: trailing whitespace, whether an empty/unset field has a glyph at all
 (§6.2's empty-cell rendering is deliberately unspecified because no requirement
 prints an unsolved grid — a surviving mutant proved that gap exists, and it is
 documented rather than latent).
+
+## An instrumentation clause can be unfalsifiable on the very fixture it names, for a reason invisible from the RTVM text (2026-08-14, #12)
+
+TP-202's instrumentation clause ("assert the solver stopped after finding the
+second solution") was written in the same sentence as `P-NONUNIQUE`'s
+outcome/grid checks, so it reads as if it runs against that fixture too. It
+can't: `P-NONUNIQUE` has exactly one branch cell with exactly two candidates,
+so its search tree is exhausted at 3 nodes whether `maxSolutions` is 2 or
+1,000,000 — a node-count comparison there can't tell "the cap stopped it" from
+"there was nothing left to find regardless". `P-BLANK` (already named in the
+project for a different reason — huge branching factor, `SolvedNotUnique` at
+exit 0) does show the cap doing real work: raising it by one measurably grows
+the search. Both the Software Engineer and the Test Engineer independently
+measured the same node counts before I ruled on it (§7 I-20).
+
+**Why:** a "does X and not Y" instrumentation clause needs a fixture where Y
+is actually reachable if the code were wrong; a fixture chosen for its
+*outcome* properties (exactly two known solutions, so the printed grid is
+checkable) is not automatically a fixture with search left over once the cap
+is hit. The two needs — checkable answer, checkable search-bound — pull
+toward different fixtures, and nothing about the RTVM prose surfaces that
+they're different needs until someone tries to make the assertion fail.
+
+**How to apply:** when an instrumentation/bound clause is written against the
+same fixture as an answer-correctness clause in the same sentence, ask
+separately "does this fixture have anything left to explore past the bound
+being tested?" before trusting the pairing. If a fixture already exists in
+the project for a different property (large branching factor, long-running,
+adversarial) it is usually the right one for the bound clause — reuse it
+rather than inventing a third fixture. Rule the fixture swap as a §7
+interpretation citing the measured evidence from both roles; it's a procedure
+correction, not a scope change, and costs nothing once the numbers are in.
+
+## A forward-pointing claim in an earlier §9 section can be wrong, and the fix is to correct it in place, not delete it (2026-08-14, #12)
+
+§9.7 (issue #8) said "TP-202 (#12) is the only place [ascending candidate
+order] becomes provable." It was wrong: TP-202's own wording forbids pinning
+`P-NONUNIQUE`'s result to a specific one of its two solutions ("must not
+assert which, since that depends on search order") — precisely the assertion
+that would be needed to prove *which* order the solver tried first. A test
+written to survive a future implementation change to the search cannot also
+assert which branch that search takes. #12 delivered exactly that: outcome
+accepted as either fixture, by design.
+
+**Why:** an earlier issue's own re-run trigger is a prediction about what a
+later issue's test will be able to show, made before that test is written. It
+reads as settled because it's in the ledger, but it's still a forecast, and
+this project's own scoping (RTVM-202 disallows pinning the answer) can defeat
+it without anyone having done anything wrong at either end.
+
+**How to apply:** when a fast-path update lands evidence that contradicts an
+earlier section's forward-pointing claim, correct that section in place
+(strikethrough the wrong sentence, explain why, leave the original text
+visible) rather than silently rewriting it or leaving it uncorrected for the
+next reader to trust. State plainly what stays permanently unevidenced as a
+result, and why that's a deliberate consequence of another ruling (here: TP-202
+robustness) rather than a gap someone still owes.

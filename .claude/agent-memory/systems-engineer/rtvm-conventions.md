@@ -245,3 +245,20 @@ cell in place (now naming only V-1/MSVC) rather than leaving it to read
 as still-open. Second confirmed instance of the pattern in
 [[rtvm-conventions]]'s own "discharge outstanding clauses on other rows"
 entry — worth trusting as standing practice, not a one-off.
+
+## A joint "#N and #M" discharge trigger only fires at the later issue, however early the first half landed (2026-08-14, #12)
+
+§9.6/§9.9 deferred RTVM-301's TP-301 clause to "the solver (#8) **and**
+non-uniqueness detection (#12)" — a joint trigger, not two independent
+half-credits. #8's `assertSolvesTo()` had already asserted the `P-EASY` half
+(`hasCompleteGrid()`) since it shipped, but the row correctly stayed
+outstanding through #9/#10/#11 because the `P-NONUNIQUE` half had no test
+yet. Only #12's own `rtvm202_*` method supplied that, so #12 is what fires
+the discharge (§9.15) even though most of the evidence predates it by three
+issues. Also corrected in the same pass: an *earlier* section's own
+forward-looking claim (§9.7's "TP-202 is the only place ascending order
+becomes provable") turned out to be wrong once TP-202's actual wording
+("must not assert which") was checked against it — struck through and
+corrected in place rather than left standing. See
+[[requirements-traps]]'s two new #12 entries for the fixture-unfalsifiability
+and forward-claim-correction detail.
