@@ -40,3 +40,16 @@ not just inspectable.
 **How to apply:** any future issue touching `SolveControl`/abort/progress
 timing — reuse both the mutation targets above and the trx per-method
 duration cross-check before trusting a "verified falsifiable" claim.
+
+**Regression pass, same day (2026-08-14), trunk tip `2199ac1` (RTVM update
+commit after Systems Engineer promoted both rows to Verified):** the compare
+against my own last-PASS branch tip (`4694387...main`) was product-empty
+(memory + `docs/RTVM.md` only), so this was a re-confirmation, not new
+ground — but I still ran the full Linux substitute suite (65/65, 49/49
+core-only) since no lighter route was offered on the hand-off. Found a
+`windows-verification` run already `in_progress` at the exact trunk SHA
+(`31840359481`); polling it to completion reproduced the identical literal
+`rtvm203_*`/`rtvm204_*` durations (20 s / 11 s) on trunk that #16's original
+PASS saw on the branch — same evidence, now trunk-anchored. Confirms
+[[windows-evidence-reading]]'s "in-flight run at the exact tip is fair
+game" pays off even on a routine regression, not just a first-time PASS.
