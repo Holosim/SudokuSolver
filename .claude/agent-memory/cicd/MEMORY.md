@@ -22,3 +22,4 @@
 ## Known issues
 
 - [Shallow-clone merge trap](shallow-clone-merge-trap.md) — "refusing to merge unrelated histories" is a depth-1 checkout, not a lost history. Fetch and unshallow first.
+- [cwd and merge-tree reading gotchas](cwd-and-merge-tree-reading-gotchas.md) — cd to repo root before trusting path-filtered git log output; `merge-tree`'s "changed in both" isn't a real conflict until you see `<<<<<<<`; local `main` looks reverted right after a push until fast-forwarded.

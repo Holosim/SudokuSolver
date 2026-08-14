@@ -53,7 +53,25 @@ Resolution rule:
   settles it in one command: nothing to reconcile, the merge just inherits
   trunk's newer copy untouched, and it's worth saying so explicitly in the
   merge commit/issue comment so the size of that diff doesn't read as a
-  missed conflict.
+  missed conflict. Confirmed again on #11 (2026-08-14): the Systems
+  Engineer's RTVM-201/RTVM-402 update (`f070385`) had gone straight to trunk
+  while `issue-11` was open, so `docs/RTVM.md` needed no merge attention at
+  all — only a non-doc file conflicted (see below).
+
+- **A source-file *scaffold header comment* narrating "what this issue filled
+  in" is a recurring, easy conflict when two issues land on the same file in
+  parallel.** On #11 (2026-08-14), `src/SudokuSolver/Messages.cpp`'s top
+  comment was independently rewritten by #10 (trunk) and #11 (this branch),
+  each describing only its own fill-in and TODO list — a real `git merge`
+  conflict, unlike the doc files above. Resolve it the same way as an §7/W-nn
+  ID collision: keep both issues' factual content (which functions each
+  filled in, why), don't let either side silently lose the other's note, and
+  write a single correct combined TODO list reflecting the file's *current*
+  state (narrow it, don't just concatenate two stale ones — cross-check which
+  RTVM items are actually done post-merge). This is a plain content conflict,
+  not an ID collision, so unlike [[merge-conflicts-that-are-id-collisions]]
+  it *is* CI/CD's to resolve outright rather than leave as a visible
+  duplicate.
 
 **Why:** whole-file conflict resolution on a document several roles write to
 loses work that merged cleanly, and the loss is invisible in the diff you're
