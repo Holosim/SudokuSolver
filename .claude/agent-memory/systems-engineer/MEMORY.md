@@ -20,6 +20,7 @@
 - `rtvm-conventions.md` also covers: §9 subsection numbers collide across branches just like I-/W-/V-/DW- IDs (allocate from trunk); a regression pass on an already-Verified row has nothing to discharge — record fresh evidence as a pointer, not a promotion; the first-pass In Test promotion commit lands on the issue's own branch, not main (only the later SHA-recording touch is direct-to-main).
 - [Shallow clone / unrelated histories](shallow-clone-unrelated-histories.md) — `git fetch --unshallow` before merging trunk into an issue branch, or a stale-branch artifact looks like a real conflict.
 - [Commit-confirmation bookkeeping pushes direct to main](commit-confirmation-pushes-direct-to-main.md) — the RTVM.md update that records CI/CD's merge SHA is a single-parent commit straight on `main`, not another `issue-N` branch + CI/CD merge cycle.
+- [Standing spike instructions can go unfulfilled](standing-spike-instructions-can-go-unfulfilled.md) — a ledger row naming "attempt this on #N" isn't self-enforcing; grep the RTVM for the issue's own number before writing the ledger entry, and reassign to a new issue rather than let it go stale. Also: a row with zero automated evidence for one shape doesn't ride the "first commit confirmation promotes to Verified" precedent just because the rest of the feature passed.
 
 ## Project context
 
