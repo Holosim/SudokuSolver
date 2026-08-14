@@ -40,4 +40,12 @@ file to write the Commit(s) SHA.
 what "VS 2022" constrains, while `issue-9` added its own `I-17` (blocking reads
 during acquisition) and `I-18`. Both were correct and neither was a mistake.
 
+**The pattern isn't limited to `I-nn`/`W-nn` rows — §9.x subsection numbers
+collide the same way.** On #13 (2026-08-14), trunk's #12 merge-record and
+`issue-13`'s RTVM-507 write-up both landed as "### 9.16" (each branch's own
+next-free number at the point it was cut). Same resolution: union, trunk's
+section first, an explicit note in the later section flagging the duplicate
+number as the Systems Engineer's to renumber — do not renumber it yourself
+just because it's a heading rather than a table row.
+
 Related: [[doc-conflicts-on-merge]], [[lock-before-merging-docs]].

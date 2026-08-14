@@ -10,6 +10,7 @@
 - [Docs-only merge, no build check](docs-only-merge-no-build-check.md) — a real 3-commit branch can still touch nothing under `src/`/`tests/`; skip the build step honestly, and don't overwrite an already-recorded evidence SHA with your merge SHA.
 - [Stale-branch real union conflicts](stale-branch-real-union-conflicts.md) — a branch cut before several other issues merged still narrows to a handful of real, additive-both-sides conflicts; resolve as a union, not a pick-one-side.
 - [checkout -B keeps a dirty worktree](checkout-b-keeps-dirty-worktree.md) — switching branches with `checkout -B` doesn't discard a prior scratch branch's staged resolution; `git reset --hard` first, then restore your backed-up resolution.
+- [Append-conflict closing-brace suffix](append-conflict-closing-brace-suffix.md) — two branches appending `TEST_METHOD`s to one file: git factors the identical trailing braces out, so the first side's last method silently needs its `}` put back.
 
 ## Build & toolchain notes
 
