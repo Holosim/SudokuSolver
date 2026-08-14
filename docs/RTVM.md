@@ -70,7 +70,7 @@ Blocked / Withdrawn.
 | RTVM-106 | Input is accepted with either LF or CRLF line endings and with or without a trailing newline. Leading and trailing horizontal whitespace on a line is ignored; interior whitespace is an illegal character. Content after the ninth line is ignored. | SN-1, SN-8 | Test (TP-106) | In Test | `3bc1b22` |
 | **CORE — solver (§4.4, §4.5, §5)** | | | | | |
 | RTVM-200 | Given a valid, uniquely-solvable standard 9×9 puzzle, the solver produces the grid's unique solution: all 81 cells filled with 1–9, with no digit repeated in any row, column, or 3×3 box, and every given preserved in place. | SN-2 | Test (TP-200) | In Test | `fdd9cea` |
-| RTVM-201 | Given a well-formed, non-contradictory puzzle that admits no completion, the solver reports "no solution" and terminates. It does not loop, guess indefinitely, or emit a partial grid. | SN-2, SN-4 | Test (TP-201) | In Test | |
+| RTVM-201 | Given a well-formed, non-contradictory puzzle that admits no completion, the solver reports "no solution" and terminates. It does not loop, guess indefinitely, or emit a partial grid. | SN-2, SN-4 | Test (TP-201) | In Test | `481c726` |
 | RTVM-202 | The solver determines whether a puzzle has more than one solution by searching for at most two solutions and stopping. Where two are found it yields the first found together with a "not unique" indication. It does not enumerate or count all solutions. | SN-2, SN-3 | Test (TP-202) | Approved | |
 | RTVM-203 | The solve is cooperatively interruptible: once an abort is requested the solver stops and yields the "aborted" outcome within 1.0 s, leaving the process free to exit cleanly. | SN-5 | Test (TP-203) | Approved | |
 | RTVM-204 | The solver maintains a monotonically increasing count of search steps taken, readable by the rest of the application and by the test suite while the solve is in flight. This is what makes "the solve is still making progress" (§7 acceptance #6) an observable fact rather than an assertion. | SN-5 | Test (TP-204) | Approved | |
@@ -81,7 +81,7 @@ Blocked / Withdrawn.
 | **OUT — presentation (§4.1, §4.3)** | | | | | |
 | RTVM-400 | A solved grid is written to stdout pretty-printed with box separators, in exactly the 13-line ASCII format given in §6.2. | SN-3 | Test (TP-400) | In Test | `62cbb1e` |
 | RTVM-401 | For the `SolvedNotUnique` outcome the grid is followed on stdout by a statement that the solution shown is not unique. | SN-3 | Test (TP-401) | Approved | |
-| RTVM-402 | For the `NoSolution` outcome a plain statement that the puzzle has no solution is written to stdout, and no grid is written. | SN-3, SN-4 | Test (TP-402) | In Test | |
+| RTVM-402 | For the `NoSolution` outcome a plain statement that the puzzle has no solution is written to stdout, and no grid is written. | SN-3, SN-4 | Test (TP-402) | In Test | `481c726` |
 | RTVM-403 | For the `InvalidInput` outcome a specific human-readable diagnostic naming the fault is written to **stderr**, and nothing is written to stdout. | SN-4 | Test (TP-403) | Verified | `139d41a` |
 | RTVM-404 | For the `Aborted` outcome a message stating the solve was abandoned at the user's request is written to **stderr**, and nothing is written to stdout. | SN-5 | Test (TP-404) | Approved | |
 | RTVM-405 | The process exit code is `0` for `Solved` and `SolvedNotUnique`, `1` for `InvalidInput`, `2` for `NoSolution`, `3` for `Aborted`, with no other exit code reachable. | SN-8, SN-4 | Test (TP-405) | Approved | |
@@ -2571,6 +2571,32 @@ ambiguity — nothing here required a ruling under the "close
 implementation-level rulings at the fast-path update" convention.
 
 Handed to CI/CD next with `status:ready-for-commit`.
+
+#### 9.11.1 CI/CD merge recorded, and why Status stays In Test
+
+CI/CD merged `issue-11` into trunk at **`481c726`** (`--no-ff`, pre-merge
+verification on the merged tree: one real conflict resolved in
+`Messages.cpp`'s header comment, `g++ -std=c++17 -Wall -Wextra -pedantic`
+clean, generated-driver suite 56/56, TP-903 grep, every `.vcxproj` entry
+resolved, `samples/unsolvable.txt` re-checked on the merged tree) and
+flagged it as a trunk merge needing regression testing. `481c726` is now
+recorded in the Commit(s) column for RTVM-201 and RTVM-402 (§5).
+
+**Status stays In Test, not Verified.** Per the standing convention
+(§9.2/§9.9.4: Verified needs the full clause set executed on the real
+toolchain *and* a trunk SHA, not the SHA alone) the outstanding
+MSVC/`vstest` discovery-and-execution clause (V-1/DW-1, #23) has not been
+produced against a tree containing this issue's two new `rtvm201_*` unit
+methods or the piggybacked `rtvm200_solvesPSearchToSEasyViaBranchAndBacktrack`
+method. All evidence gathered on this issue's thread (§9.11, and CI/CD's
+own pre-merge checks) ran on the Ubuntu agent runner, not MSVC. Recording
+the SHA here says which scaffold these rows sit on; it is not evidence the
+missing clause ran.
+
+Routed to the Test Engineer for the regression pass CI/CD asked for. That
+pass, and any future Windows evidence run against a tree that contains
+`481c726` or later, is what would actually discharge V-1/DW-1 for these
+two rows — not this update.
 
 ### 9.12 V-1/DW-1 discharged on the merged tree, and RTVM-009/102–105/403 promoted to Verified (issue #10, regression pass)
 
