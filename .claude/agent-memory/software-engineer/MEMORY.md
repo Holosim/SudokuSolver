@@ -21,6 +21,7 @@
 - [Solver search shape](solver-search-shape.md) — one search covers RTVM-200/201/202; measured margins and which mutations TP-200 can't catch.
 - [Output layer scope per issue](output-layer-scope-per-issue.md) — SDD §3.3's unit-vs-process TP split; don't write TEST_METHODs for TP-401+.
 - [RTVM-500 needed no code](rtvm-500-no-code-needed.md) — recognising a genuine measurement-only issue, and what to still verify before saying so.
+- [RTVM-506 needed no code](rtvm-506-no-code-needed.md) — static-CRT settings and dumpbin evidence already landed at #5; #14 was a verification pass, not new implementation.
 - [TP-202 instrumentation needs P-BLANK](tp202-instrumentation-needs-p-blank.md) — P-NONUNIQUE's tree is exhausted regardless of the solution cap, so the "did not continue" proof has to run on P-BLANK instead.
 - [PowerShell Mandatory/List gotchas](powershell-mandatory-and-list-gotchas.md) — `return $list` unrolls to `$null`; `Mandatory` rejects empty input; `-RedirectStandardInput 'NUL'` throws on real Windows and can produce false PASSes downstream.
 
