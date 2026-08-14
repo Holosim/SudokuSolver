@@ -93,7 +93,7 @@ Blocked / Withdrawn.
 | RTVM-503 | The solve does not pause while a prompt is displayed or while a reply is awaited: the RTVM-204 search-step count strictly increases across every prompt window. | SN-5 | Test (TP-503) | Approved | |
 | RTVM-504 | The application is never silent while working. From launch to exit the user always has either a result, a diagnostic, or a prompt. The longest permitted interval with no output on either stream is bounded by the RTVM-501 first-prompt threshold **before** the first prompt (15 s + 1.0 s tolerance = 16.0 s) and by the RTVM-502 repeat interval **thereafter** (10 s + 1.0 s tolerance = 11.0 s). See §7 I-12. | SN-5 | Test (TP-504) | Approved | |
 | RTVM-505 | No input causes an unhandled exception, an access violation, an assertion dialog, or a non-zero exit code outside the set in RTVM-405. Every run terminates. | SN-4 | Test (TP-505) | Approved | |
-| RTVM-506 | The delivered executable is a self-contained x64 Windows console application that runs on a clean Windows machine with no installed runtime or third-party component beyond what a stock Windows install provides. | SN-6, SN-7 | Test (TP-506) | In Implementation | `85bab27` |
+| RTVM-506 | The delivered executable is a self-contained x64 Windows console application that runs on a clean Windows machine with no installed runtime or third-party component beyond what a stock Windows install provides. | SN-6, SN-7 | Test (TP-506) | In Test | `85bab27` |
 | RTVM-507 | The build provides a documented diagnostic means of forcing a solve to run past the prompt thresholds without altering ordinary behaviour, so that RTVM-004…008 and RTVM-501…504 are verifiable end-to-end. It is documented in `docs/SDD.md`, not in the user-facing README, and is inert in normal use. | SN-5 | Test (TP-507) | Verified | `d39eacd` |
 | **DELIV — deliverable requirements (§6). Verified by inspection.** | | | | | |
 | RTVM-900 | The repository contains a committed, openable Visual Studio 2022 solution and project file(s) — not source files alone. (D-1) | SN-7 | Inspection (TP-900) | In Test | `85bab27` |
@@ -1347,7 +1347,7 @@ than for a plan.
 
 | # | Clause | Why a hosted runner may not reach it | Proposed automation route before conceding it | Recommendation |
 | --- | --- | --- | --- | --- |
-| A-1 | **TP-506** — run the exe on a clean Windows machine with no VS, no redistributable, no build tools | Every hosted Windows image ships the full VS toolchain and the VC++ runtimes, so "runs where the runtime was never installed" cannot be demonstrated there — the negative is unobservable on the only machine we have | `dumpbin /dependents` asserting the import list is stock system DLLs only (`KERNEL32`, `USER32`, …) with no `MSVCP140.dll` / `VCRUNTIME140*.dll` — TP-506's own last sentence, and it is strong evidence | **Genuine V-4 item — confirmed 2026-08-13, and now down to one sentence.** The `dumpbin` clause is **executed and clean** at `4a849b7`: the delivered exe imports `KERNEL32.dll` and nothing else, with no `MSVCP140.dll` / `VCRUNTIME140*.dll`. That is near-conclusive and needs nothing from the client. The residue going to acceptance is only *"the exe launches on a machine where the VC++ runtime was never installed"* — the one thing no machine we can rent will ever demonstrate, because they all have it |
+| A-1 | **TP-506** — run the exe on a clean Windows machine with no VS, no redistributable, no build tools | Every hosted Windows image ships the full VS toolchain and the VC++ runtimes, so "runs where the runtime was never installed" cannot be demonstrated there — the negative is unobservable on the only machine we have | `dumpbin /dependents` asserting the import list is stock system DLLs only (`KERNEL32`, `USER32`, …) with no `MSVCP140.dll` / `VCRUNTIME140*.dll` — TP-506's own last sentence, and it is strong evidence | **Closed 2026-08-14 (§9.20, issue #14) — Test Engineer PASS.** The `dumpbin` clause re-executed and clean at `9e801cd` (run `31811410503`): `KERNEL32.dll` only, no `MSVCP140.dll` / `VCRUNTIME140*.dll`. The one residual sentence — "launches on a machine that never had the VC++ runtime installed" — is accepted per this row's own standing ruling, not re-litigated: no rentable/hosted image can ever demonstrate it. TP-506 treated as fully discharged on that basis; RTVM-506 promoted to In Test pending CI/CD's trunk-commit confirmation (§9.2's second Verified precondition) |
 | A-2 | **TP-900** — the solution *opening* in VS 2022 with no "project unavailable" and no migration prompt | The prompt is modal GUI behaviour; a headless runner never renders it | `devenv.exe SudokuSolver.sln /Build "Debug\|x64"` uses the same solution loader as the IDE and fails or hangs where the IDE would prompt; combined with a toolset/`ToolsVersion` inspection this covers the substance | **Genuine V-4 item — measured 2026-08-13 (§9.1.6), not a suspicion.** `vswhere -legacy -all -products *` (P2, `run-procedures.ps1`) confirms **no VS `17.x` instance exists on `win25-vs2026`**, on both the pre-fix and post-fix runs. The toolset half is covered — the build ran on `PlatformToolset=v143` / MSVC 14.44, the VS 2022 toolset shipped side-by-side. What remains, and cannot be automated on this image, is one sentence: *"the solution opens in the VS 2022 IDE itself with no migration prompt."* Ready to go forward with A-1 once A-4 is attempted (V-5) |
 | A-3 | **TP-905** — tests appearing in **Test Explorer** | Test Explorer is a GUI surface | `vstest.console.exe` is the discovery and execution engine Test Explorer drives; if it discovers and runs both methods, the substantive claim holds | **CLOSED 2026-08-13 (§9.1.6, DW-1 fixed).** `run-procedures.ps1` now runs `vstest.console.exe /ListTests:<dll>` for discovery and a separate `/Logger:trx` execution; both artifacts exist at SHA `3658728` (Windows run `31739274812`): 25/25 tests discovered, 25/25 executed and passed. No longer a V-4 candidate |
 | A-4 | **TP-004…008** — the console-handle behaviour (`PeekConsoleInput`, `GetFileType` = console, an interactive-equivalent stdin held open) | A runner step has no interactive console attached: stdin is a pipe or `NUL`, so `GetFileType` never reports a console and the console path is never entered. TP-008's redirected half runs fine; TP-004/005/006's do not | Drive the exe under a **ConPTY pseudoconsole** (`CreatePseudoConsole`, available on Windows Server 2022) from a small harness, so the child genuinely sees a console handle. This is the same mechanism Windows Terminal uses and it is not exotic | **Undecided — needs a feasibility spike on #17** before it goes anywhere near the client. If ConPTY works this whole row disappears, and it is the largest row on the list. **2026-08-13: the spike is now actually possible** — there is a live Windows job to try it against, and the image is Windows Server 2025, where `CreatePseudoConsole` is long-established. The spike belongs in `tests/windows/run-procedures.ps1` (W-10). Worth doing on its own terms even if it fails: *"we drove the exe under a pseudo-console and here is precisely what it still could not observe"* is a far stronger thing to put to a client than *"consoles are hard"* |
@@ -3059,5 +3059,49 @@ updated with Commit(s) `d39eacd`.
 merge of new product code (`SolveOptions::minSolveDuration` plus its
 console wiring and tests), not a docs-only or zero-commit fast path.
 Handed to the Test Engineer next.
+
+**§7 interpretations raised in this thread: none.**
+
+### 9.20 TP-506 discharged, RTVM-506 promoted to In Test ([RTVM-506], issue #14)
+
+Issue #14 re-verified the static-CRT DELIV requirement. Software
+Engineer confirmed no source change was needed — `/MT`/`/MTd` on
+`SudokuSolver`/`SudokuCore` and the §3.7 `/MD` test-DLL exception were
+already correct since Generate Code Base (`85bab27`); `git diff
+origin/main issue-14 -- src tests *.sln samples docs/RTVM.md
+docs/SDD.md` is empty, so no regression risk and nothing new to build.
+
+**Evidence, Test Engineer PASS at `9e801cd`:** an in-flight
+`windows-verification.yml` run already pinned to that exact tip (run
+`31811410503`, `win25-vs2026`) was used rather than triggering a new
+one. Raw log read directly (not the summary tick, per this repo's
+standing false-PASS caution): the delivered `x64\Release\
+SudokuSolver.exe` import table is `KERNEL32.dll` and nothing else — no
+`MSVCP140.dll`, no `VCRUNTIME140*.dll`. (The same run's separate
+`vstest.console.exe` step failed on the pre-existing TP-905 discovery
+defect — a different step, doesn't touch this evidence, not this
+issue's requirement.)
+
+**Status outcome: RTVM-506 In Implementation → In Test, not Verified.**
+TP-506's dumpbin clause is executed and clean, and its one remaining
+sentence (launch on a machine that never had the VC++ runtime
+installed) is accepted per §9.4 A-1's standing ruling rather than
+re-litigated — so every clause of the procedure is discharged. But
+RTVM-506 is a DELIV row, and §9.2's rule takes two things for Verified,
+not one: every clause passed **and** CI/CD has reported the trunk
+commit in the Commit(s) column. Only the first is true yet — this
+branch hasn't merged. Commit(s) stays `85bab27` (the scaffold SHA;
+there is no new product commit to record). §9.4's A-1 row updated in
+place to point here.
+
+Handed to CI/CD with `status:ready-for-commit` per the literal fast
+path even though the diff is `docs/RTVM.md`/memory only — no code for
+CI/CD to build, but the merge confirmation is still what discharges
+§9.2's second precondition and lets this row reach Verified (see
+[[no-code-measurement-still-routes-to-cicd]]). Once CI/CD reports the
+merge SHA, that commit-confirmation is expected to promote RTVM-506
+straight to Verified on the first hand-back
+([[verified-on-first-commit-confirmation-not-gated-by-v1]]) — no
+further regression risk, since nothing under `src/`/`tests/` moved.
 
 **§7 interpretations raised in this thread: none.**
