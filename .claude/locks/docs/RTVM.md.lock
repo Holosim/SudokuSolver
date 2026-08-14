@@ -1,7 +1,0 @@
-{
-  "path": "docs/RTVM.md",
-  "holder": "systems-engineer",
-  "issue": 24,
-  "acquired_at": "2026-08-14T01:05:21Z",
-  "reason": "Fast-path RTVM update after issue #24 ProcessRunner harness PASS"
-}
