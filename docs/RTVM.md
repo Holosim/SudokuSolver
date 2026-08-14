@@ -2651,3 +2651,54 @@ This is the fast-path fixture: no code changed, only `docs/RTVM.md`.
 Handed to CI/CD next with `status:ready-for-commit` to record this
 doc-only update; issue #10 closes once that hand-back confirms, per
 standing convention for the group's chain.
+
+### 9.13 Post-merge regression pass on trunk, no defects — issue #11 closes without promotion
+
+§9.11.1 left RTVM-201 and RTVM-402 **In Test** at `481c726`, routed to the
+Test Engineer for the regression pass CI/CD asked for. That pass is now
+in: run on `main` @ `aa7daf0` (which contains `481c726`), scope derived
+from `gh api .../compare/481c726...main` — 2 commits ahead, 0
+product-content files changed (only the Commit(s)-recording edit and
+CI/CD memory files) — so this is confirmation evidence over an unchanged
+merge, not first execution, and is written up that way rather than as a
+fresh pass.
+
+**Environment: Ubuntu agent runner, no MSVC available** (V-1 stands, per
+§9.1) — the same gap §9.11.1 identified. **No Windows/`vstest` evidence
+was produced this round**, unlike issue #10's §9.12 regression pass,
+where a corrected `run-procedures.ps1` (#24) made a genuine
+`vstest.console.exe` discovery-and-execution run possible for the first
+time. Nothing analogous landed here, so the V-1/DW-1 clause §9.11.1 left
+outstanding for RTVM-201 and RTVM-402 is **not discharged** by this pass.
+
+**What was reconfirmed on trunk, not merely inspected:** generated-driver
+suite discovery held at 56 methods (8 test files), 56/56 pass; core-only
+link (RTVM-903 split) 40/40; the full console binary rebuilt and
+`samples/unsolvable.txt` re-run — stdout byte-identical (`cmp`, 30 bytes)
+to `This puzzle has no solution.\n`, empty stderr, exit `2`, one line,
+zero `+` characters; `easy`/`hard17`/`nonunique`/`malformed` samples
+unchanged from prior rounds; CRLF/`.gitattributes` and `.vcxproj`
+ignore-status cheap checks per `trunk-regression-scope` memory; the
+Commit(s)-column diff since `481c726` spot-checked against several other
+rows (RTVM-009, 102–105, 200, 403, 900, 902, 903, 906, 907) to confirm no
+other row's SHA or status was disturbed.
+
+**Status outcome: no change.** RTVM-201 and RTVM-402 remain **In Test**
+at `481c726` (§5) — a regression pass adds no clause coverage by design
+(§9.2's two-part rule, reaffirmed at §9.8.6.3); the finding here is that
+the merge disturbed nothing, which is a result, not an absence of one.
+The remaining path to Verified for both rows is the standing MSVC/`vstest`
+discovery-and-execution clause (V-1/DW-1), owned by **#23**, run against
+a tree containing `481c726` or later — not reopened as work on this
+issue. RTVM-200's row (§9.7/§9.11, piggybacked, not this issue's own
+scope) is untouched by this pass.
+
+**§7 interpretations raised in this thread: none.**
+
+**Issue #11 closes here.** This is the second `status:ready-for-rtvm-update`
+on the issue and the terminus of the commit→regression→RTVM loop, not the
+fast path: the code is already on trunk and this update changed nothing
+promotable, so there is nothing for CI/CD to commit and no promotion to
+route through them for — mirroring §9.8.6.3's reasoning on issue #9.
+Routing this to CI/CD would only produce a third regression round trip
+over a docs-only, no-op change.
