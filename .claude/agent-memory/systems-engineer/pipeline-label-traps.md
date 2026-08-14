@@ -85,3 +85,24 @@ each guard's *own stated reason* before touching it. `docs/ci/` (owner-gated)
 and `tests/windows/` (Test-Engineer-gated) are enforced by unrelated
 mechanisms with unrelated justifications, even though both currently block
 the same two files.
+
+## Stray relabel that raced the dependency-check sweep, not a query
+
+Seen 2026-08-14 (issue #16, `[RTVM-203]`/`[RTVM-204]`). Human relabeled a
+still-on-hold feature issue to `agent:systems-engineer` + `status:in-progress`
+without removing `status:on-hold` and with no comment — same empty-thread
+signature as above, but here the twist was *why*: the manual relabel landed
+~27s **before** its last Finish-Start dependency actually closed, i.e. one
+scheduled sweep too early — the very next `dependency-check.yml` run would
+have released it to `agent:software-engineer` on its own.
+
+**How to apply:** when you hit this shape, check dependency state *as of
+now*, not as of the relabel timestamp. If every declared dependency is
+closed by the time you look, there's no real ambiguity left to ask about —
+restore the state the sweep would have produced (drop
+`status:on-hold`/`status:in-progress`/the stray `agent:*`, add
+`agent:software-engineer`) yourself rather than opening a round trip for
+a question nobody actually has an answer to. Say so in the comment and
+invite a reopen with a stated question if the relabel meant something else.
+Only fall back to "ask on the thread and wait" (the general rule above) when
+a dependency is genuinely still open.
