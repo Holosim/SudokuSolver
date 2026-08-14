@@ -108,6 +108,21 @@ explicit lighter route named" as the default case requiring the full
 substitute-harness run, not just the compare — #23's shortcut was
 Systems-Engineer-sanctioned, not a standing default.
 
+**#13's regression pass (2026-08-14)**, same no-lighter-route default
+(63/63 full, 47/47 core-only) — but here the compare-against-last-passed-
+branch-tip trick from the top of this note needed a correction: `compare/
+<issue-13's own branch tip>...main` came back non-empty for files the
+branch never touched (`Messages.cpp`, `Reporter.cpp`, `TestFixtures.h`),
+because that branch tip predated #12's merge to trunk. The right baseline
+for a post-merge regression is **the trunk tip before *this* merge**
+(here `e5119a0`, the merge commit's non-branch parent), not the feature
+branch's own tip — compare `<pre-merge-trunk-tip>...main` instead, which
+came back exactly the touched files (`Solver.cpp`, `main.cpp`,
+`SolverTests.cpp`, `docs/RTVM.md`) and nothing else. Use the merge
+commit's second parent (`git log --merges` or the CI/CD hand-off's stated
+parents) to find it, not the branch-tip SHA a Software/Test Engineer
+comment names earlier in the thread.
+
 **#12's regression pass (2026-08-14), same no-lighter-route default (59/59
 full, 43/43 core-only), plus a free find worth repeating every time:**
 `gh run list --workflow=windows-verification.yml` had a *completed* run

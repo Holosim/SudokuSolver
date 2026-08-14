@@ -37,3 +37,18 @@ binary.
 **How to apply:** any future issue touching this hook (e.g. if #16 wires
 RTVM-203/204's timing procedures through it) — reuse this CPU-time check
 before trusting a "genuine work, not a sleep" claim in a handoff.
+
+**The Windows harness's own runtime-procedures script already detects the
+hook going active, but can't finish TP-004–008/TP-507's active-demonstration
+clauses yet.** On #13's post-merge regression (2026-08-14, trunk `a1c7bc3`),
+`runtime-procedures.json`/`.txt` set `SUDOKU_DIAG_MIN_SOLVE_MS=20000` and
+reported `NOT-RUN` with reason *"process still running after the 5s probe
+ceiling; hook appears active but this script does not yet drive its
+interactive prompt/abort protocol"* for TP-004/005/006/007/008 and TP-507's
+own active-hook-demonstration case. That is expected, current state — not a
+regression, and not new information — because the script only has a
+process-alive probe, not the stop-response protocol TP-004–008 need. Don't
+re-report it as a defect on a future regression pass; just confirm the
+reason text is still this one (a different reason would be worth flagging).
+The 60s+ demonstration and TP-501–504 remain out of *this* hook's scope —
+see the RTVM-507 row's own §9.19 note (issue #16 territory).
