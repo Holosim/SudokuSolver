@@ -67,6 +67,21 @@ inline constexpr std::string_view kSolvedHard17 =
     "856129743"
     "274836159";
 
+// P-UNSOLVABLE (docs/RTVM.md 6.1) — P-EASY with r1c3 set to 1. Its givens are
+// mutually consistent (no row, column or box duplicate), so RTVM-104 must not
+// reject it at the parser; the solver itself has to discover it has no
+// completion (RTVM-201, TP-201).
+inline constexpr std::string_view kPuzzleUnsolvable =
+    "531070000"
+    "600195000"
+    "098000060"
+    "800060003"
+    "400803001"
+    "700020006"
+    "060000280"
+    "000419005"
+    "000080079";
+
 // The normative rendering of S-EASY (docs/RTVM.md 6.2) — 13 lines of 25 ASCII
 // characters, every line terminated, the last one included. Transcribed from
 // the document and nowhere else: this literal *is* the requirement, so TP-400

@@ -13,8 +13,8 @@
 // rtvm200_theSolutionCheckerRejectsAGridThatIsNotASolution is what keeps the
 // structural pass falsifiable.
 //
-// RTVM-201 (no solution) and RTVM-202 (non-uniqueness) run on the same search
-// but are verified under #11 and #12; nothing here asserts them.
+// RTVM-201 (no solution, TP-201) is verified below, on the same search;
+// RTVM-202 (non-uniqueness) is verified under #12.
 
 #include "CppUnitTest.h"
 
@@ -173,6 +173,41 @@ public:
         Assert::IsTrue(report.outcome() == Outcome::Solved);
         Assert::IsTrue(report.nodesExplored() > 0ULL,
             L"solving a 17-given puzzle explores at least one search node");
+    }
+
+    // TP-201: P-UNSOLVABLE is P-EASY with r1c3 forced to 1 — its givens are
+    // mutually consistent (no row/column/box duplicate), so nothing before the
+    // solver can reject it; the search itself must discover it has no
+    // completion. Expect NoSolution, no grid, and no fault (RTVM-201).
+    TEST_METHOD(rtvm201_puzzleWithNoCompletionReportsNoSolution)
+    {
+        NullSolveControl control;
+        const SolveReport report =
+            solve(gridFromCompactForm(kPuzzleUnsolvable), SolveOptions{}, control);
+
+        Assert::IsTrue(report.outcome() == Outcome::NoSolution,
+            L"a puzzle with mutually consistent but unsatisfiable givens must "
+            L"report NoSolution, not a fault and not a partial grid");
+        Assert::IsFalse(report.hasGrid(),
+            L"NoSolution must not carry a grid (RTVM-201: no partial grid)");
+        Assert::IsFalse(report.hasFault(),
+            L"NoSolution is not InvalidInput; RTVM-104 does not apply here");
+    }
+
+    // P-UNSOLVABLE's r1c3 = 1 given creates no row/column/box duplicate by
+    // itself (docs/RTVM.md 6.1) — S-EASY's r1c3 is 4, so forcing 1 there is
+    // unsatisfiable only once propagation and search chase the implications
+    // out. Solving the unmodified P-EASY still succeeds, which is what keeps
+    // rtvm201 falsifiable rather than trivially true for any input.
+    TEST_METHOD(rtvm201_theSameSearchStillSolvesTheUnmodifiedPuzzle)
+    {
+        NullSolveControl control;
+        const SolveReport report =
+            solve(gridFromCompactForm(kPuzzleEasy), SolveOptions{}, control);
+
+        Assert::IsTrue(report.outcome() == Outcome::Solved,
+            L"P-EASY, unmodified, must still solve — proves the NoSolution "
+            L"result above comes from the r1c3 mutation, not a broken search");
     }
 };
 
