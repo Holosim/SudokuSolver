@@ -10,6 +10,7 @@
 - [Compile-time invariant testing](compile-time-invariant-testing.md) — `static_assert`/`-Wswitch` "tests" prove nothing unless mutated; how, plus the private-ctor false negative.
 
 - [Reading Windows evidence](windows-evidence-reading.md) — reaching `windows-verification` artifacts from Ubuntu, the three surfaces that render a failed step green, and the compile-vs-execute split.
+- [ProcessRunner harness + DW-1 fix](process-runner-harness-and-dw1-fix.md) — #24's real end-to-end harness, verified independently; and `run-procedures.ps1`'s corrected `/ListTests:<dll>` now gives genuine TP-905 pass evidence even though the workflow's own inline step is still DW-1-broken and masked.
 
 ## How to scope work
 
