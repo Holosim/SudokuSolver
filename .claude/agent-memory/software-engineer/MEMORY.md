@@ -25,6 +25,7 @@
 - [TP-202 instrumentation needs P-BLANK](tp202-instrumentation-needs-p-blank.md) — P-NONUNIQUE's tree is exhausted regardless of the solution cap, so the "did not continue" proof has to run on P-BLANK instead.
 - [RTVM-203/204 wall-clock tests](rtvm203-204-wallclock-tests.md) — literal TP-203/204 numbers kept as-is, and the mutation trap: `m_aborted` isn't what decides the outcome during the RTVM-507 extension, the loop's own return-value check is.
 - [PowerShell Mandatory/List gotchas](powershell-mandatory-and-list-gotchas.md) — `return $list` unrolls to `$null`; `Mandatory` rejects empty input; `-RedirectStandardInput 'NUL'` throws on real Windows and can produce false PASSes downstream.
+- [RTVM-004 prompt/abort/non-blocking stdin](rtvm-004-prompt-abort-nonblocking-stdin.md) — the fourth `StdinChannel` seam function, why `select()` mirrors all four Win32 availability tests, and why only `Reporter`'s Aborted branch (not `SolveSession`) got a unit test.
 
 ## Process
 
