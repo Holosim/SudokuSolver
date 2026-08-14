@@ -2362,3 +2362,135 @@ check above is the evidence it is genuinely exercised rather than
 vacuously green.
 
 Handed to CI/CD next with `status:ready-for-commit`.
+
+### 9.10 The harness lands: TP-001/002/003 automated, and genuine `vstest` discovery/execution ([RTVM-001], issue #24)
+
+State at branch `issue-24` (harness commit `37ad5c0`; the Test Engineer's
+PASS is at `cf551b2`/`cf551b23`, one commit later, confirmed by diff to
+add only a Software Engineer memory file — no product path moved between
+the two), tested by the Test Engineer 2026-08-14 — **PASS**. This closes
+§9.8.1's harness gap and, incidentally, produces the first genuine
+`vstest.console.exe` discovery-and-execution evidence this project has
+had at any commit.
+
+**What was built.** `sudoku::test::ProcessRunner` (`docs/SDD.md` §3.3):
+spawns the exe with 0..n args and three stdin modes (`Closed`, `Bytes`,
+`File`); pumps stdout and stderr on dedicated threads so a child writing
+more than 64 KiB to both before exiting cannot deadlock the harness
+(exercised directly, below); enforces a timeout with forced termination
+reported as a distinct `timedOut` flag rather than hanging; captures
+both streams binary-safely (NUL preserved); reports wall-clock duration.
+The `_WIN32` branch (`CreateProcess` + anonymous pipes) is the only one
+`SudokuSolver.Tests.vcxproj` compiles and is what ships; a POSIX branch
+(`fork`/`exec`/`pipe`), mirroring the `StdinChannel.cpp` platform seam
+issue #9 used, ships nothing to the client but is what lets these
+procedures execute for real on this pipeline's Linux agents. TP-001
+(both input forms plus a byte-identity check between them), TP-002 (all
+three parts, including the file-wins-over-stdin case), and TP-003 are
+ported onto it as `rtvm001…`/`rtvm002…`/`rtvm003…` `TEST_METHOD`s in the
+new `EndToEndTests.cpp`.
+
+**Linux evidence (the Test Engineer's own build, not the Software
+Engineer's throwaway driver).** `g++ -std=c++17 -Wall -Wextra -pedantic`
+compiles clean. **30 discovered / 30 passed / 0 failed** (up from 25
+pre-#24 — exactly the 5 new methods), linked core-only (`SudokuCore`
+alone, no console object — RTVM-903's split holds), spawning a real
+g++-built console binary through the POSIX branch. Nine standalone
+stress checks against the harness API directly, all passed:
+spawn-failure reporting, timeout + forced termination (300 ms budget,
+unblocks at ~300 ms not 5 s), the specific dual-stream deadlock scenario
+(300 KB to stdout **and** stderr before exit, both captured in full),
+the three stdin modes, NUL-byte preservation, the CRLF-normalisation
+helper, and a SIGPIPE fix found and fixed this run (the POSIX `SIG_IGN`
+mitigation needed so a child exiting before reading all of stdin can't
+kill the harness was leaking into spawned children via `exec`, since
+`SIG_IGN` survives `execve` unlike a function handler; fixed by
+resetting to `SIG_DFL` in the child immediately after `fork`, before
+`exec`).
+
+**Falsifiability.** A scratch mutation of `InputSource.cpp` making the
+file argument always defer to stdin failed exactly the 4 of the 5
+ported tests that depend on the file argument; TP-003 (which never
+supplies a file argument) correctly still passed. The harness tests real
+product behaviour, not returning green unconditionally.
+
+**Windows evidence — the first genuine `vstest.console.exe` pass on this
+project.** Run `31758912922` @ `cf551b23` (the branch tip; not the
+cancelled earlier run). MSVC 14.44 `/W4` Debug **and** Release both
+compile `ProcessRunner.cpp` and `EndToEndTests.cpp` clean, 0
+warnings/errors, both configurations. `tests/windows/run-procedures.ps1`'s
+corrected `/ListTests:<dll>` invocation — **not** the workflow's own
+inline step, which stays DW-1-broken and is masked green only by
+`continue-on-error` — discovered all 30 methods and ran all 30 for
+real: `exit=0 total=30 passed=30 failed=0`. Cross-checked directly
+against `tests.trx`, not just the script's own summary: all five
+`rtvm001…rtvm003` methods show `outcome="Passed"`. The same script's
+separate process-level checks agree, against the real
+`SudokuSolver.exe`: `[PASS] TP-002 / bare-file-arg`, `/trailing-args-
+ignored`, `/file-arg-wins-over-stdin`, `[PASS] TP-003 / stdin-fallback`.
+No regressions: the 7 `[FAIL]` rows in `runtime-procedures.txt` are all
+previously-known deferred-wording items owned elsewhere (TP-009→#10,
+TP-401→#12, TP-402→#11, TP-403→#10), each with the correct exit code and
+empty streams; TP-500's `anyWrongExit:false` gate (the #23 fix) still
+holds.
+
+| Req | Executed here and passed | Still outstanding |
+| --- | --- | --- |
+| RTVM-001 | TP-001 in full, via the now-committed harness, on **both** Linux (real spawned binary, POSIX branch) and Windows (real `SudokuSolver.exe`, `_WIN32` branch, discovered **and** executed under genuine `vstest.console.exe`, confirmed against `tests.trx`) | Nothing. Both of §9.8.6.3's outstanding items for this row — the committed automated harness, and MSVC/Test-Explorer discovery-and-execution — are now closed |
+| RTVM-002 | TP-002 in full (all three parts, including the file-wins-over-stdin case), same two-platform evidence | Nothing, as RTVM-001 |
+| RTVM-003 | TP-003 in full, same two-platform evidence | Nothing, as RTVM-001 |
+
+#### 9.10.1 What this does and does not discharge elsewhere
+
+This is genuine evidence that discovery-and-execution under
+`vstest.console.exe` now works — the second half of the V-1 split
+§9.8.6.2 drew, and the half **DW-1** has blocked at every prior Windows
+run on this project. It is real evidence, but scoped to what actually
+ran: **this issue's tree**, branched from trunk `62cbb1e` before #10
+merged, carrying 30 test methods (the 25 present at `62cbb1e` plus the 5
+new TP-001/002/003 ports). It does **not** cover the 23 further methods
+(`ParserTests`, the new `MessagesTests`/`ReporterTests` files,
+`InputFaultTests`' growth to 5) that #10 added to trunk on a branch this
+tree never merged — RTVM-009, RTVM-102…105 and RTVM-403 still own their
+own V-1/DW-1 discharge, on their own tree, whenever a future issue or
+regression pass produces it. Extending this evidence to those rows would
+be quoting a fact from the wrong run (§9.8.6.2's **W-9**), so it is not
+done here.
+
+What it does discharge, on a row it actually exercised without touching:
+**RTVM-400**. §9.8.6.3 left RTVM-400 with exactly one outstanding item —
+"TP-400's discovery under the real framework (V-1/DW-1)" — and
+`GridFormatTests`' six methods are part of the same 30
+discovered-and-executed set reported above (six of the pre-existing 25,
+unchanged since `62cbb1e`; no code under test moved on this branch).
+**RTVM-400's outstanding clause is therefore discharged. Status and
+Commit(s) are unchanged (`In Test`, `62cbb1e`)** — this issue didn't
+touch `GridFormatTests` or `GridFormat.cpp`, so nothing here promotes
+the row; it only closes the last thing §9.8.6.3 left it waiting on, per
+the discharge-not-promotion pattern of §9.9.1.
+
+The workflow's own inline "TP-905 — unit tests discovered and executed
+by vstest.console" step in `windows-verification.yml` is **still** the
+malformed `/ListTests:` syntax DW-1 names, and still fails — masked
+green only by `continue-on-error`. It is superseded by
+`run-procedures.ps1`'s corrected invocation, which is why the evidence
+above is real rather than absent, but the defect in the committed
+workflow file itself is unfixed. Flagged for whoever next touches that
+file — CI/CD's territory, not a Systems Engineer edit — and not blocking
+anything, since the superseding script is what every procedure in this
+project actually reads.
+
+#### 9.10.2 Status outcome
+
+**No status promotion.** Per standing convention, Verified needs a trunk
+commit SHA covering the tested tree in addition to full clause
+execution, and this evidence is on branch `issue-24`, not yet merged.
+RTVM-001, RTVM-002 and RTVM-003 remain **In Test**, Commit(s) unchanged
+(`62cbb1e`, the prior merge) until CI/CD reports the new SHA. Their
+procedures now have **zero** outstanding clauses, though — new for this
+project — so recording the SHA on the next commit-confirmation hand-back
+should move these three straight to Verified without a further
+regression round, unless CI/CD flags one. RTVM-400 stays In Test at
+`62cbb1e` per §9.10.1 — a clause closed, not a promotion.
+
+Handed to CI/CD next with `status:ready-for-commit`.
