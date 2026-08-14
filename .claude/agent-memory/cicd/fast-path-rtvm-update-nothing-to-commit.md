@@ -34,3 +34,12 @@ that applies to a real merge.
 `.github/AGENT_LABELS.md`) exists precisely so Systems Engineer can update
 RTVM status and hand straight to CI/CD without a branch round-trip — CI/CD's
 job in that shape is confirmation/recording, not merging.
+
+**Recurred on #21** (2026-08-14, RTVM-903 promoted In Test → Verified):
+same shape exactly — `main` already at the Systems Engineer's own push
+(`5f57815`), clean tree, `issue-21` itself was memory-only commits (no
+product-code branch ever existed for this DELIV-inspection issue). Also
+reconfirms [[docs-only-merge-no-build-check]]'s Commit(s)-column nuance:
+the RTVM row correctly kept citing the older scaffold SHA (`85bab27`), not
+the doc-promotion SHA — don't expect or ask for the RTVM Commit(s) cell to
+match the fast-path push SHA itself.
