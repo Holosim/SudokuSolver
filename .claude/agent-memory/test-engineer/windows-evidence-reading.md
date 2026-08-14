@@ -78,6 +78,36 @@ EPYC 9V74 / 2596 MHz and EPYC 7763 / 2445 MHz hours apart. Always quote
 Report the compile/execute split explicitly and leave the crediting to
 the Systems Engineer; measuring is mine, writing the RTVM row is not.
 
+**DW-1 is now fixed (issue #23/#24, 2026-08-14) — the execute half is no
+longer permanently unavailable.** `tests/windows/run-procedures.ps1` now
+invokes `vstest.console.exe` correctly (separate discovery and execution
+calls; the workflow's own inline "TP-905" step is still the broken
+`/ListTests:<output-path>` form and still fails — that's expected and
+irrelevant, everything reads the script). On #10's V-1/DW-1 regression
+pass (run `31797295886` @ `4d80c8c`), `discovered-tests.txt` +
+`tests.trx` gave genuine per-method Passed/Failed for all 53 methods,
+letting me grep for the specific 28 methods a given RTVM row owns and
+confirm each one's `outcome="Passed"` directly from the trx rather than
+trusting the script's own PASS/FAIL summary line. **Do this per-row
+cross-check whenever a hand-off says a specific row's V-1/DW-1 clause is
+what's outstanding** — the aggregate 53/53 doesn't by itself prove any
+one row's methods are in that count, only that discovery/execution work
+at all.
+
+**Also check `runs/<label>/{stdout,stderr}.txt` against
+`runtime-procedures.json`'s per-case `observed` field, not just the
+`[PASS]`/`[FAIL]` text summary** — the json carries the actual
+`exit=N stdoutBytes=… stderrBytes=…` string the PASS was computed from,
+which is what lets you confirm the check was exit-code-gated rather than
+timing/content-only (see [[false-pass-from-unchecked-exit-codes]]).
+
+**A Windows run already in flight for the exact trunk SHA under test is
+fair game — no need to trigger a fresh one.** `gh run list
+--workflow=windows-verification.yml` occasionally shows an `in_progress`
+run whose `headSha` already matches; polling it to completion
+(`gh run view <id> --json status -q .status` in a wait loop) is cheaper
+and no less valid than starting a new one.
+
 See [[no-windows-runner]] for what the Ubuntu substitute toolchain can
 and cannot prove, and [[test-engineer-cannot-author-repo-files]] for who
 writes the procedure scripts.
