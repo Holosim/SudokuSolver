@@ -91,6 +91,21 @@ inline constexpr std::string_view kSolvedEasyFormatted =
 // 5, 9 and 13 does not retype it four times.
 inline constexpr std::string_view kFormatSeparatorLine = "+-------+-------+-------+";
 
+// P-UNSOLVABLE (docs/RTVM.md 6.1) -- P-EASY with r1c3 set to 1. The givens
+// are mutually consistent (RTVM-104 must not reject it); the solver has to
+// discover the contradiction itself. Used by TP-002's "file argument wins
+// over stdin" case: this is what is piped to stdin and must be ignored.
+inline constexpr std::string_view kPuzzleUnsolvable =
+    "531070000"
+    "600195000"
+    "098000060"
+    "800060003"
+    "400803001"
+    "700020006"
+    "060000280"
+    "000419005"
+    "000080079";
+
 // Builds a Grid from the compact row-major form above: '0' and '.' are empty,
 // and any character from '1' up to the kGridSize'th digit is a given. Anything
 // else is treated as empty, and a short string leaves the remaining cells
@@ -110,6 +125,23 @@ inline constexpr std::string_view kFormatSeparatorLine = "+-------+-------+-----
         grid.set(index / kGridSize, index % kGridSize, digit);
     }
     return grid;
+}
+
+// Renders a compact 81-character puzzle string as the 9-line, LF-terminated
+// form docs/RTVM.md 6.1 fixtures are written in -- one row per line, every
+// line including the last terminated. End-to-end tests build a process's
+// stdin bytes or a file-argument fixture from this rather than retyping the
+// puzzle in its multi-line form (docs/SDD.md 3.3, issue #24).
+[[nodiscard]] inline std::string toMultilinePuzzleText(std::string_view compact)
+{
+    std::string text;
+    text.reserve(compact.size() + static_cast<std::size_t>(kGridSize));
+    for (int row = 0; row < kGridSize; ++row) {
+        const std::size_t offset = static_cast<std::size_t>(row) * static_cast<std::size_t>(kGridSize);
+        text.append(compact.substr(offset, static_cast<std::size_t>(kGridSize)));
+        text.push_back('\n');
+    }
+    return text;
 }
 
 } // namespace sudoku::test
