@@ -13,8 +13,9 @@
 // rtvm200_theSolutionCheckerRejectsAGridThatIsNotASolution is what keeps the
 // structural pass falsifiable.
 //
-// RTVM-201 (no solution) and RTVM-202 (non-uniqueness) run on the same search
-// but are verified under #11 and #12; nothing here asserts them.
+// RTVM-201 (no solution) and RTVM-202 (non-uniqueness) run on the same
+// search. RTVM-202 (TP-202) is verified below. RTVM-201 is verified under #11
+// and nothing here asserts it.
 
 #include "CppUnitTest.h"
 
@@ -173,6 +174,89 @@ public:
         Assert::IsTrue(report.outcome() == Outcome::Solved);
         Assert::IsTrue(report.nodesExplored() > 0ULL,
             L"solving a 17-given puzzle explores at least one search node");
+    }
+
+    // TP-202, non-uniqueness: P-NONUNIQUE solves to SolvedNotUnique, and the
+    // printed grid is exactly S-NONUNIQUE-A or S-NONUNIQUE-B — deliberately
+    // not pinned to one, since docs/RTVM.md TP-202 says which one depends on
+    // search order and must not be asserted.
+    TEST_METHOD(rtvm202_solvesPNonUniqueToOneOfItsTwoKnownSolutions)
+    {
+        const Grid        puzzle = gridFromCompactForm(kPuzzleNonUnique);
+        NullSolveControl  control;
+        const SolveReport report = solve(puzzle, SolveOptions{}, control);
+
+        Assert::IsTrue(report.outcome() == Outcome::SolvedNotUnique,
+            L"P-NONUNIQUE has exactly two solutions and must report SolvedNotUnique");
+        Assert::IsTrue(report.hasCompleteGrid(),
+            L"the first solution found is still a complete grid (RTVM-301)");
+
+        const std::string found = toCompactString(report.grid());
+        const bool matchesA = found == std::string(kSolvedNonUniqueA);
+        const bool matchesB = found == std::string(kSolvedNonUniqueB);
+        Assert::IsTrue(matchesA || matchesB,
+            L"the reported grid must be exactly S-NONUNIQUE-A or S-NONUNIQUE-B");
+        Assert::IsTrue(isWellFormedSolution(report.grid()),
+            L"every row, column and box must still be a permutation of 1..kGridSize");
+        Assert::IsTrue(preservesGivens(puzzle, report.grid()),
+            L"every given must appear unchanged at the same position");
+    }
+
+    // TP-202's control case: a uniquely-solvable puzzle must report Solved,
+    // never SolvedNotUnique. rtvm200_solvesPEasyToItsUniqueSolution already
+    // pins the Solved outcome for P-EASY; this restates it under RTVM-202's
+    // own name so the control case has a home that survives even if that
+    // test's assertions ever narrow.
+    TEST_METHOD(rtvm202_controlCasePEasyStaysUnique)
+    {
+        NullSolveControl  control;
+        const SolveReport report =
+            solve(gridFromCompactForm(kPuzzleEasy), SolveOptions{}, control);
+
+        Assert::IsTrue(report.outcome() == Outcome::Solved,
+            L"a uniquely-solvable puzzle must report Solved, not SolvedNotUnique");
+    }
+
+    // TP-202's instrumentation clause ("assert ... the solver stopped after
+    // finding the second solution and did not continue searching"), on the
+    // fixture where it is actually falsifiable.
+    //
+    // P-NONUNIQUE cannot show this: after propagation it has exactly one
+    // branch cell with exactly two viable candidates, so the whole search
+    // tree is exhausted at 3 nodes (root + 2 children) whether maxSolutions
+    // is 2 or 1'000'000 — verified by hand against this solver. There is
+    // nothing left to explore either way, so a node-count comparison on
+    // P-NONUNIQUE cannot distinguish "stopped because two were found" from
+    // "kept going and found nothing more because there was nothing more".
+    //
+    // P-BLANK — the same fixture this issue's design notes call out — has an
+    // enormous branching factor, so raising the solution budget by one
+    // measurably grows the search: proof that maxSolutions genuinely bounds
+    // the work rather than the tree happening to run out on its own.
+    //
+    // TP-202's wording ties the instrumentation clause to P-NONUNIQUE
+    // specifically; using P-BLANK instead is flagged in the issue #12
+    // hand-off rather than assumed silently.
+    TEST_METHOD(rtvm202_stoppingAtTwoSolutionsBoundsTheSearch)
+    {
+        NullSolveControl control;
+        const Grid        blank = gridFromCompactForm(kPuzzleBlank);
+
+        SolveOptions stopAtTwo;
+        stopAtTwo.maxSolutions = 2;
+        const SolveReport twoSolutions = solve(blank, stopAtTwo, control);
+
+        SolveOptions stopAtThree;
+        stopAtThree.maxSolutions = 3;
+        const SolveReport threeSolutions = solve(blank, stopAtThree, control);
+
+        Assert::IsTrue(twoSolutions.outcome() == Outcome::SolvedNotUnique);
+        Assert::IsTrue(threeSolutions.outcome() == Outcome::SolvedNotUnique,
+            L"P-BLANK has far more than three solutions");
+        Assert::IsTrue(twoSolutions.nodesExplored() < threeSolutions.nodesExplored(),
+            L"a search capped at two solutions must explore strictly fewer nodes "
+            L"than the same search capped at three, or the cap is not actually "
+            L"stopping anything");
     }
 };
 

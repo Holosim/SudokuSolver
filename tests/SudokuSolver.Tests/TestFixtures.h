@@ -67,6 +67,54 @@ inline constexpr std::string_view kSolvedHard17 =
     "856129743"
     "274836159";
 
+// P-NONUNIQUE (docs/RTVM.md 6.1) — S-EASY with the deadly rectangle at
+// r4c6, r4c9, r5c6, r5c9 blanked. Exactly two solutions.
+inline constexpr std::string_view kPuzzleNonUnique =
+    "534678912"
+    "672195348"
+    "198342567"
+    "859760420"
+    "426850790"
+    "713924856"
+    "961537284"
+    "287419635"
+    "345286179";
+
+// S-NONUNIQUE-A (docs/RTVM.md 6.1) — identical to S-EASY by construction.
+// Named separately so a test reading TP-202 does not have to rediscover that
+// fact from the fixture text.
+inline constexpr std::string_view kSolvedNonUniqueA = kSolvedEasy;
+
+// S-NONUNIQUE-B (docs/RTVM.md 6.1) — S-EASY with row 4 `859763421` and row 5
+// `426851793`, the other resolution of the same deadly rectangle.
+inline constexpr std::string_view kSolvedNonUniqueB =
+    "534678912"
+    "672195348"
+    "198342567"
+    "859763421"
+    "426851793"
+    "713924856"
+    "961537284"
+    "287419635"
+    "345286179";
+
+// P-BLANK (docs/RTVM.md 6.1) — 81 empty cells, an enormous number of
+// solutions. Its full robustness procedure is TP-505, owned by a later
+// issue; here it is only the fixture RTVM-202's design notes call out as the
+// case where "stop at two" actually has work to cut short, unlike
+// P-NONUNIQUE whose search tree is exhausted after exactly two solutions
+// regardless of the budget.
+inline constexpr std::string_view kPuzzleBlank =
+    "000000000"
+    "000000000"
+    "000000000"
+    "000000000"
+    "000000000"
+    "000000000"
+    "000000000"
+    "000000000"
+    "000000000";
+
 // The normative rendering of S-EASY (docs/RTVM.md 6.2) — 13 lines of 25 ASCII
 // characters, every line terminated, the last one included. Transcribed from
 // the document and nowhere else: this literal *is* the requirement, so TP-400
