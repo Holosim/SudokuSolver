@@ -8,12 +8,24 @@
     <Filter Include="Core Under Test">
       <UniqueIdentifier>{72A0A0B4-2E0F-4E2B-9C8F-4F5B2E0D6A11}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Console Under Test">
+      <UniqueIdentifier>{9B6E5B0E-3C46-4E23-9C5E-2B6E6E9B9B12}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="GridFormatTests.cpp">
       <Filter>Test Files</Filter>
     </ClCompile>
     <ClCompile Include="InputFaultTests.cpp">
+      <Filter>Test Files</Filter>
+    </ClCompile>
+    <ClCompile Include="MessagesTests.cpp">
+      <Filter>Test Files</Filter>
+    </ClCompile>
+    <ClCompile Include="ParserTests.cpp">
+      <Filter>Test Files</Filter>
+    </ClCompile>
+    <ClCompile Include="ReporterTests.cpp">
       <Filter>Test Files</Filter>
     </ClCompile>
     <ClCompile Include="ScaffoldTests.cpp">
@@ -42,6 +54,12 @@
     </ClCompile>
     <ClCompile Include="..\..\src\SudokuCore\Solver.cpp">
       <Filter>Core Under Test</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\SudokuSolver\Messages.cpp">
+      <Filter>Console Under Test</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\SudokuSolver\Reporter.cpp">
+      <Filter>Console Under Test</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

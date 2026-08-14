@@ -1,19 +1,16 @@
 // Parser.cpp — see Parser.h.
 //
-// docs/SDD.md 2.5, 2.6, 2.9. RTVM-100, RTVM-101, RTVM-106, RTVM 7 I-1..I-3,
-// I-13.
+// docs/SDD.md 2.5, 2.6, 2.9. RTVM-100, RTVM-101, RTVM-102..106, RTVM 7
+// I-1..I-3, I-13, I-15.
 //
-// The parse is two passes over the same nine logical lines, and the split is
-// deliberate: RTVM-105 fixes the precedence shape -> illegal character ->
+// The parse is three passes over the same nine logical lines, and the split
+// is deliberate: RTVM-105 fixes the precedence shape -> illegal character ->
 // contradiction across the *whole* input, not line by line. A single pass
 // that validated each line completely before moving on would report the `X`
-// in P-MULTIFAULT's line 1 ahead of its missing line 9 and fail TP-105.
-//
-// TODO(RTVM-104, issue #10): the contradiction pass (row / column / box
-// duplicate among the givens) is the third stage of that precedence and is
-// not implemented here. Issue #6 covers the accepting path only; until #10
-// lands, a self-contradictory but well-shaped puzzle parses successfully and
-// is left for the solver to discover has no completion.
+// in P-MULTIFAULT's line 1 ahead of its missing line 9 and fail TP-105. Each
+// pass only runs once the previous one has cleared the whole grid, so a
+// contradiction is never even looked for until every character is known
+// legal (RTVM-105).
 
 #include "Parser.h"
 
@@ -154,9 +151,9 @@ struct LogicalLine {
 // because RTVM-102 measures a line "after the rules of RTVM-106 are
 // applied" and RTVM-106 makes interior whitespace an illegal character. So
 // the space in TP-106's negative case `098 000060` is reported as an
-// illegal character at r3c4 rather than as a ten-character line. See the
-// note on issue #6 — that reading is flagged to the Systems Engineer for
-// confirmation alongside RTVM-102 (#10).
+// illegal character at r3c4 rather than as a ten-character line — ruled
+// 2026-08-13 as docs/RTVM.md 7 I-15, narrowly: only against the length
+// check of the line the whitespace is on.
 [[nodiscard]] bool findShapeFault(const std::array<LogicalLine, kGridSize>& lines,
                                   int lineCount,
                                   InputFault& fault)
@@ -207,6 +204,88 @@ struct LogicalLine {
     return false;
 }
 
+// Which of the 3x3 boxes (row-major, 0-based) a cell belongs to.
+[[nodiscard]] constexpr int boxIndex(int row, int col) noexcept
+{
+    return (row / kBoxSize) * kBoxSize + col / kBoxSize;
+}
+
+// Pass 3: contradiction. Every cell is known to hold a legal digit by now
+// (kEmpty or 1..kGridSize), so this only has to notice a repeat among the
+// givens. RTVM-104 names three unit kinds; RTVM-105 says nothing about an
+// order among them, so a single deterministic scan is used throughout:
+// cells are visited in row-major reading order, and for each given the row
+// is checked before the column before the box against every earlier given
+// already seen. That is what makes P-CONTRA-ROW report `r1c1`/`r1c7` (the
+// row match on r1c7 is found before its column or box are even consulted)
+// and P-CONTRA-BOX report `r1c2`/`r3c3` (the earlier box member, not the
+// scanning cell itself, is always `first`).
+//
+// Each *Seen table is addressed [unit index][digit - 1]; kEmpty is 0 and is
+// therefore never entered, since an empty cell is never a "given" to
+// contradict.
+[[nodiscard]] bool findContradictionFault(const Grid& grid, InputFault& fault)
+{
+    using SeenTable = std::array<std::array<CellRef, kGridSize>, kGridSize>;
+
+    SeenTable rowSeen{};
+    SeenTable colSeen{};
+    SeenTable boxSeen{};
+
+    for (int row = 0; row < kGridSize; ++row) {
+        for (int col = 0; col < kGridSize; ++col) {
+            const Digit digit = grid.at(row, col);
+            if (digit == kEmpty) {
+                continue;
+            }
+            const std::size_t d = static_cast<std::size_t>(digit) - 1;
+            const int box = boxIndex(row, col);
+            const CellRef here = cellRefFromZeroBased(row, col);
+
+            const CellRef earlierInRow = rowSeen[static_cast<std::size_t>(row)][d];
+            const CellRef earlierInCol = colSeen[static_cast<std::size_t>(col)][d];
+            const CellRef earlierInBox = boxSeen[static_cast<std::size_t>(box)][d];
+
+            if (earlierInRow.isApplicable()) {
+                fault = InputFault{};
+                fault.kind  = FaultKind::RowDuplicate;
+                fault.digit = static_cast<int>(digit);
+                fault.line  = row + 1;
+                fault.first  = earlierInRow;
+                fault.second = here;
+                return true;
+            }
+            if (earlierInCol.isApplicable()) {
+                // Unlike a row duplicate, no single line names a column
+                // conflict (its two cells sit on different lines), so
+                // `line` stays 0 -- "not applicable" -- and the location
+                // is carried entirely by `first`/`second` (docs/SDD.md 2.5).
+                fault = InputFault{};
+                fault.kind  = FaultKind::ColumnDuplicate;
+                fault.digit = static_cast<int>(digit);
+                fault.first  = earlierInCol;
+                fault.second = here;
+                return true;
+            }
+            if (earlierInBox.isApplicable()) {
+                // Same reasoning as the column case above.
+                fault = InputFault{};
+                fault.kind  = FaultKind::BoxDuplicate;
+                fault.digit = static_cast<int>(digit);
+                fault.first  = earlierInBox;
+                fault.second = here;
+                return true;
+            }
+
+            rowSeen[static_cast<std::size_t>(row)][d] = here;
+            colSeen[static_cast<std::size_t>(col)][d] = here;
+            boxSeen[static_cast<std::size_t>(box)][d] = here;
+        }
+    }
+
+    return false;
+}
+
 } // namespace
 
 ParseResult parseGrid(std::string_view text)
@@ -237,6 +316,14 @@ ParseResult parseGrid(std::string_view text)
             }
             grid.set(row, col, static_cast<Digit>(value));
         }
+    }
+
+    // Pass 3: contradiction (RTVM-104). Only reached once every cell is
+    // known to hold a legal digit, so a rejected puzzle is never handed to
+    // the solver either for a bad shape, a bad character, or a repeat
+    // (RTVM-105).
+    if (findContradictionFault(grid, fault)) {
+        return ParseResult::failure(fault);
     }
 
     return ParseResult::success(std::move(grid));

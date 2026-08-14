@@ -16,7 +16,9 @@
 
 namespace sudoku::cli::messages {
 
-// "r<row>c<col>", converting the core's 0-based cells to 1-based (RTVM-105).
+// "r<row>c<col>". A CellRef is already 1-based by the time it reaches here
+// (InputFault.h's cellRefFromZeroBased is the one place that conversion
+// happens, docs/RTVM.md 7 I-16) — this only formats it (RTVM-105).
 [[nodiscard]] std::string cellName(const CellRef& cell);
 
 // Diagnostic for a rejected input. stderr (RTVM-403).
