@@ -261,6 +261,27 @@ struct BranchCell {
     return best;
 }
 
+// Seeds `state` with every given of `puzzle`. Returns false on a
+// contradiction -- an out-of-range given, or one that empties a peer's
+// candidate set on assignment -- leaving `state` unusable, the same contract
+// as assign() itself. Shared by the real search and by every pass of the
+// RTVM-507 diagnostic extension below, so both seed identically.
+[[nodiscard]] bool seedGivens(const Grid& puzzle, SearchState& state)
+{
+    for (int row = 0; row < kGridSize; ++row) {
+        for (int col = 0; col < kGridSize; ++col) {
+            const Digit given = puzzle.at(row, col);
+            if (given == kEmpty) {
+                continue;
+            }
+            if (given > kGridSize || !assign(state, row, col, given)) {
+                return false;
+            }
+        }
+    }
+    return true;
+}
+
 [[nodiscard]] Grid toGrid(const SearchState& state)
 {
     Grid grid;
@@ -341,6 +362,19 @@ public:
 
     [[nodiscard]] std::uint64_t nodesExplored() const { return m_nodesExplored; }
 
+    // Resets this pass's solution bookkeeping so a fresh explore() call can
+    // find its own first and (up to) second solution, while leaving the node
+    // counter, poll countdown and abort flag untouched. Used only by the
+    // RTVM-507 diagnostic extension in solve(): each extra pass repeats "the
+    // full two-solution search" (docs/SDD.md 3.6), but RTVM-204's counter and
+    // the poll cadence it drives must stay continuous across passes rather
+    // than restart at every pass boundary.
+    void beginNewPass()
+    {
+        m_solutionsFound = 0;
+        m_firstSolution  = Grid{};
+    }
+
 private:
     // Calls onPoll every pollNodeInterval nodes. An interval of zero disables
     // polling rather than dividing by it; a caller that wants no callbacks says
@@ -394,31 +428,60 @@ SolveReport solve(const Grid& puzzle,
                   const SolveOptions& options,
                   SolveControl& control)
 {
-    // TODO(RTVM-507): options.minSolveDuration is the diagnostic slow-down
-    // hook (docs/SDD.md 3.6) and is honoured under its own issue. It is part
-    // of the signature now so that issue is additive rather than a rewrite.
+    const auto startTime = std::chrono::steady_clock::now();
 
     SearchState root = makeEmptyState();
 
     // Seed the givens. A contradictory set of givens cannot complete, so it is
     // a NoSolution here; RTVM-104 catches the duplicate-digit case earlier and
     // more precisely, but solve() must not depend on having been called after
-    // the parser.
-    for (int row = 0; row < kGridSize; ++row) {
-        for (int col = 0; col < kGridSize; ++col) {
-            const Digit given = puzzle.at(row, col);
-            if (given == kEmpty) {
-                continue;
-            }
-            if (given > kGridSize || !assign(root, row, col, given)) {
-                return SolveReport::noSolution(0);
-            }
-        }
+    // the parser. Seeding is deterministic, so there is no RTVM-507 extension
+    // to run below when it fails here -- a second attempt would fail exactly
+    // the same way -- hence the direct return.
+    if (!seedGivens(puzzle, root)) {
+        return SolveReport::noSolution(0);
     }
 
     Search search(options, control);
     static_cast<void>(search.explore(std::move(root), 0));
-    return search.report();
+    const SolveReport result = search.report();
+
+    if (options.minSolveDuration.count() <= 0 || result.outcome() == Outcome::Aborted) {
+        return result;
+    }
+
+    // RTVM-507 diagnostic hook (docs/SDD.md 3.6): `result` is already the
+    // answer this call will return. Keep performing genuine search work --
+    // repeating the full two-solution search on a scratch copy of `puzzle`
+    // and discarding every result -- until minSolveDuration has elapsed
+    // since this call began, so that a solve normally far too fast to reach
+    // the prompt thresholds (docs/RTVM.md 7 I-10) can be made to sit in them
+    // on demand.
+    //
+    // `search` itself is reused rather than rebuilt for each pass so its node
+    // count and poll countdown stay continuous across passes -- rebuilding it
+    // would reset the poll countdown every pass and could leave onPoll never
+    // called at all on a puzzle whose full search tree is smaller than
+    // options.pollNodeInterval, which is exactly the P-HARD17 case this hook
+    // exists for. That continuity is also what keeps RTVM-204's counter
+    // monotonic across the whole call rather than sawtoothing back to zero at
+    // every pass boundary.
+    //
+    // An abort requested during this extra work outranks the hook: RTVM-203
+    // promises the solve stops within 1.0 s regardless of which phase it is
+    // in, so that outcome replaces `result` below rather than being folded
+    // into it or delayed until minSolveDuration elapses.
+    while (std::chrono::steady_clock::now() - startTime < options.minSolveDuration) {
+        SearchState scratch = makeEmptyState();
+        if (!seedGivens(puzzle, scratch)) {
+            break;   // unreachable in practice: seeding already succeeded once
+        }
+        search.beginNewPass();
+        if (!search.explore(std::move(scratch), 0)) {
+            return SolveReport::aborted(search.nodesExplored());
+        }
+    }
+    return result;
 }
 
 } // namespace sudoku
