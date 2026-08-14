@@ -36,6 +36,7 @@
 - [RTVM-500 verified](rtvm-500-verified.md) — 2026-08-14 PASS with real exit-code-gated timing data; why TP-501-504 staying open doesn't block it, and to re-check inertness once #13 wires up the RTVM-507 hook.
 - [RTVM-506 verified](rtvm-506-verified.md) — 2026-08-14 PASS; static-CRT confirmed by direct grep + clean dumpbin on the exact branch tip; the A-1 clean-machine residue is pre-accepted, not a fresh gap.
 - [RTVM-507 diagnostic hook verification](rtvm-507-diagnostic-hook-verification.md) — 2026-08-14 PASS, fully runnable on Linux (no Windows needed); the CPU-time-vs-wall-time trick that proves it's real work, not a sleep.
+- [RTVM-203/204 verified](rtvm-203-204-verified.md) — 2026-08-14 PASS; first RTVM-2xx item with real MSVC/vstest trx confirming literal TP timing numbers; branch-ancestry vs. issue-number-order gotcha for the DW-1 fix.
 
 ## Recurring failure patterns
 
