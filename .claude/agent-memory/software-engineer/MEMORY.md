@@ -13,6 +13,8 @@
 
 ## Reusable solutions
 
+- [RTVM-507 diagnostic hook](rtvm-507-diagnostic-hook.md) — why the extension reuses one `Search` instance instead of rebuilding it per pass, and the RTVM-203/204 continuity trap that would hide.
+
 - [Parser fault precedence](parser-precedence-reading.md) — why `parseGrid` is three passes, and how the TP-106 interior-space conflict was ruled (§7 I-15).
 - [Contradiction pass and fault wording](contradiction-pass-and-fault-wording.md) — RTVM-104's row-major scan order, box numbering in messages, and what RTVM-102..105/009/403 wording is (and isn't) pinned to.
 - [Making invariants compile-time](making-invariants-compile-time.md) — the enum/static_assert/exhaustive-switch tricks this project uses instead of runtime checks.
