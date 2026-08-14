@@ -14,6 +14,7 @@
 - [Pipeline label traps](pipeline-label-traps.md) — a hand-removed `status:on-hold` orphans an issue from the dependency sweep; how to handle a feature issue with an empty thread.
 - [Fast-path promotion after SHA recorded](fast-path-promotion-after-sha-recorded.md) — SHA already in Commit(s), later regression PASS on a tree containing it promotes In Test → Verified immediately; still hand off to CI/CD even for a docs-only diff.
 - [Second ready-for-rtvm-update closes directly](second-ready-for-rtvm-update-closes-directly.md) — a repeat regression-pass handoff that discharges nothing (no promotion) closes the issue outright, no CI/CD round trip; only route to CI/CD when a clause is actually discharged and a row promotes.
+- [No-code measurement still routes to CI/CD](no-code-measurement-still-routes-to-cicd.md) — a measurement-only issue's first Approved→Verified promotion takes the fast path to CI/CD even with a docs-only diff; don't confuse with the repeat-handoff close-directly case.
 
 ## Project context
 
