@@ -3274,3 +3274,33 @@ exist.
 **§7 interpretations raised in this thread: none.**
 
 Handed to Test Engineer next for the regression pass CI/CD requested.
+
+### 9.24 Post-merge regression pass reconfirms RTVM-203/RTVM-204, no promotion (issue #16)
+
+Test Engineer's regression pass ran on trunk tip `2199ac1` (the RTVM
+bookkeeping commit from §9.23 itself), per CI/CD's "regression testing
+is needed on this trunk arrival" flag. Scope check first: `compare/
+4694387...main` showed only `.claude/agent-memory/**` and
+`docs/RTVM.md` changed since the original PASS — no `src/`, `tests/`,
+`samples/`, or project-file content moved — so there was nothing left
+to discharge on this row; both RTVM-203 and RTVM-204 are already
+**Verified** at `ce15599` (§9.23), not In Test, so this pass has no
+outstanding clause to promote.
+
+Evidence gathered anyway (full substitute suite, 65/65 on Linux;
+49/49 on the core-only driver; real Windows `windows-verification` run
+`31840359481` pinned to this exact tip `2199ac1` — Debug/Release `0
+Error(s)`, `tests.trx` 65 Passed/0 Failed, both
+`rtvm203_abortLatencyStaysUnderOneSecondOverTenConsecutiveRepetitions`
+and `rtvm204_progressCounterProducesTenStrictlyIncreasingOneSecondSamples`
+individually Passed with the same literal TP-203/TP-204 durations
+already recorded in §9.22, now reproduced on trunk) is a clean
+reconfirmation of already-Verified rows, not new promotable ground —
+per [[second-ready-for-rtvm-update-closes-directly]], a routine
+regression re-check that discharges nothing doesn't get routed back to
+CI/CD for a third round trip on the same content; it closes here.
+
+**No status change.** RTVM-203 and RTVM-204 remain Verified at
+`ce15599` (§5). **§7 interpretations raised in this thread: none.**
+
+Closing issue #16 directly — no further hand-off.
