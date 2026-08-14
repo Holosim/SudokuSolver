@@ -59,14 +59,14 @@ Blocked / Withdrawn.
 | RTVM-006 | No prompt requires a response. The application never blocks on reading a prompt reply: continuing is the default and an unanswered prompt simply lapses at the next prompt point. | SN-5, SN-8 | Test (TP-006) | Approved | |
 | RTVM-007 | If the solve finishes while a prompt is outstanding, the result is printed and the application exits normally. It does not wait for a reply to the lapsed prompt. | SN-5 | Test (TP-007) | Approved | |
 | RTVM-008 | An invocation with no interactive console (stdin redirected from a file or pipe, stdout/stderr redirected) is never blocked or delayed by the prompt mechanism, and always terminates with a result and an exit code. | SN-5, SN-8 | Test (TP-008) | Approved | |
-| RTVM-009 | A file argument that cannot be opened or read is reported as a specific diagnostic naming the path and the reason, and exits with code `1`. | SN-4, SN-8 | Test (TP-009) | In Test | `139d41a` |
+| RTVM-009 | A file argument that cannot be opened or read is reported as a specific diagnostic naming the path and the reason, and exits with code `1`. | SN-4, SN-8 | Test (TP-009) | Verified | `139d41a` |
 | **DATA-IN — internal representation of input (§4.2)** | | | | | |
 | RTVM-100 | The application parses 9 lines of 9 characters into an internal 9×9 grid in which each cell holds either a given digit 1–9 or "empty". | SN-1, SN-2 | Test (TP-100) | In Test | `3bc1b22` |
 | RTVM-101 | Both `0` and `.` denote an empty cell, interchangeably, including mixed within the same puzzle. | SN-1 | Test (TP-101) | In Test | `3bc1b22` |
-| RTVM-102 | Input whose shape is wrong — fewer than 9 lines, or any of the first 9 lines not exactly 9 characters after the rules of RTVM-106 are applied — is rejected as malformed with a message naming the offending line number and what was wrong with it. Interior horizontal whitespace is the one exception to that length test: it is reported as an illegal character (RTVM-103), not as a length fault on its own line — §7 I-15. | SN-4 | Test (TP-102) | In Test | `139d41a` |
-| RTVM-103 | Input containing a character other than `1`–`9`, `0` or `.` in the grid is rejected as malformed with a message naming the offending character and its row and column. | SN-4 | Test (TP-103) | In Test | `139d41a` |
-| RTVM-104 | Input that is well-formed but self-contradictory — the same digit given twice in a row, a column, or a 3×3 box — is rejected with a message naming the digit, the unit, and both conflicting cells. | SN-4 | Test (TP-104) | In Test | `139d41a` |
-| RTVM-105 | Validation reports exactly one fault, the first found, in the fixed precedence order: shape (RTVM-102) → illegal character (RTVM-103) → contradiction (RTVM-104). The single exception is interior horizontal whitespace, which outranks the length fault of the line it appears on and is reported as an illegal character (§7 I-15); precedence between different lines is unaffected. Cells are named in one-based `r<row>c<col>` form. A rejected puzzle is never passed to the solver. | SN-4 | Test (TP-105) | In Test | `139d41a` |
+| RTVM-102 | Input whose shape is wrong — fewer than 9 lines, or any of the first 9 lines not exactly 9 characters after the rules of RTVM-106 are applied — is rejected as malformed with a message naming the offending line number and what was wrong with it. Interior horizontal whitespace is the one exception to that length test: it is reported as an illegal character (RTVM-103), not as a length fault on its own line — §7 I-15. | SN-4 | Test (TP-102) | Verified | `139d41a` |
+| RTVM-103 | Input containing a character other than `1`–`9`, `0` or `.` in the grid is rejected as malformed with a message naming the offending character and its row and column. | SN-4 | Test (TP-103) | Verified | `139d41a` |
+| RTVM-104 | Input that is well-formed but self-contradictory — the same digit given twice in a row, a column, or a 3×3 box — is rejected with a message naming the digit, the unit, and both conflicting cells. | SN-4 | Test (TP-104) | Verified | `139d41a` |
+| RTVM-105 | Validation reports exactly one fault, the first found, in the fixed precedence order: shape (RTVM-102) → illegal character (RTVM-103) → contradiction (RTVM-104). The single exception is interior horizontal whitespace, which outranks the length fault of the line it appears on and is reported as an illegal character (§7 I-15); precedence between different lines is unaffected. Cells are named in one-based `r<row>c<col>` form. A rejected puzzle is never passed to the solver. | SN-4 | Test (TP-105) | Verified | `139d41a` |
 | RTVM-106 | Input is accepted with either LF or CRLF line endings and with or without a trailing newline. Leading and trailing horizontal whitespace on a line is ignored; interior whitespace is an illegal character. Content after the ninth line is ignored. | SN-1, SN-8 | Test (TP-106) | In Test | `3bc1b22` |
 | **CORE — solver (§4.4, §4.5, §5)** | | | | | |
 | RTVM-200 | Given a valid, uniquely-solvable standard 9×9 puzzle, the solver produces the grid's unique solution: all 81 cells filled with 1–9, with no digit repeated in any row, column, or 3×3 box, and every given preserved in place. | SN-2 | Test (TP-200) | In Test | `fdd9cea` |
@@ -82,7 +82,7 @@ Blocked / Withdrawn.
 | RTVM-400 | A solved grid is written to stdout pretty-printed with box separators, in exactly the 13-line ASCII format given in §6.2. | SN-3 | Test (TP-400) | In Test | `62cbb1e` |
 | RTVM-401 | For the `SolvedNotUnique` outcome the grid is followed on stdout by a statement that the solution shown is not unique. | SN-3 | Test (TP-401) | Approved | |
 | RTVM-402 | For the `NoSolution` outcome a plain statement that the puzzle has no solution is written to stdout, and no grid is written. | SN-3, SN-4 | Test (TP-402) | In Test | |
-| RTVM-403 | For the `InvalidInput` outcome a specific human-readable diagnostic naming the fault is written to **stderr**, and nothing is written to stdout. | SN-4 | Test (TP-403) | In Test | `139d41a` |
+| RTVM-403 | For the `InvalidInput` outcome a specific human-readable diagnostic naming the fault is written to **stderr**, and nothing is written to stdout. | SN-4 | Test (TP-403) | Verified | `139d41a` |
 | RTVM-404 | For the `Aborted` outcome a message stating the solve was abandoned at the user's request is written to **stderr**, and nothing is written to stdout. | SN-5 | Test (TP-404) | Approved | |
 | RTVM-405 | The process exit code is `0` for `Solved` and `SolvedNotUnique`, `1` for `InvalidInput`, `2` for `NoSolution`, `3` for `Aborted`, with no other exit code reachable. | SN-8, SN-4 | Test (TP-405) | Approved | |
 | RTVM-406 | Across every reachable outcome, stdout carries only the result (grid, non-unique note, no-solution statement). No prompt text, no diagnostic, and no progress output ever reaches stdout. | SN-8 | Test (TP-406) | Approved | |
@@ -2571,3 +2571,57 @@ ambiguity — nothing here required a ruling under the "close
 implementation-level rulings at the fast-path update" convention.
 
 Handed to CI/CD next with `status:ready-for-commit`.
+
+### 9.12 V-1/DW-1 discharged on the merged tree, and RTVM-009/102–105/403 promoted to Verified (issue #10, regression pass)
+
+§9.9.4 left RTVM-009, RTVM-102, RTVM-103, RTVM-104, RTVM-105 and
+RTVM-403 In Test at `139d41a` with exactly one outstanding item per row:
+the V-1/DW-1 MSVC/`vstest.console.exe` discovery-and-execution clause,
+on a tree containing #10's 23 new test methods. The Test Engineer's
+regression pass, run on trunk `main` @ `4d80c8c` (which contains
+`139d41a`), closes it.
+
+**Why this pass could succeed where earlier ones couldn't.** #24 landed
+a corrected `tests/windows/run-procedures.ps1` (DW-1's `/ListTests:`
+syntax fixed) after §9.9's evidence was gathered, so a genuine
+`vstest.console.exe` discovery-and-execution pass against this issue's
+own tree became possible for the first time on this regression round.
+
+**Evidence** (Windows run `31797295886` @ `4d80c8cdc22bfbf1dad330bea6ac6c9a0cfa4ccc`,
+`win25-vs2026`, read from the raw log and `.trx`, not the summary):
+Debug and Release both build clean with `Messages.cpp`/`Parser.cpp`/
+`Reporter.cpp` in both configs' compile lines; 53 methods discovered
+(all 28 `rtvm009_*`/`rtvm102_*`/`rtvm103_*`/`rtvm104_*`/`rtvm105_*`/
+`rtvm403_*` methods #10 added, confirmed by grep against the discovery
+file, not the script's own count); `tests.trx` shows `total="53"
+passed="53" failed="0"`, all 28 of those methods individually
+`outcome="Passed"`. Process-level runs cross-checked against
+`runtime-procedures.json` for exit code specifically: `TP-009-missing-
+file`, `TP-009-existing-directory`, `TP-403-badchar`, `TP-403-short`,
+`TP-403-contra-row` all `exit=1`, stdout 0 bytes — `existing-directory`
+reads "Permission denied" on Windows rather than POSIX's "Is a
+directory", expected and non-binding per §7 I-18. The only two `[FAIL]`
+rows in `runtime-procedures.txt` are `TP-401`/`TP-402`, both owned
+elsewhere (#12, #11) and not rows of this issue. The workflow's own
+inline `/ListTests:` step is unchanged and still fails, masked by
+`continue-on-error` — not the evidence used here, per §9.10.1's
+standing note that the superseding script is authoritative.
+
+**Status outcome.** `139d41a` was already recorded in the Commit(s)
+column at §9.9.4, and this evidence runs on a tree that contains that
+exact SHA — so, per the pattern §9.10.2 anticipated for RTVM-001/002/003
+("recording the SHA on the next commit-confirmation hand-back should
+move these... straight to Verified without a further regression round"),
+**RTVM-009, RTVM-102, RTVM-103, RTVM-104, RTVM-105 and RTVM-403 move
+from In Test to Verified** (§5), Commit(s) unchanged at `139d41a`. Every
+clause TP-009/102/103/104/105/403 ask for, plus V-1/DW-1, is now
+executed and passed against a tree containing the recorded SHA — zero
+outstanding items remain on any of these six rows.
+
+**§7 interpretations raised in this thread: none** — this round is
+confirmation evidence on already-scoped work.
+
+This is the fast-path fixture: no code changed, only `docs/RTVM.md`.
+Handed to CI/CD next with `status:ready-for-commit` to record this
+doc-only update; issue #10 closes once that hand-back confirms, per
+standing convention for the group's chain.
