@@ -30,6 +30,10 @@
 
 - [Systems Engineer piggyback obligations](systems-engineer-piggyback-obligations.md) — an in-thread comment (not the issue body) can attach an extra RTVM item to an issue by file-touch timing; check the whole thread before sign-off.
 
+## Verified requirements (context worth keeping)
+
+- [RTVM-500 verified](rtvm-500-verified.md) — 2026-08-14 PASS with real exit-code-gated timing data; why TP-501-504 staying open doesn't block it, and to re-check inertness once #13 wires up the RTVM-507 hook.
+
 ## Recurring failure patterns
 
 - [Stub wording vs exit codes](stub-wording-vs-exit-codes.md) — right exit code with an empty stream is expected state on this project, not a defect; which issue owns which wording.
