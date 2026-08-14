@@ -12,6 +12,7 @@
 - [Stale-branch real union conflicts](stale-branch-real-union-conflicts.md) — a branch cut before several other issues merged still narrows to a handful of real, additive-both-sides conflicts; resolve as a union, not a pick-one-side.
 - [checkout -B keeps a dirty worktree](checkout-b-keeps-dirty-worktree.md) — switching branches with `checkout -B` doesn't discard a prior scratch branch's staged resolution; `git reset --hard` first, then restore your backed-up resolution.
 - [Append-conflict closing-brace suffix](append-conflict-closing-brace-suffix.md) — two branches appending `TEST_METHOD`s to one file: git factors the identical trailing braces out, so the first side's last method silently needs its `}` put back.
+- [Test-code-only merge still needs regression](test-code-only-merge-still-needs-regression.md) — #16: new `TEST_METHOD`s with zero `src/` change is a real code merge, not the docs-only carve-out; don't waive the regression-testing note.
 
 ## Build & toolchain notes
 
