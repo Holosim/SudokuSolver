@@ -70,7 +70,7 @@ Blocked / Withdrawn.
 | RTVM-106 | Input is accepted with either LF or CRLF line endings and with or without a trailing newline. Leading and trailing horizontal whitespace on a line is ignored; interior whitespace is an illegal character. Content after the ninth line is ignored. | SN-1, SN-8 | Test (TP-106) | In Test | `3bc1b22` |
 | **CORE — solver (§4.4, §4.5, §5)** | | | | | |
 | RTVM-200 | Given a valid, uniquely-solvable standard 9×9 puzzle, the solver produces the grid's unique solution: all 81 cells filled with 1–9, with no digit repeated in any row, column, or 3×3 box, and every given preserved in place. | SN-2 | Test (TP-200) | In Test | `fdd9cea` |
-| RTVM-201 | Given a well-formed, non-contradictory puzzle that admits no completion, the solver reports "no solution" and terminates. It does not loop, guess indefinitely, or emit a partial grid. | SN-2, SN-4 | Test (TP-201) | Approved | |
+| RTVM-201 | Given a well-formed, non-contradictory puzzle that admits no completion, the solver reports "no solution" and terminates. It does not loop, guess indefinitely, or emit a partial grid. | SN-2, SN-4 | Test (TP-201) | In Test | |
 | RTVM-202 | The solver determines whether a puzzle has more than one solution by searching for at most two solutions and stopping. Where two are found it yields the first found together with a "not unique" indication. It does not enumerate or count all solutions. | SN-2, SN-3 | Test (TP-202) | Approved | |
 | RTVM-203 | The solve is cooperatively interruptible: once an abort is requested the solver stops and yields the "aborted" outcome within 1.0 s, leaving the process free to exit cleanly. | SN-5 | Test (TP-203) | Approved | |
 | RTVM-204 | The solver maintains a monotonically increasing count of search steps taken, readable by the rest of the application and by the test suite while the solve is in flight. This is what makes "the solve is still making progress" (§7 acceptance #6) an observable fact rather than an assertion. | SN-5 | Test (TP-204) | Approved | |
@@ -81,7 +81,7 @@ Blocked / Withdrawn.
 | **OUT — presentation (§4.1, §4.3)** | | | | | |
 | RTVM-400 | A solved grid is written to stdout pretty-printed with box separators, in exactly the 13-line ASCII format given in §6.2. | SN-3 | Test (TP-400) | In Test | `62cbb1e` |
 | RTVM-401 | For the `SolvedNotUnique` outcome the grid is followed on stdout by a statement that the solution shown is not unique. | SN-3 | Test (TP-401) | Approved | |
-| RTVM-402 | For the `NoSolution` outcome a plain statement that the puzzle has no solution is written to stdout, and no grid is written. | SN-3, SN-4 | Test (TP-402) | Approved | |
+| RTVM-402 | For the `NoSolution` outcome a plain statement that the puzzle has no solution is written to stdout, and no grid is written. | SN-3, SN-4 | Test (TP-402) | In Test | |
 | RTVM-403 | For the `InvalidInput` outcome a specific human-readable diagnostic naming the fault is written to **stderr**, and nothing is written to stdout. | SN-4 | Test (TP-403) | In Test | |
 | RTVM-404 | For the `Aborted` outcome a message stating the solve was abandoned at the user's request is written to **stderr**, and nothing is written to stdout. | SN-5 | Test (TP-404) | Approved | |
 | RTVM-405 | The process exit code is `0` for `Solved` and `SolvedNotUnique`, `1` for `InvalidInput`, `2` for `NoSolution`, `3` for `Aborted`, with no other exit code reachable. | SN-8, SN-4 | Test (TP-405) | Approved | |
@@ -1697,7 +1697,7 @@ gets a row naming them, and no row here is Verified.
 
 | Req | Executed here and passed | Still outstanding |
 | --- | --- | --- |
-| RTVM-200 | TP-200's **original two cases in full**. `P-EASY` → `S-EASY` and `P-HARD17` → `S-HARD17`, byte-identical to §6.1; for both, all 81 cells in 1–9, every row/column/box a permutation of 1–9, every given unchanged in place. The checks are falsifiable, not merely green: a moved `r1c1` given, a blanked cell, a duplicated digit and an unsolved grid are each rejected, and `nodesExplored() > 0` rules out a hard-coded answer. Fixtures independently re-derived from §6.1 rather than from the test header — all four match byte for byte, `P-EASY` has 30 givens, `P-HARD17` has 17, and each solution is a genuine solution consistent with every given. Ten repeat solves of `P-HARD17` are byte-identical (determinism). Beyond the procedure, a randomised cross-check against an independently written oracle: **60/60 uniquely-solvable puzzles returned `Solved` with exactly the oracle's grid**, 33 of them requiring real backtracking | **The new `P-SEARCH` clause** — added to TP-200 by this update and therefore not run in the #8 pass; it needs a fixture and one test method in `tests/SudokuSolver.Tests/`. Executed at **#11** (see the re-run trigger below). Plus the standing **MSVC / VS test-project re-execution** (V-1, #23) — the `g++` pass is evidence, not a verdict |
+| RTVM-200 | TP-200's **original two cases in full**. `P-EASY` → `S-EASY` and `P-HARD17` → `S-HARD17`, byte-identical to §6.1; for both, all 81 cells in 1–9, every row/column/box a permutation of 1–9, every given unchanged in place. The checks are falsifiable, not merely green: a moved `r1c1` given, a blanked cell, a duplicated digit and an unsolved grid are each rejected, and `nodesExplored() > 0` rules out a hard-coded answer. Fixtures independently re-derived from §6.1 rather than from the test header — all four match byte for byte, `P-EASY` has 30 givens, `P-HARD17` has 17, and each solution is a genuine solution consistent with every given. Ten repeat solves of `P-HARD17` are byte-identical (determinism). Beyond the procedure, a randomised cross-check against an independently written oracle: **60/60 uniquely-solvable puzzles returned `Solved` with exactly the oracle's grid**, 33 of them requiring real backtracking. **The `P-SEARCH` clause is now discharged too** — see §9.11: `P-SEARCH` → `Solved`, grid byte-identical to `S-EASY`, `nodesExplored() > 1` asserted as an inequality (5 nodes measured), on branch `issue-11` (`7966c21`), PASS confirmed by the Test Engineer with an independent node re-count | The standing **MSVC / VS test-project re-execution** (V-1, #23) — the `g++` pass is evidence, not a verdict. This is now the row's only outstanding item |
 
 **The coverage gap this section exists to record, and what was done
 about it.** Both TP-200 fixtures solve at `nodesExplored == 1`:
@@ -2492,5 +2492,58 @@ project — so recording the SHA on the next commit-confirmation hand-back
 should move these three straight to Verified without a further
 regression round, unless CI/CD flags one. RTVM-400 stays In Test at
 `62cbb1e` per §9.10.1 — a clause closed, not a promotion.
+
+Handed to CI/CD next with `status:ready-for-commit`.
+
+### 9.11 No-solution detection tested, and TP-200's re-run trigger fires ([RTVM-201], [RTVM-402], issue #11)
+
+State at branch `issue-11` (`3096103`, plus the `P-SEARCH` addendum at
+`7966c21`), tested by the Test Engineer 2026-08-14 — **PASS** on both
+rounds. This issue was scoped as tests against already-delivered code
+(§9.7's own note: "the zero-solution exit already exists in the shipped
+search loop") and also carried §9.7's `P-SEARCH` re-run trigger for
+`tests/SudokuSolver.Tests/SolverTests.cpp`, per the Systems Engineer's
+in-thread comment naming this issue as the vehicle.
+
+**What was exercised.**
+
+| Req | Executed here and passed | Still outstanding |
+| --- | --- | --- |
+| RTVM-201 | TP-201 (unit): `P-UNSOLVABLE` (§6.1 — `P-EASY` with `r1c3` forced to `1`) reports `Outcome::NoSolution`, `hasGrid() == false`, `hasFault() == false`. Falsifiability proven by mutation: `Search::report()`'s zero-solution branch forced to return `Solved` instead — the test failed as expected (independently re-confirmed by the Test Engineer, not just trusted from the Software Engineer's write-up), then reverted. A control method confirms the unmodified `P-EASY` still solves, so the mutation isn't trivially detected by a broken fixture. TP-402 (process-level): the full console binary run against `P-UNSOLVABLE` on stdin produces stdout byte-identical (`cmp`, 30 bytes) to `This puzzle has no solution.\n`, empty stderr, exit `2`, no grid, no separator line — one line total. RTVM-104 does not reject `P-UNSOLVABLE` at the parser stage (exit `2` not `1`), confirming the fixture's mutually-consistent-givens design and that the solver itself discovers the contradiction, not the parser | Nothing for either row's own scope. The standing MSVC/VS re-execution (V-1, #23) is unaffected — see §9.1/§9.4 |
+| RTVM-402 | Wording wired in `Messages.cpp` (`noSolution()`) to the pinned `This puzzle has no solution.\n`, matching `GridFormat.cpp`'s own trailing-newline convention. Verified as above under TP-402 | As RTVM-201 |
+| RTVM-200 (piggybacked, not this issue's own row) | §9.7's `P-SEARCH` clause: new fixture `kPuzzleSearch` (`docs/RTVM.md` §6.1, 25 givens dug from `S-EASY`), new `TEST_METHOD` asserting the standard TP-200 structural properties (81 cells 1–9, row/column/box permutations, givens preserved, grid == `S-EASY`) plus `nodesExplored() > 1` as an **inequality**, per the Systems Engineer's instruction that the node count is an implementation property, not a requirement. Node counts independently re-measured by both the Software Engineer and the Test Engineer against the live solver (not read from the RTVM prose): `P-SEARCH` 5, `P-EASY` 1, `P-HARD17` 1 — matches the §9.7 reference figures (`c662bb1`) exactly. No solver code touched; confirmed by diff (`3096103..7966c21` touches only `SolverTests.cpp`, `TestFixtures.h`, and memory files) | See §9.7's updated row — V-1/MSVC only |
+
+**Environment, both rounds.** Ubuntu agent runner, no MSVC available (V-1
+stands, per §9.1) — `g++ 13, -std=c++17 -Wall -Wextra -Wswitch`, a
+throwaway `CppUnitTest.h` shim, and a generated driver that scans
+`TEST_CLASS`/`TEST_METHOD` across all test files rather than a
+hand-maintained list. Suite grew from 27 to 28 discovered methods across
+the two rounds (the two new `rtvm201_*` methods, then the one new
+`rtvm200_*` method); all passed both rounds, core-only link with no
+console object file (RTVM-903 split still holds). Regression: `easy`,
+`hard17`, `unsolvable`, `nonunique`, `malformed` samples all produced
+unchanged exit codes and stream contents across both rounds.
+
+**Falsifiability, independently re-run by the Test Engineer.** Not taken
+on the Software Engineer's word: the Test Engineer separately mutated
+`Solver.cpp`'s zero-solution branch and reproduced the expected single
+failure (`26 passed, 1 failed`), then reverted and confirmed a clean
+`git status`.
+
+**No status promotion to Verified.** Per standing convention, Verified
+needs a trunk commit SHA in addition to full clause execution, and this
+evidence is all on branch `issue-11`. RTVM-201 and RTVM-402 move
+**Approved → In Test**, Commit(s) left blank pending CI/CD. RTVM-200's
+row keeps its existing status (**In Test**) and existing Commit(s)
+(`fdd9cea`, from #8's merge) unchanged — this issue's `P-SEARCH` work
+discharges the clause §9.7 left outstanding on that row without
+promoting it, per the discharge-not-promotion pattern established at
+§9.9.1/§9.10.1. RTVM-200 is not otherwise re-verified here: its original
+two TP-200 cases were not re-run by this issue, only the third.
+
+**§7 interpretations raised in this thread: none.** Both hand-off
+comments were implementation write-ups of already-scoped work, not new
+ambiguity — nothing here required a ruling under the "close
+implementation-level rulings at the fast-path update" convention.
 
 Handed to CI/CD next with `status:ready-for-commit`.

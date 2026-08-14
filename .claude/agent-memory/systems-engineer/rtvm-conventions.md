@@ -229,3 +229,19 @@ here, because `GridFormatTests`' six methods are unchanged since the same
 the tree comparison holds, not just that the defect class is the same.
 
 See [[verification-platform-trap]].
+
+## A piggybacked clause discharges its origin row, not the closing issue's own row (2026-08-14, #11)
+
+#11 was scoped as `[RTVM-201]` but also carried §9.7's `P-SEARCH` re-run
+trigger for `SolverTests.cpp` (a Software Engineer/Test Engineer exchange
+in-thread, not a Systems Engineer action). At the fast-path RTVM update,
+that meant three separate status actions, not one: RTVM-201 and RTVM-402
+promoted Approved → In Test (this issue's own rows); RTVM-200 discharged
+its outstanding `P-SEARCH` clause per §9.7 but did **not** promote — its
+own two TP-200 cases were not re-run this issue, so it isn't this issue's
+evidence to credit beyond the one clause. Wrote the discharge as its own
+paragraph in the new §9.11, and updated §9.7's own "Still outstanding"
+cell in place (now naming only V-1/MSVC) rather than leaving it to read
+as still-open. Second confirmed instance of the pattern in
+[[rtvm-conventions]]'s own "discharge outstanding clauses on other rows"
+entry — worth trusting as standing practice, not a one-off.
