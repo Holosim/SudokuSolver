@@ -6,6 +6,16 @@ metadata:
 ---
 
 Learned 2026-08-14 (issue #10, `[RTVM-102]` group: RTVM-009/102/103/104/105/403).
+Reconfirmed 2026-08-14 on issue #21 (§9.25): RTVM-903 carried SHA
+`85bab27` at In Test with exactly one clause outstanding ("re-confirm
+the link clause under MSVC, not `g++`") since the DELIV scaffold
+(§9.2). A no-source-change inspection issue (Software Engineer found
+nothing to fix; Test Engineer supplied a real Windows `link.exe`/`trx`
+run on the same branch tip) discharged that one clause, promoting
+straight to Verified with Commit(s) left at `85bab27`. Same shape even
+though the *triggering* issue was itself an inspection pass with no
+feature branch merge behind it — the pattern is about the RTVM row's
+state, not about what kind of issue produced the new evidence.
 
 ## The sequence that produces this situation
 
@@ -57,3 +67,16 @@ branch: confirm the RTVM rows are Verified with the right SHA, comment,
 and close the issue outright — no further agent label/hand-off needed
 since the chain is complete. (Issue #10, closed 2026-08-14 on this
 basis.)
+
+Reconfirmed on issue #21 (2026-08-14): identical shape one level up —
+CI/CD's hand-back here was itself the *second* leg (a
+`status:ready-for-commit` fast-path already recorded the SHA and
+promoted RTVM-903 before CI/CD was even reached), so by the time it
+got back to me there was truly nothing left to do but verify and
+close. One difference from #10: closing via `gh issue close` did
+**not** auto-strip `status:in-progress`/`status:ready-for-commit`
+here (#10's must have been a workflow side-effect of a different
+trigger, not something `gh issue close` does on its own) — remove
+those two labels manually with `gh issue edit` after closing so the
+issue's final label state matches precedent (`agent:systems-engineer`
++ `type:requirement` only).
