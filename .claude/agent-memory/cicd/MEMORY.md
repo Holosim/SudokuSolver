@@ -11,6 +11,7 @@
 
 - [No Windows build verification](no-windows-build-verification.md) — Ubuntu runners vs. an MSVC deliverable: what a pre-merge build check can honestly claim.
 - [Pre-merge check sequence](pre-merge-check-sequence.md) — conflict preview, build the *merged* content, TP-903 grep, and the `git merge -F -` stdin quirk.
+- [Test-DLL link set grows](test-dll-link-set-grows.md) — since #10 the native-suite driver must also link `Messages.cpp`/`Reporter.cpp`, not `SudokuCore` alone; check the test `.vcxproj`'s `ClCompile` list, don't hardcode it.
 
 ## Release & versioning
 
