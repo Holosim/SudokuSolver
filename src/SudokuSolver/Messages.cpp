@@ -1,11 +1,19 @@
 // Messages.cpp — see Messages.h.
 //
-// This issue ([RTVM-102], #10) fills in `cellName` and `inputFault` — the
-// wording RTVM-102, RTVM-103, RTVM-104, RTVM-105, RTVM-009 and RTVM-403
-// need. The remaining functions stay scaffolds; their wording belongs to the
-// output issues that own RTVM-400..404.
+// This file fills in one message-producing function per issue as the output
+// requirements land; this header tracks what's real and what's still a
+// scaffold.
 //
-// TODO(RTVM-400, RTVM-401, RTVM-402, RTVM-404, RTVM-004): real wording.
+// #10 ([RTVM-102]) filled in `cellName` and `inputFault` — the wording
+// RTVM-102, RTVM-103, RTVM-104, RTVM-105, RTVM-009 and RTVM-403 need.
+// #11 ([RTVM-402]) filled in `noSolution` — the reference wording of
+// docs/SDD.md 2.8 / docs/RTVM.md 6.2, terminated the same way every other
+// message in this file is — GridFormat.cpp's convention of every line
+// (including the last) carrying its own '\n', so a caller downstream never
+// has to add or guess about a separator (docs/RTVM.md TP-402: "no separator
+// line").
+//
+// TODO(RTVM-400, RTVM-401, RTVM-404, RTVM-004): real wording.
 //
 // docs/RTVM.md 6.2 pins exact wording only for RTVM-401/402/404 and the
 // progress prompt; RTVM-102..105, RTVM-009 and RTVM-403 are unpinned —
@@ -122,7 +130,7 @@ std::string notUniqueNote()
 
 std::string noSolution()
 {
-    return std::string{};
+    return "This puzzle has no solution.\n";
 }
 
 std::string aborted()
