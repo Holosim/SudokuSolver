@@ -59,14 +59,14 @@ Blocked / Withdrawn.
 | RTVM-006 | No prompt requires a response. The application never blocks on reading a prompt reply: continuing is the default and an unanswered prompt simply lapses at the next prompt point. | SN-5, SN-8 | Test (TP-006) | Approved | |
 | RTVM-007 | If the solve finishes while a prompt is outstanding, the result is printed and the application exits normally. It does not wait for a reply to the lapsed prompt. | SN-5 | Test (TP-007) | Approved | |
 | RTVM-008 | An invocation with no interactive console (stdin redirected from a file or pipe, stdout/stderr redirected) is never blocked or delayed by the prompt mechanism, and always terminates with a result and an exit code. | SN-5, SN-8 | Test (TP-008) | Approved | |
-| RTVM-009 | A file argument that cannot be opened or read is reported as a specific diagnostic naming the path and the reason, and exits with code `1`. | SN-4, SN-8 | Test (TP-009) | Approved | |
+| RTVM-009 | A file argument that cannot be opened or read is reported as a specific diagnostic naming the path and the reason, and exits with code `1`. | SN-4, SN-8 | Test (TP-009) | In Test | |
 | **DATA-IN — internal representation of input (§4.2)** | | | | | |
 | RTVM-100 | The application parses 9 lines of 9 characters into an internal 9×9 grid in which each cell holds either a given digit 1–9 or "empty". | SN-1, SN-2 | Test (TP-100) | In Test | `3bc1b22` |
 | RTVM-101 | Both `0` and `.` denote an empty cell, interchangeably, including mixed within the same puzzle. | SN-1 | Test (TP-101) | In Test | `3bc1b22` |
-| RTVM-102 | Input whose shape is wrong — fewer than 9 lines, or any of the first 9 lines not exactly 9 characters after the rules of RTVM-106 are applied — is rejected as malformed with a message naming the offending line number and what was wrong with it. Interior horizontal whitespace is the one exception to that length test: it is reported as an illegal character (RTVM-103), not as a length fault on its own line — §7 I-15. | SN-4 | Test (TP-102) | Approved | |
-| RTVM-103 | Input containing a character other than `1`–`9`, `0` or `.` in the grid is rejected as malformed with a message naming the offending character and its row and column. | SN-4 | Test (TP-103) | Approved | |
-| RTVM-104 | Input that is well-formed but self-contradictory — the same digit given twice in a row, a column, or a 3×3 box — is rejected with a message naming the digit, the unit, and both conflicting cells. | SN-4 | Test (TP-104) | Approved | |
-| RTVM-105 | Validation reports exactly one fault, the first found, in the fixed precedence order: shape (RTVM-102) → illegal character (RTVM-103) → contradiction (RTVM-104). The single exception is interior horizontal whitespace, which outranks the length fault of the line it appears on and is reported as an illegal character (§7 I-15); precedence between different lines is unaffected. Cells are named in one-based `r<row>c<col>` form. A rejected puzzle is never passed to the solver. | SN-4 | Test (TP-105) | Approved | |
+| RTVM-102 | Input whose shape is wrong — fewer than 9 lines, or any of the first 9 lines not exactly 9 characters after the rules of RTVM-106 are applied — is rejected as malformed with a message naming the offending line number and what was wrong with it. Interior horizontal whitespace is the one exception to that length test: it is reported as an illegal character (RTVM-103), not as a length fault on its own line — §7 I-15. | SN-4 | Test (TP-102) | In Test | |
+| RTVM-103 | Input containing a character other than `1`–`9`, `0` or `.` in the grid is rejected as malformed with a message naming the offending character and its row and column. | SN-4 | Test (TP-103) | In Test | |
+| RTVM-104 | Input that is well-formed but self-contradictory — the same digit given twice in a row, a column, or a 3×3 box — is rejected with a message naming the digit, the unit, and both conflicting cells. | SN-4 | Test (TP-104) | In Test | |
+| RTVM-105 | Validation reports exactly one fault, the first found, in the fixed precedence order: shape (RTVM-102) → illegal character (RTVM-103) → contradiction (RTVM-104). The single exception is interior horizontal whitespace, which outranks the length fault of the line it appears on and is reported as an illegal character (§7 I-15); precedence between different lines is unaffected. Cells are named in one-based `r<row>c<col>` form. A rejected puzzle is never passed to the solver. | SN-4 | Test (TP-105) | In Test | |
 | RTVM-106 | Input is accepted with either LF or CRLF line endings and with or without a trailing newline. Leading and trailing horizontal whitespace on a line is ignored; interior whitespace is an illegal character. Content after the ninth line is ignored. | SN-1, SN-8 | Test (TP-106) | In Test | `3bc1b22` |
 | **CORE — solver (§4.4, §4.5, §5)** | | | | | |
 | RTVM-200 | Given a valid, uniquely-solvable standard 9×9 puzzle, the solver produces the grid's unique solution: all 81 cells filled with 1–9, with no digit repeated in any row, column, or 3×3 box, and every given preserved in place. | SN-2 | Test (TP-200) | In Test | `fdd9cea` |
@@ -82,7 +82,7 @@ Blocked / Withdrawn.
 | RTVM-400 | A solved grid is written to stdout pretty-printed with box separators, in exactly the 13-line ASCII format given in §6.2. | SN-3 | Test (TP-400) | In Test | `62cbb1e` |
 | RTVM-401 | For the `SolvedNotUnique` outcome the grid is followed on stdout by a statement that the solution shown is not unique. | SN-3 | Test (TP-401) | Approved | |
 | RTVM-402 | For the `NoSolution` outcome a plain statement that the puzzle has no solution is written to stdout, and no grid is written. | SN-3, SN-4 | Test (TP-402) | Approved | |
-| RTVM-403 | For the `InvalidInput` outcome a specific human-readable diagnostic naming the fault is written to **stderr**, and nothing is written to stdout. | SN-4 | Test (TP-403) | Approved | |
+| RTVM-403 | For the `InvalidInput` outcome a specific human-readable diagnostic naming the fault is written to **stderr**, and nothing is written to stdout. | SN-4 | Test (TP-403) | In Test | |
 | RTVM-404 | For the `Aborted` outcome a message stating the solve was abandoned at the user's request is written to **stderr**, and nothing is written to stdout. | SN-5 | Test (TP-404) | Approved | |
 | RTVM-405 | The process exit code is `0` for `Solved` and `SolvedNotUnique`, `1` for `InvalidInput`, `2` for `NoSolution`, `3` for `Aborted`, with no other exit code reachable. | SN-8, SN-4 | Test (TP-405) | Approved | |
 | RTVM-406 | Across every reachable outcome, stdout carries only the result (grid, non-unique note, no-solution statement). No prompt text, no diagnostic, and no progress output ever reaches stdout. | SN-8 | Test (TP-406) | Approved | |
@@ -2276,3 +2276,89 @@ over a docs-only change. The remaining path to Verified for
 RTVM-001/002/003/400 runs through **#24** (the harness) and **#23** (V-1 /
 DW-1), in that order; neither is reopened as work on this issue, and the
 issue closing is what releases #24 from `status:on-hold`.
+
+### 9.9 DATA-IN precedence, contradiction detection, and diagnostic wording ([RTVM-102], issue #10)
+
+State at branch `issue-10` @ `307038f` (memory update `8f9b6df`), tested
+by the Test Engineer 2026-08-14 — **PASS**. Same table shape and same
+V-6 rule as §9.2, §9.5–§9.8: a procedure with unexecuted clauses gets a
+row naming them, and no row here is Verified.
+
+**Native suite:** `g++ -std=c++17 -Wall -Wextra -Werror` over all of
+`SudokuCore`, all of `SudokuSolver`, and every test file — clean.
+**53/53** discovered/passed, up from the 25 recorded at §9.8 (growth:
+`ParserTests` 12, `MessagesTests` 12 (new file), `ReporterTests` 4 (new
+file), `InputFaultTests` 5, `ScaffoldTests`/`SolveReportTests`/
+`SolverTests`/`GridFormatTests` unchanged). `.vcxproj`/`.vcxproj.filters`
+for all three projects parse as well-formed XML, with `Messages.cpp`
+and `Reporter.cpp` now registered as `ClCompile` in the test project.
+
+**Falsifiability, not just green.** The Test Engineer mutated a `/tmp`
+copy to disable the row-duplicate branch in `Parser.cpp` and rebuilt:
+exactly the 3 tests exercising `P-CONTRA-ROW` failed
+(`InputFaultTests`, `ParserTests`, `ReporterTests`), everything else
+stayed green — RTVM-104's new pass is genuinely exercised.
+
+| Req | Executed here and passed | Still outstanding |
+| --- | --- | --- |
+| RTVM-009 | TP-009 in full: missing file → `Cannot open 'does_not_exist.txt': No such file or directory.`; directory argument → `Cannot open 'adir': Is a directory.` Both exit `1`, stdout empty | Re-execution under MSVC / the VS test project (V-1, narrowed per §9.8.6.2 to the `vstest.console.exe` discovery half — DW-1, #23) |
+| RTVM-102 | TP-102 in full: `P-SHORT` → `line 9 is missing`; `P-LONGLINE` → `line 5 ... too long (11 characters...)`; `P-SHORTLINE` → `line 5 ... too short (7 characters...)`; plus the over-cap sentinel rendered as "more than 4096 characters", never the raw number (§7 I-13) | As RTVM-009 — V-1 / DW-1 |
+| RTVM-103 | TP-103 in full: `P-BADCHAR` → `illegal character 'X' at r1c1`; §7 I-15 negative `098 000060` → `illegal character ' ' at r3c4`, exit `1` | As RTVM-009 — V-1 / DW-1 |
+| RTVM-104 | TP-104 in full: `P-CONTRA-ROW` → `digit 5 ... row 1, at r1c1 and r1c7`; `P-CONTRA-COL` → `digit 4 ... column 1, at r1c1 and r5c1`; `P-CONTRA-BOX` → `digit 8 ... box 1, at r1c2 and r3c3`. Regression control: `P-EASY` (mutually consistent givens) still solves to the exact §6.2 grid, exit `0` — the new pass does not false-positive a valid fixture (this is TP-104's own RTVM-201 control case, not a borrowed one) | As RTVM-009 — V-1 / DW-1 |
+| RTVM-105 | TP-105 both cases plus the narrowness confirmation TP-105 explicitly asks for: `P-MULTIFAULT` (8 lines + `X` + row dup) → shape fault only (`line 9 is missing`); `P-MULTIFAULT-9` → illegal character only (`r1c1`), row dup not mentioned; `P-LONGLINE` still `LineTooLong`; `P-MULTIFAULT` still the missing line. "Solver never entered" holds by construction — no test method here calls `solve()` | As RTVM-009 — V-1 / DW-1 |
+| RTVM-403 | TP-403 end to end at unit level (`ReporterTests`, `std::ostringstream` in place of `std::cout`/`std::cerr`) for `P-BADCHAR`, `P-SHORT`, `P-CONTRA-ROW` (parsed for real): byte-empty stdout, stderr equal to `Messages::inputFault`, exit code `InvalidInput`, plus a `SourceUnreadable` case | As RTVM-009 — V-1 / DW-1 |
+
+Box numbering 1–9 row-major in the unit-name wording (`box 1`…`box 9`)
+is a **display-only convention** introduced in `Messages.cpp` this
+issue — no RTVM item names it, and none needs to; TP-104 only asserts
+the digit, the unit kind, and the two cells.
+
+#### 9.9.1 Two outstanding clauses recorded elsewhere are now discharged
+
+**§9.5's RTVM-106 negative-wording clause — DISCHARGED.** §9.5 (and
+§9.8.2/§9.8.6.1 after it) deferred TP-106's negative case
+(`098 000060`, line 3, 10 characters) to "#10's wording". That ran here
+as part of §7 I-15's negative check above: `illegal character ' ' at
+r3c4`, exit `1`. **RTVM-106 stays In Test**, Commit(s) unchanged at
+`3bc1b22` — its own implementation didn't move, only its last
+outstanding clause closed. What remains for RTVM-106 is V-1 / DW-1,
+same as every row in this table.
+
+**§9.6's RTVM-302 parse-driven-half clause — DISCHARGED.** §9.6 noted
+TP-302's fault-object assertions were data-only pending RTVM-104
+detection; `InputFaultTests` now grows the `parseGrid(P-CONTRA-ROW)`
+call §9.6 said it would, and it passes with the same fault object
+already asserted (`RowDuplicate`, line 1, digit `5`, `r1c1`/`r1c7`).
+**RTVM-302 stays In Test**, Commit(s) unchanged at `668f9a4`; only the
+outstanding clause closed. V-1 / DW-1 remains.
+
+**`src/SudokuCore/Grid.h`'s pre-I-16 comment is still adrift**, carried
+from §9.7/§9.8.4 and not touched this issue either — the file list this
+run's evidence is scoped to is `Parser.cpp`, `Messages.cpp`/`.h` and
+their tests only. Carried definitively to **#11**, the next issue to
+open `Grid.h`.
+
+#### 9.9.2 Windows evidence
+
+Run `31750257442`, this exact HEAD (`8f9b6df`): both `Debug|x64` and
+`Release|x64` build succeeded, 0 errors (2 pre-existing `C4996
+strerror` warnings, non-fatal — `TreatWarningAsError` is `false`
+project-wide and `std::strerror` is what §7 I-18 specifies, so this is
+expected, not a defect). `Messages.cpp`/`Parser.cpp`/`Reporter.cpp` all
+appear in the compile lines for both configs — compilation evidence
+per the V-1 split (§9.8.6.2). Execution (`vstest`) remains blocked by
+DW-1, unrelated to this issue and unchanged by it.
+
+#### 9.9.3 Status outcome
+
+**RTVM-009, RTVM-102, RTVM-103, RTVM-104, RTVM-105 and RTVM-403 move
+from Approved to In Test** (§5). No Commit(s) value yet — that is
+CI/CD's hand-back to record, per standing convention. Every row's sole
+outstanding item is the same V-1 / DW-1 discovery-under-`vstest`
+clause carried across this whole project; nothing here is
+requirement-specific. RTVM-104 (contradiction detection) is real new
+product logic behind these rows, not just wording, and the mutation
+check above is the evidence it is genuinely exercised rather than
+vacuously green.
+
+Handed to CI/CD next with `status:ready-for-commit`.
