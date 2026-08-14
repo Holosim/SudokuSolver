@@ -10,7 +10,9 @@
 //
 // The individual stages are scaffolds; the wiring is not.
 
+#include <cerrno>
 #include <chrono>
+#include <cstdlib>
 #include <exception>
 #include <iostream>
 
@@ -29,12 +31,27 @@ namespace {
 // docs/SDD.md 3.6: the console layer reads SUDOKU_DIAG_MIN_SOLVE_MS at
 // startup and passes the value in SolveOptions::minSolveDuration, so the
 // core never touches the environment (RTVM-903). Absent, empty, zero or
-// unparseable means completely inert.
-//
-// TODO(RTVM-507): read and parse the variable.
+// unparseable means completely inert -- std::strtol's own "no digits
+// consumed" signal (end == value) covers empty and non-numeric text in one
+// branch, *end != '\0' rejects trailing garbage such as "500ms" rather than
+// silently truncating it, and the range/sign checks reject overflow and
+// non-positive values. Not reachable from puzzle content in any form (RTVM-002
+// fixes the meaning of argv; this reads the environment, not argv) -- TP-507
+// asserts that.
 [[nodiscard]] std::chrono::milliseconds diagnosticMinSolveDuration()
 {
-    return std::chrono::milliseconds{0};
+    const char* const value = std::getenv("SUDOKU_DIAG_MIN_SOLVE_MS");
+    if (value == nullptr || *value == '\0') {
+        return std::chrono::milliseconds{0};
+    }
+
+    errno = 0;
+    char* end = nullptr;
+    const long parsed = std::strtol(value, &end, 10);
+    if (end == value || *end != '\0' || errno == ERANGE || parsed <= 0) {
+        return std::chrono::milliseconds{0};
+    }
+    return std::chrono::milliseconds{parsed};
 }
 
 [[nodiscard]] sudoku::cli::ExitCode run(int argc, char** argv)

@@ -34,6 +34,7 @@
 ## Verified requirements (context worth keeping)
 
 - [RTVM-500 verified](rtvm-500-verified.md) — 2026-08-14 PASS with real exit-code-gated timing data; why TP-501-504 staying open doesn't block it, and to re-check inertness once #13 wires up the RTVM-507 hook.
+- [RTVM-507 diagnostic hook verification](rtvm-507-diagnostic-hook-verification.md) — 2026-08-14 PASS, fully runnable on Linux (no Windows needed); the CPU-time-vs-wall-time trick that proves it's real work, not a sleep.
 
 ## Recurring failure patterns
 

@@ -94,7 +94,7 @@ Blocked / Withdrawn.
 | RTVM-504 | The application is never silent while working. From launch to exit the user always has either a result, a diagnostic, or a prompt. The longest permitted interval with no output on either stream is bounded by the RTVM-501 first-prompt threshold **before** the first prompt (15 s + 1.0 s tolerance = 16.0 s) and by the RTVM-502 repeat interval **thereafter** (10 s + 1.0 s tolerance = 11.0 s). See §7 I-12. | SN-5 | Test (TP-504) | Approved | |
 | RTVM-505 | No input causes an unhandled exception, an access violation, an assertion dialog, or a non-zero exit code outside the set in RTVM-405. Every run terminates. | SN-4 | Test (TP-505) | Approved | |
 | RTVM-506 | The delivered executable is a self-contained x64 Windows console application that runs on a clean Windows machine with no installed runtime or third-party component beyond what a stock Windows install provides. | SN-6, SN-7 | Test (TP-506) | In Implementation | `85bab27` |
-| RTVM-507 | The build provides a documented diagnostic means of forcing a solve to run past the prompt thresholds without altering ordinary behaviour, so that RTVM-004…008 and RTVM-501…504 are verifiable end-to-end. It is documented in `docs/SDD.md`, not in the user-facing README, and is inert in normal use. | SN-5 | Test (TP-507) | Approved | |
+| RTVM-507 | The build provides a documented diagnostic means of forcing a solve to run past the prompt thresholds without altering ordinary behaviour, so that RTVM-004…008 and RTVM-501…504 are verifiable end-to-end. It is documented in `docs/SDD.md`, not in the user-facing README, and is inert in normal use. | SN-5 | Test (TP-507) | In Test | |
 | **DELIV — deliverable requirements (§6). Verified by inspection.** | | | | | |
 | RTVM-900 | The repository contains a committed, openable Visual Studio 2022 solution and project file(s) — not source files alone. (D-1) | SN-7 | Inspection (TP-900) | In Test | `85bab27` |
 | RTVM-901 | A client engineer can clone, open, build, and run the solution in VS 2022 with no setup step that is not written down in the README. (D-2) | SN-7 | Inspection (TP-901) | In Implementation | `85bab27` |
@@ -2895,3 +2895,73 @@ question.
 
 **§7 interpretations raised in this thread: none** — this round is
 merge bookkeeping and status promotion, not new scope.
+
+### 9.16 The long-solve diagnostic hook lands ([RTVM-507], issue #13)
+
+**Duplicate section number, deliberate:** this section and the §9.16
+immediately above it (#12's merge-recorded note) were appended
+independently by two branches that both picked the next free number.
+Per standing convention this is an ID collision, not a content clash —
+both are kept verbatim, trunk's (#12) first, and renumbering is left to
+the Systems Engineer rather than decided here by CI/CD.
+
+State at branch `issue-13` (`37d0208`, plus two memory-only commits),
+tested by the Test Engineer 2026-08-14 — **PASS**. This is the
+`SUDOKU_DIAG_MIN_SOLVE_MS` hook fully specified in `docs/SDD.md` §3.6
+and called for by §7 **I-10**: there is no puzzle input that reaches
+the RTVM-501 15 s prompt threshold on a solver fast enough to meet
+RTVM-500, so RTVM-004…008 and RTVM-501…504 have had no way to be
+exercised end-to-end until this hook existed.
+
+**What was exercised.** `Solver.cpp::solve()` now honours
+`SolveOptions::minSolveDuration`: once the real search has its answer,
+it repeats the two-solution search on scratch copies of the original
+grid via a shared `Search` instance — real search work, polling
+`SolveControl` and advancing `nodesExplored` exactly as the normal
+search does, not a sleep — until that many milliseconds have elapsed
+since the call began, then returns the original outcome unchanged. The
+console layer (`main.cpp`) reads `SUDOKU_DIAG_MIN_SOLVE_MS` via
+`std::strtol` (strict — trailing garbage like `"500ms"` is
+unparseable, not truncated) and is the only place in the tree that
+calls `getenv`; `grep -rn getenv src/SudokuCore/` finds nothing, so
+RTVM-903 is intact. Test Engineer independently reproduced both of the
+Software Engineer's mutation claims (extension disabled; abort
+swallowed mid-extension) against untracked `/tmp` copies of
+`Solver.cpp` and confirmed each mutation breaks exactly the new
+`rtvm507_*` test(s) it should and nothing else.
+
+Inert-path regression (env var unset/empty/`"0"`/`"-100"`/`"abc"`/
+`"500ms"`/whitespace-only, and a CLI argument literally containing the
+variable's name/value) produced byte-identical stdout to the baseline
+on `hard17.txt`, ~2–3 ms each — confirms the hook is out of the parse
+path and cannot be triggered by any puzzle input, per TP-507's
+explicit assertion. Active-path: `SUDOKU_DIAG_MIN_SOLVE_MS=3000` → 3.002
+s wall / 3.00 s user CPU (real work, not a sleep), byte-identical
+stdout to the inert run; `=61000` → 1:01.00 wall / 60.99 s user CPU,
+satisfying TP-507's "runs past 60 s" demonstration. TP-507's inspection
+half: `docs/SDD.md` §3.6 documents the hook; `grep -in` for the
+variable name/"diagnostic hook" in `README.md` finds nothing —
+correctly absent from the user-facing doc.
+
+**Environment.** Ubuntu agent runner, no MSVC (V-1 stands, per §9.1) —
+`g++ -std=c++17 -Wall -Wextra -pedantic`, full link of
+`src/SudokuCore/*.cpp` + `src/SudokuSolver/*.cpp`. Test Engineer's own
+generated-driver harness: full driver 60/60 pass (56 prior + 4 new
+`rtvm507_*`); core-only driver (no console-layer object files) 44/44
+pass, independently re-confirming RTVM-903. Both roles agree this is a
+full run rather than a partial one — TP-507's mechanism is portable
+C++/env-var handling with no Windows-specific surface, unlike most
+other NFR procedures gated on V-1/DW-1.
+
+**Downstream unblocked, not yet exercised.** TP-501…504 remain
+correctly NOT-RUN — this issue only lands the hook; running those
+procedures against it is out of scope here (tracked separately, e.g.
+issue #16 for the RTVM-203/204 abort-latency and search-continuity
+procedures per the Software Engineer's handoff note above).
+
+**No status promotion to Verified.** Per standing convention, Verified
+needs a trunk commit SHA in addition to full clause execution, and
+this evidence is all on branch `issue-13`. **RTVM-507 moves Approved →
+In Test** (§5), Commit(s) left blank pending CI/CD.
+
+Handed to CI/CD next with `status:ready-for-commit`.
