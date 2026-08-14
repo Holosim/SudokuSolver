@@ -71,7 +71,7 @@ Blocked / Withdrawn.
 | **CORE — solver (§4.4, §4.5, §5)** | | | | | |
 | RTVM-200 | Given a valid, uniquely-solvable standard 9×9 puzzle, the solver produces the grid's unique solution: all 81 cells filled with 1–9, with no digit repeated in any row, column, or 3×3 box, and every given preserved in place. | SN-2 | Test (TP-200) | In Test | `fdd9cea` |
 | RTVM-201 | Given a well-formed, non-contradictory puzzle that admits no completion, the solver reports "no solution" and terminates. It does not loop, guess indefinitely, or emit a partial grid. | SN-2, SN-4 | Test (TP-201) | In Test | `481c726` |
-| RTVM-202 | The solver determines whether a puzzle has more than one solution by searching for at most two solutions and stopping. Where two are found it yields the first found together with a "not unique" indication. It does not enumerate or count all solutions. | SN-2, SN-3 | Test (TP-202) | In Test | |
+| RTVM-202 | The solver determines whether a puzzle has more than one solution by searching for at most two solutions and stopping. Where two are found it yields the first found together with a "not unique" indication. It does not enumerate or count all solutions. | SN-2, SN-3 | Test (TP-202) | Verified | `7ef04ce` |
 | RTVM-203 | The solve is cooperatively interruptible: once an abort is requested the solver stops and yields the "aborted" outcome within 1.0 s, leaving the process free to exit cleanly. | SN-5 | Test (TP-203) | Approved | |
 | RTVM-204 | The solver maintains a monotonically increasing count of search steps taken, readable by the rest of the application and by the test suite while the solve is in flight. This is what makes "the solve is still making progress" (§7 acceptance #6) an observable fact rather than an assertion. | SN-5 | Test (TP-204) | Approved | |
 | **DATA-OUT — internal representation of output (§4.1, §4.3)** | | | | | |
@@ -80,7 +80,7 @@ Blocked / Withdrawn.
 | RTVM-302 | The `InvalidInput` outcome carries structured fault detail (fault kind, line/row/column, digit or character involved) rather than a pre-formatted message, so that all wording lives in the output layer. | SN-4, SN-7 | Test (TP-302) | In Test | `668f9a4` |
 | **OUT — presentation (§4.1, §4.3)** | | | | | |
 | RTVM-400 | A solved grid is written to stdout pretty-printed with box separators, in exactly the 13-line ASCII format given in §6.2. | SN-3 | Test (TP-400) | In Test | `62cbb1e` |
-| RTVM-401 | For the `SolvedNotUnique` outcome the grid is followed on stdout by a statement that the solution shown is not unique. | SN-3 | Test (TP-401) | In Test | |
+| RTVM-401 | For the `SolvedNotUnique` outcome the grid is followed on stdout by a statement that the solution shown is not unique. | SN-3 | Test (TP-401) | Verified | `7ef04ce` |
 | RTVM-402 | For the `NoSolution` outcome a plain statement that the puzzle has no solution is written to stdout, and no grid is written. | SN-3, SN-4 | Test (TP-402) | In Test | `481c726` |
 | RTVM-403 | For the `InvalidInput` outcome a specific human-readable diagnostic naming the fault is written to **stderr**, and nothing is written to stdout. | SN-4 | Test (TP-403) | Verified | `139d41a` |
 | RTVM-404 | For the `Aborted` outcome a message stating the solve was abandoned at the user's request is written to **stderr**, and nothing is written to stdout. | SN-5 | Test (TP-404) | Approved | |
@@ -2842,3 +2842,56 @@ evidence is all on branch `issue-12`. **RTVM-202 and RTVM-401 move
 Approved → In Test** (§5), Commit(s) left blank pending CI/CD.
 
 Handed to CI/CD next with `status:ready-for-commit`.
+
+### 9.16 CI/CD merge recorded, RTVM-202/RTVM-401 promoted to Verified (issue #12, commit confirmation)
+
+CI/CD merged `issue-12` into `main` with `--no-ff`, resolving four
+real additive-on-both-sides conflicts (`Messages.cpp`,
+`SolverTests.cpp`, `TestFixtures.h`, and the Software Engineer's
+memory file — the branch predates #10/#11/#14/#15 landing on trunk).
+`docs/RTVM.md` itself needed no merge attention: this issue never
+touched it, so the merged copy is byte-identical to what §9.15 above
+already put on trunk (§9.15's In Test promotion and the §7 I-20 ruling
+went straight to `main` while the branch was still open).
+
+**Which SHA the row carries.** CI/CD's merge commit is `7ef04ce`
+(parents: `main`'s prior tip and branch head `c165d76`, confirmed by
+parent count — two parents, per the standing convention at
+[[commit-sha-recorded-is-the-merge-commit]], not the single-parent
+`83ec82d` that followed it with a CI/CD memory-only commit). `7ef04ce`
+is what is recorded in the Commit(s) column above, not `83ec82d` —
+`git diff --stat 7ef04ce 83ec82d` touches only
+`.claude/agent-memory/cicd/`, so the two are equivalent for every
+purpose except which one a completed Windows workflow run is actually
+pinned to (that's `83ec82d`, per CI/CD's own note; recorded here for
+continuity, not in the table).
+
+**Post-merge verification CI/CD already ran** on the merged tree (not
+the branch): `g++` clean over `SudokuCore`/`SudokuSolver`; the
+regenerated CppUnitTest-shim driver discovers 59 methods across 8
+files, 59/59 pass, including all three `rtvm202_*` methods and #11's
+`rtvm201_*` methods this branch had been diverged from; the console
+binary against `samples/nonunique.txt` still ends stdout with the
+exact TP-401 wording; all 14 `samples/*.txt` still exit as expected.
+`windows-verification.yml` was triggered by the push — its evidence,
+once produced, is not itself a verdict (V-1) and is the Test Engineer's
+to interpret, same as every prior row in this table.
+
+**Status outcome.** Per the standing "receiving a commit confirmation
+from CI/CD" procedure: record the SHA and promote to Verified
+immediately on a commit confirmation, independent of whether V-1/DW-1
+evidence has already been produced against this exact tree — that
+evidence is what the regression pass below is for, not a precondition
+for this promotion. **RTVM-202 and RTVM-401 move In Test → Verified**
+(§5), Commit(s) `7ef04ce`.
+
+**This needs regression testing** — CI/CD flagged it explicitly, since
+it is a real trunk merge of new product code (the `Messages.cpp`
+wiring plus solver test coverage), not a docs-only or zero-commit
+fast path. Handing off to the Test Engineer for that pass; if it
+surfaces a defect, the correction routes back through this issue's
+normal RTVM-update channel rather than reopening #12's design
+question.
+
+**§7 interpretations raised in this thread: none** — this round is
+merge bookkeeping and status promotion, not new scope.
