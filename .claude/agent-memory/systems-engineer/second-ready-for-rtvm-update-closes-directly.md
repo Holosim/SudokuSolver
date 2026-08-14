@@ -6,7 +6,10 @@ metadata:
 ---
 
 Learned 2026-08-14 (issue #11, RTVM-201/RTVM-402 — no promotion; contrast
-with issue #10, §9.12 — promotion).
+with issue #10, §9.12 — promotion). Reconfirmed 2026-08-14 on issue #13
+(RTVM-507, §9.21) — same shape as #12's §9.18: row already Verified at
+commit confirmation, regression pass on that exact trunk tip adds only
+bonus Windows evidence, nothing to promote, close directly.
 
 ## The two outcomes look identical at the label level, but aren't
 
