@@ -25,6 +25,10 @@
 - [Solver coverage limits](solver-coverage-limits.md) — TP-200's fixtures never reach the DFS; mutants it can't see, and the randomised-oracle cross-check that covers it.
 - [Console layer runs end-to-end now](console-layer-end-to-end-now-runnable.md) — since #9 the whole binary builds on Linux; how to byte-compare §6.2 stdout without hiding the final newline.
 
+## How to scope work (cont.)
+
+- [Systems Engineer piggyback obligations](systems-engineer-piggyback-obligations.md) — an in-thread comment (not the issue body) can attach an extra RTVM item to an issue by file-touch timing; check the whole thread before sign-off.
+
 ## Recurring failure patterns
 
 - [Stub wording vs exit codes](stub-wording-vs-exit-codes.md) — right exit code with an empty stream is expected state on this project, not a defect; which issue owns which wording.
