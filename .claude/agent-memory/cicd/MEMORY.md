@@ -15,6 +15,7 @@
 - [Test-code-only merge still needs regression](test-code-only-merge-still-needs-regression.md) — #16: new `TEST_METHOD`s with zero `src/` change is a real code merge, not the docs-only carve-out; don't waive the regression-testing note.
 - [RTVM promoted ahead of branch merge](rtvm-promoted-ahead-of-branch-merge.md) — #19: Systems Engineer pushed the RTVM promotion straight to `main` before the branch (real, unmerged PowerShell harness code) was merged; check the full branch diff, not just `docs/`, before reaching for the fast-path label.
 - [Reset-and-redo beats rebase after a push race](reset-and-redo-beats-rebase-after-push-race.md) — #18: a rejected push after trunk moved should be handled with `reset --hard origin/main` + re-merge, not `git rebase`, which replays the branch's individual commits and reproduces every conflict piecemeal.
+- [Handoff label missed triggers stall-recovery](handoff-label-missed-triggers-stall-recovery.md) — #20: the merge + comment can land fine while the final relabel step doesn't; check `git log` on `main` before assuming a stall-recovery re-trigger means real work is still pending.
 
 ## Build & toolchain notes
 
