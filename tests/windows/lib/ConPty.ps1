@@ -1048,6 +1048,100 @@ Write-Output ("EVENTS=" + $events + " LINE=[" + $visible + "]")
         $lines.Add("EXCEPTION in probe (5): $($_.Exception.Message)")
     }
 
+    $lines.Add('')
+
+    # (6) Ninth Windows round, second probe: probe (5) was *framed* as
+    # cmd.exe-free ("no cmd.exe" in its own header line above) but is not,
+    # in fact, cmd.exe-free - it passes StdoutRedirectPath/StderrRedirectPath,
+    # and New-ConPtyProcess's Start() (see its doc comment) unconditionally
+    # wraps $Exe in a `cmd.exe /c "... 1>out 2>err"` layer whenever either
+    # redirect path is given. So probe (5)'s EVENTS=0 result still has
+    # cmd.exe in the chain, exactly like probes (3)/(4) - it never actually
+    # tested "does input reach a process with *nothing* else in the chain".
+    # This probe does: powershell.exe attached to the pseudoconsole with
+    # NEITHER redirect path given (true direct attachment - the same shape
+    # SudokuSolver.exe itself has in the real TP-004/005/006 probes *before*
+    # Start() adds any cmd wrapper), and the child reports its result with
+    # [System.IO.File]::WriteAllText - a plain Win32 file write, not
+    # Write-Output - so the answer does not depend on the render pass
+    # already proven broken on this image (probe (1): cmd.exe's own echoed
+    # text through the plain pty transcript never arrives past the initial
+    # handshake). A clean "EVENTS=1 LINE=[hello]" here, with nothing else
+    # anywhere in the chain, is the most direct answer this harness can
+    # give to "does console input delivery work on this image at all".
+    try {
+        $lines.Add('--- (6) console input round-trip test, true direct attachment (no cmd.exe anywhere, no redirect wrapper) - result written to a file from inside the child, not through its own rendered stdout ---')
+        $diagDir6 = Join-Path $EvidenceDir 'conpty-diag-input-direct'
+        New-Item -ItemType Directory -Force -Path $diagDir6 | Out-Null
+        $resultPath6 = Join-Path $diagDir6 'result.txt'
+        if (Test-Path -LiteralPath $resultPath6) { Remove-Item -LiteralPath $resultPath6 -Force }
+
+        $psPath6 = Join-Path $env:SystemRoot 'System32\WindowsPowerShell\v1.0\powershell.exe'
+        if (-not (Test-Path -LiteralPath $psPath6)) { $psPath6 = 'powershell.exe' }
+
+        # Same P/Invoke/poll shape as probe (5)'s child script; the only
+        # difference is where the answer goes - a file, via plain .NET file
+        # I/O, substituted in below as a literal single-quoted PowerShell
+        # string (backslashes are not escapes inside single quotes, so the
+        # raw Windows path substitutes in unmodified).
+        $childScript6 = @'
+Add-Type -Namespace SudokuDiag6 -Name Con -MemberDefinition @"
+[DllImport("kernel32.dll")] public static extern IntPtr GetStdHandle(int nStdHandle);
+[DllImport("kernel32.dll", SetLastError = true)] public static extern bool GetNumberOfConsoleInputEvents(IntPtr hConsoleInput, out uint lpNumberOfEvents);
+[DllImport("kernel32.dll", SetLastError = true)] public static extern bool ReadConsoleA(IntPtr hConsoleInput, byte[] lpBuffer, uint nNumberOfCharsToRead, out uint lpNumberOfCharsRead, IntPtr lpInputControl);
+"@
+$h = [SudokuDiag6.Con]::GetStdHandle(-10)
+$deadline = [DateTime]::UtcNow.AddSeconds(20)
+$events = 0
+while ([DateTime]::UtcNow -lt $deadline) {
+    [uint32]$n = 0
+    [void][SudokuDiag6.Con]::GetNumberOfConsoleInputEvents($h, [ref]$n)
+    if ($n -gt 0) { $events = $n; break }
+    Start-Sleep -Milliseconds 100
+}
+$line = ''
+if ($events -gt 0) {
+    $buf = New-Object byte[] 256
+    [uint32]$read = 0
+    [void][SudokuDiag6.Con]::ReadConsoleA($h, $buf, 256, [ref]$read, [IntPtr]::Zero)
+    $line = [System.Text.Encoding]::ASCII.GetString($buf, 0, $read)
+}
+$visible = $line.Replace("`r", '<CR>').Replace("`n", '<LF>')
+[System.IO.File]::WriteAllText('__RESULT_PATH__', 'EVENTS=' + $events + ' LINE=[' + $visible + ']')
+'@
+        $childScript6 = $childScript6.Replace('__RESULT_PATH__', $resultPath6)
+        $encoded6 = [Convert]::ToBase64String([System.Text.Encoding]::Unicode.GetBytes($childScript6))
+        $psArgs6 = "-NoProfile -NonInteractive -EncodedCommand $encoded6"
+
+        # No StdoutRedirectPath/StderrRedirectPath here - unlike probe (5),
+        # this really is one process (powershell.exe) attached to the
+        # pseudoconsole directly, nothing else in the chain.
+        $p6 = New-ConPtyProcess -Exe $psPath6 -Arguments $psArgs6 -Columns 120 -Rows 30
+        $lines.Add("Started=$($p6.Started) LastError=$($p6.LastError) ProcessId=$($p6.ProcessId)")
+        if ($p6.Started) {
+            # Same 1.5s settle as probe (5) before writing - the child polls
+            # internally for up to 20s before giving up, so this needs to
+            # wait at least that long too, not race it.
+            Start-Sleep -Milliseconds 1500
+            $writeOk6 = $p6.WriteInput("hello`r")
+            $writeErr6 = $p6.LastError
+            $exited6 = $p6.WaitForExit(25000)
+            Start-Sleep -Milliseconds 300
+            $resultText6 = Get-Content -LiteralPath $resultPath6 -Raw -ErrorAction SilentlyContinue
+            if (-not $resultText6) { $resultText6 = '(result.txt not written - child never reached the WriteAllText call, or was killed first)' }
+            $lines.Add("writeInputOk=$writeOk6 writeInputError=$writeErr6")
+            $lines.Add("exited=$exited6 exitCode=$(if ($exited6) { $p6.ExitCode } else { 'n/a' })")
+            $lines.Add("resultFile=[$resultText6]")
+            $lines.Add("inputReachedConsoleInputBuffer=$([bool]($resultText6 -match 'EVENTS=[1-9]'))")
+            $lines.Add("readConsoleAGotHello=$([bool]($resultText6 -match 'hello'))")
+            if (-not $exited6) { $p6.Kill() }
+            try { $p6.Dispose() } catch { }
+        }
+    }
+    catch {
+        $lines.Add("EXCEPTION in probe (6): $($_.Exception.Message)")
+    }
+
     Write-Utf8NoBom -Path (Join-Path $EvidenceDir 'conpty-diag.txt') -Content ($lines -join "`n")
 }
 
