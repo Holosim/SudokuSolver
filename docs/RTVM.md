@@ -54,9 +54,9 @@ Blocked / Withdrawn.
 | RTVM-001 | On launch the application begins solving immediately. It presents no menu, no mode selection, and asks the user nothing before reading the puzzle. | SN-1, SN-6 | Test (TP-001) | In Test | `62cbb1e` |
 | RTVM-002 | If a first command-line argument is present it is treated as a path to a puzzle file, and the puzzle is read from that file. Any further arguments are ignored. | SN-1, SN-8 | Test (TP-002) | In Test | `62cbb1e` |
 | RTVM-003 | If no command-line argument is present the puzzle is read from standard input. | SN-1, SN-8 | Test (TP-003) | In Test | `62cbb1e` |
-| RTVM-004 | While a solve is still running at a prompt point (RTVM-501/502) the application writes a progress prompt to stderr stating (a) that it is still working, (b) the whole seconds elapsed, (c) how to stop, and (d) that no response is required. | SN-5 | Test (TP-004) | In Test | `2ca7deb` |
-| RTVM-005 | If the user gives the documented stop response at any prompt, the application stops the solve, reports that it was abandoned at the user's request, and exits with code `3`. | SN-5 | Test (TP-005) | In Test | `2ca7deb` |
-| RTVM-006 | No prompt requires a response. The application never blocks on reading a prompt reply: continuing is the default and an unanswered prompt simply lapses at the next prompt point. | SN-5, SN-8 | Test (TP-006) | In Test | `2ca7deb` |
+| RTVM-004 | While a solve is still running at a prompt point (RTVM-501/502) the application writes a progress prompt to stderr stating (a) that it is still working, (b) the whole seconds elapsed, (c) how to stop, and (d) that no response is required. | SN-5 | Test (TP-004) | Verified | `0892b30` |
+| RTVM-005 | If the user gives the documented stop response at any prompt, the application stops the solve, reports that it was abandoned at the user's request, and exits with code `3`. | SN-5 | Test (TP-005) | In Test | `0892b30` |
+| RTVM-006 | No prompt requires a response. The application never blocks on reading a prompt reply: continuing is the default and an unanswered prompt simply lapses at the next prompt point. | SN-5, SN-8 | Test (TP-006) | In Test | `0892b30` |
 | RTVM-007 | If the solve finishes while a prompt is outstanding, the result is printed and the application exits normally. It does not wait for a reply to the lapsed prompt. | SN-5 | Test (TP-007) | In Test | `2ca7deb` |
 | RTVM-008 | An invocation with no interactive console (stdin redirected from a file or pipe, stdout/stderr redirected) is never blocked or delayed by the prompt mechanism, and always terminates with a result and an exit code. | SN-5, SN-8 | Test (TP-008) | In Test | `2ca7deb` |
 | RTVM-009 | A file argument that cannot be opened or read is reported as a specific diagnostic naming the path and the reason, and exits with code `1`. | SN-4, SN-8 | Test (TP-009) | Verified | `139d41a` |
@@ -83,13 +83,13 @@ Blocked / Withdrawn.
 | RTVM-401 | For the `SolvedNotUnique` outcome the grid is followed on stdout by a statement that the solution shown is not unique. | SN-3 | Test (TP-401) | Verified | `7ef04ce` |
 | RTVM-402 | For the `NoSolution` outcome a plain statement that the puzzle has no solution is written to stdout, and no grid is written. | SN-3, SN-4 | Test (TP-402) | In Test | `481c726` |
 | RTVM-403 | For the `InvalidInput` outcome a specific human-readable diagnostic naming the fault is written to **stderr**, and nothing is written to stdout. | SN-4 | Test (TP-403) | Verified | `139d41a` |
-| RTVM-404 | For the `Aborted` outcome a message stating the solve was abandoned at the user's request is written to **stderr**, and nothing is written to stdout. | SN-5 | Test (TP-404) | In Test | `2ca7deb` |
+| RTVM-404 | For the `Aborted` outcome a message stating the solve was abandoned at the user's request is written to **stderr**, and nothing is written to stdout. | SN-5 | Test (TP-404) | In Test | `0892b30` |
 | RTVM-405 | The process exit code is `0` for `Solved` and `SolvedNotUnique`, `1` for `InvalidInput`, `2` for `NoSolution`, `3` for `Aborted`, with no other exit code reachable. | SN-8, SN-4 | Test (TP-405) | Verified | `a78f0d2` |
 | RTVM-406 | Across every reachable outcome, stdout carries only the result (grid, non-unique note, no-solution statement). No prompt text, no diagnostic, and no progress output ever reaches stdout. | SN-8 | Test (TP-406) | Verified | `a78f0d2` |
 | **NFR — non-functional (§4.4, §5)** | | | | | |
 | RTVM-500 | Any standard 9×9 puzzle, including a hard 17-clue grid, is solved in under 10 s wall clock on a typical desktop (reference machine defined in §6.3). | SN-5 | Test (TP-500) | Verified | `699abde` |
-| RTVM-501 | The first progress prompt is emitted when the solve has been running for 15 s, within a tolerance of ±1.0 s. | SN-5 | Test (TP-501) | In Test | `2ca7deb` |
-| RTVM-502 | Progress prompts repeat every 10 s thereafter — at 25 s, 35 s, 45 s and so on — each within ±1.0 s of its nominal time, for as long as the solve is running. | SN-5 | Test (TP-502) | In Test | `2ca7deb` |
+| RTVM-501 | The first progress prompt is emitted when the solve has been running for 15 s, within a tolerance of ±1.0 s. | SN-5 | Test (TP-501) | In Test | `0892b30` |
+| RTVM-502 | Progress prompts repeat every 10 s thereafter — at 25 s, 35 s, 45 s and so on — each within ±1.0 s of its nominal time, for as long as the solve is running. | SN-5 | Test (TP-502) | In Test | `0892b30` |
 | RTVM-503 | The solve does not pause while a prompt is displayed or while a reply is awaited: the RTVM-204 search-step count strictly increases across every prompt window. | SN-5 | Test (TP-503) | In Test | `2ca7deb` |
 | RTVM-504 | The application is never silent while working. From launch to exit the user always has either a result, a diagnostic, or a prompt. The longest permitted interval with no output on either stream is bounded by the RTVM-501 first-prompt threshold **before** the first prompt (15 s + 1.0 s tolerance = 16.0 s) and by the RTVM-502 repeat interval **thereafter** (10 s + 1.0 s tolerance = 11.0 s). See §7 I-12. | SN-5 | Test (TP-504) | Verified | `292af46` |
 | RTVM-505 | No input causes an unhandled exception, an access violation, an assertion dialog, or a non-zero exit code outside the set in RTVM-405. Every run terminates. | SN-4 | Test (TP-505) | Verified | `68c9cde` |
@@ -4098,3 +4098,87 @@ Real test-infrastructure code lands on this branch
 (`tests/windows/lib/ConPty.ps1`, `tests/windows/run-procedures.ps1`)
 regardless of the promotion outcome above, so this still needs a real
 merge — handed to CI/CD next with `status:ready-for-commit`.
+
+### 9.35 CI/CD merge recorded, RTVM-004 promoted to Verified, RTVM-005/006/404/501/502 held at In Test with fresh Commit(s) (issue #25, commit confirmation)
+
+CI/CD merged `issue-25` `--no-ff` into `main` at merge commit
+**`0892b30`** (parents `54c448c`/`79c3585`, confirmed two-parent via
+`git log -1 --format=%P`), then confirmed the evidence tree cited in
+§9.34 (Windows CI run
+[31903980994](https://github.com/Holosim/SudokuSolver/actions/runs/31903980994),
+headSha `cf67e0d`) is now genuinely on `main` — `git diff --stat cf67e0d
+0892b30 -- . ':!.claude/agent-memory'` empty — and flagged this issue as
+**needing regression testing**, since real product test-infrastructure
+(`tests/windows/lib/ConPty.ps1`, new; `tests/windows/run-procedures.ps1`,
++139/-5) lands with this merge, not a docs-only diff.
+
+Independently re-confirmed before writing anything: `0892b30` is the
+actual two-parent `--no-ff` merge commit, matching
+[[commit-sha-recorded-is-the-merge-commit]]'s standing rule (record the
+merge SHA, not a pre-merge evidence SHA). A shallow clone initially hid
+the parent list (`git log -1 --format=%P` returned empty) — required
+`git fetch --unshallow` first, same trap as
+[[shallow-clone-unrelated-histories]].
+
+**Cancel-in-progress note, per
+[[cancel-in-progress-shifts-trunk-arrival-sha]].** By the time this
+touch started, CI/CD's own required post-merge memory commit
+(`0aaddb1`, single-parent on top of `0892b30`) had already landed and,
+via `windows-verification`'s `cancel-in-progress` concurrency group on
+`main`, cancelled the regression run that had started against `0892b30`
+(run [31908311713](https://github.com/Holosim/SudokuSolver/actions/runs/31908311713),
+`cancelled`) in favour of one against `0aaddb1` (run
+[31908341868](https://github.com/Holosim/SudokuSolver/actions/runs/31908341868),
+in progress at the time of writing). Confirmed tree-identical to
+`0892b30` outside `.claude/agent-memory` (`git diff --stat 0892b30
+0aaddb1` touches only `.claude/agent-memory/cicd/MEMORY.md` and one new
+file under it). This RTVM.md bookkeeping commit is itself about to push
+directly to `main` on top of `0aaddb1`
+([[commit-confirmation-pushes-direct-to-main]]), which will cancel that
+run in turn and start a fresh one against this commit's own SHA — also
+tree-identical to `0892b30` for every `src/`, `tests/`, `samples/` and
+project-file path. Rather than chase a SHA that will already be stale by
+the time this section is read, **`0892b30` is recorded as the Commit(s)
+value** (it is the tree that actually carries the tested product/harness
+content) and the Test Engineer's regression pass should read whichever
+`windows-verification` run is current on `main`'s tip at the time they
+look, confirming it is tree-identical to `0892b30` for those paths
+before ruling — the same check this section already did.
+
+**Per-row outcome, applying
+[[commit-sha-updates-even-without-promotion]] (SHA and promotion are
+independent decisions):**
+
+- **RTVM-004** — §9.34 found zero outstanding clauses (TP-004 executed
+  in full against a genuine console handle; both the automated-harness
+  gap and the standing V-1 MSVC/process-level gap are closed). Per
+  [[verified-on-first-commit-confirmation-not-gated-by-v1]], this is the
+  first commit-confirmation for this evidence, so it promotes **In Test
+  → Verified** now, independent of the regression pass CI/CD still
+  wants — that pass is downstream confirmation, not a precondition.
+  Commit(s) → `0892b30`.
+- **RTVM-501, RTVM-502** — §9.34 recorded genuine but partial automated
+  evidence (1-of-5 sample; 4-of-5 scheduled prompts). Per V-6 that isn't
+  "in full," so both stay **In Test** — but the merge is new evidence
+  reaching trunk, so Commit(s) updates to `0892b30` per
+  [[commit-sha-updates-even-without-promotion]].
+- **RTVM-006** — §9.34's substantive-behaviour evidence is clean, but
+  TP-006's own procedure also demands the stop-response clause, which
+  failed for the isolated infra reason below. Stays **In Test**,
+  Commit(s) → `0892b30` (new evidence, no promotion).
+- **RTVM-005, RTVM-404** — attempted for the first time this round, FAIL
+  both clauses, isolated per §9.34/§9.4's A-4 row to the ConPTY
+  input-delivery gap (probe (6): `writeInputOk=True`,
+  `inputReachedConsoleInputBuffer=False`), not a product defect. Stays
+  **In Test** — a measured negative is still evidence, so Commit(s) →
+  `0892b30` per the same rule.
+- **RTVM-503** — the ConPTY harness never sampled the RTVM-204 step
+  count; §9.34 recorded "nothing" for this row. No new evidence reached
+  trunk for it this round, so Commit(s) stays `2ca7deb` unchanged.
+- **RTVM-203** — already **Verified** (issue #16, TP-203 unit-level
+  evidence); §9.34 recorded this round added nothing to or against it.
+  Unaffected, Commit(s) stays `ce15599` unchanged.
+
+**§7 interpretations raised in this thread: none.**
+
+Handed to Test Engineer next for the regression pass CI/CD requested.
