@@ -338,3 +338,29 @@ single-parent, direct-to-`main`, no branch. Don't conflate the two: check
 whether a SHA is already being recorded (→ direct to main) or whether this
 is the pre-merge promotion to In Test (→ commit on the existing
 `issue-N` branch, same branch Software/Test Engineer already used).
+
+## §9.x heading collision, fourth instance — CI/CD leaves it, names it, and the fix lands at commit-confirmation time (2026-08-15, #18 vs #19)
+
+Same mechanism as the #12-vs-#13 `### 9.16` collision above, but this time
+CI/CD hit it during its own `--no-ff` merge (not me rebasing locally): #18's
+and #19's branches both independently appended `### 9.29` — #19 merged to
+trunk first, so #18's landed as a literal duplicate `### 9.29` heading, with
+an inline HTML comment CI/CD left flagging it as mine to fix, matching
+[[commit-sha-recorded-is-the-merge-commit]]'s general pattern of CI/CD
+naming renumbering-type decisions rather than making them silently. I
+renumbered #18's section to the next free number (**9.30**, since 9.29 was
+already the highest by the time I looked) at the *same* touch where I
+recorded the merge SHA and promoted RTVM-405/406 to Verified — not a
+separate pass. Also had to update the one prose cross-reference elsewhere
+in the doc (§9.6's RTVM-300 row said "issue #18, §9.29" and needed to
+become "§9.30") — a plain `grep -n '§9.29\|§9.30'` across the whole file
+before pushing is what caught it; the earlier collision-fix entries above
+didn't call this step out explicitly but it's implied by "keep the text
+byte-identical" — the number itself is not byte-identical text, so its own
+citations must be swept too.
+
+**How to apply:** when fixing a CI/CD-flagged heading collision, do it in
+the same commit as whatever else that hand-off already requires (recording
+a SHA, promoting a status) rather than opening a separate pass — and always
+grep the *whole* document for both the old and new number before pushing,
+not just the two colliding headings themselves.
