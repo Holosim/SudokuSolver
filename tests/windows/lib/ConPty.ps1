@@ -577,11 +577,94 @@ function New-ConPtyProcess {
     return $proc
 }
 
+# Fifth Windows round (issue #25): rounds one through four established that
+# CreatePseudoConsole/CreateProcessW/the pipe plumbing all succeed (a real
+# child process is created, attached, and runs to a correct exit code) and
+# that conhost's own *negotiation* burst (clear screen, hide/show cursor,
+# set title - see conpty-diag.txt's "rawEscaped" dumps from prior rounds)
+# reaches the reader thread intact. What never arrives, from *either*
+# SudokuSolver.exe or a trivial `cmd.exe /c echo` control case, is any
+# subsequently-*rendered* text - not delayed, not truncated, simply absent,
+# even measured well after the child has fully exited (so it is not a
+# buffering-before-flush question; the CRT/console API calls that would
+# produce it are proven to have already returned by the time the process
+# object signals termination). Two remaining, checkable explanations: (a)
+# conhost's VT render pass needs a window station/desktop context this job
+# doesn't have (a documented failure mode for console hosts run under a
+# non-interactive service context) - probe (0) below checks that directly
+# instead of inferring it; (b) something about *this* pseudoconsole's
+# render pass specifically never fires a repaint after the first frame,
+# independent of (a) - if (0) comes back "interactive", (b) becomes the
+# live hypothesis instead and the cmd.exe control case (probe 1) already
+# rules out anything SudokuSolver.exe-specific.
+#
+# Not asserted against any TP (C4/C5) - this is one .NET type compiled
+# purely to read two OS facts (the window station handle's name and its
+# WSF_VISIBLE flag), kept separate from ConPtyProcess above so a failure to
+# compile *this* diagnostic can never take down the actual TP-004/005/006
+# probes.
+function Get-WindowStationDiagnostic {
+    try {
+        if (-not ("SudokuTests.WindowStationDiag" -as [type])) {
+            Add-Type -Namespace SudokuTests -Name WindowStationDiag -MemberDefinition @'
+[DllImport("user32.dll", SetLastError = true)]
+public static extern IntPtr GetProcessWindowStation();
+
+// Same native GetUserObjectInformationW entry point, exposed twice under
+// different managed signatures/names - once for the fixed-size
+// USEROBJECTFLAGS struct (UOI_FLAGS=1), once for the station's own name
+// (UOI_NAME=2), since P/Invoke cannot overload one extern method over two
+// different marshaled buffer types.
+[DllImport("user32.dll", EntryPoint = "GetUserObjectInformationW", SetLastError = true, CharSet = CharSet.Unicode)]
+public static extern bool GetUserObjectInformationFlags(IntPtr hObj, int nIndex, byte[] pvInfo, int nLength, out int lpnLengthNeeded);
+
+[DllImport("user32.dll", EntryPoint = "GetUserObjectInformationW", SetLastError = true, CharSet = CharSet.Unicode)]
+public static extern bool GetUserObjectInformationName(IntPtr hObj, int nIndex, System.Text.StringBuilder pvInfo, int nLength, out int lpnLengthNeeded);
+'@
+        }
+    }
+    catch {
+        return "WindowStationDiag failed to compile: $($_.Exception.Message)"
+    }
+
+    try {
+        $hwinsta = [SudokuTests.WindowStationDiag]::GetProcessWindowStation()
+        if ($hwinsta -eq [IntPtr]::Zero) {
+            return "GetProcessWindowStation returned NULL, GetLastError=$([System.Runtime.InteropServices.Marshal]::GetLastWin32Error())"
+        }
+
+        # USEROBJECTFLAGS is { BOOL fInherit; BOOL fReserved; DWORD dwFlags }
+        # - three 4-byte fields, dwFlags at offset 8. WSF_VISIBLE = 0x0001.
+        $buf = New-Object byte[] 12
+        $needed = 0
+        $flagsOk = [SudokuTests.WindowStationDiag]::GetUserObjectInformationFlags($hwinsta, 1, $buf, $buf.Length, [ref]$needed)
+        $flagsText = if ($flagsOk) {
+            $dwFlags = [System.BitConverter]::ToUInt32($buf, 8)
+            "dwFlags=0x$($dwFlags.ToString('X8')) WSF_VISIBLE=$(($dwFlags -band 0x1) -ne 0)"
+        }
+        else {
+            "GetUserObjectInformation(UOI_FLAGS) failed, GetLastError=$([System.Runtime.InteropServices.Marshal]::GetLastWin32Error())"
+        }
+
+        $nameSb = New-Object System.Text.StringBuilder 256
+        $nameNeeded = 0
+        $nameOk = [SudokuTests.WindowStationDiag]::GetUserObjectInformationName($hwinsta, 2, $nameSb, $nameSb.Capacity, [ref]$nameNeeded)
+        $nameText = if ($nameOk) { $nameSb.ToString() } else { '<name unavailable>' }
+
+        return "windowStationName='$nameText' $flagsText dotnetUserInteractive=$([Environment]::UserInteractive)"
+    }
+    catch {
+        return "window-station diagnostic threw: $($_.Exception.Message)"
+    }
+}
+
 # Diagnostic only - never asserted against any TP, written straight to
 # <EvidenceDir>/conpty-diag.txt rather than through Add-Check (C4/C5: the
-# evidence ledger is for TP evidence, not harness self-diagnosis). Two
+# evidence ledger is for TP evidence, not harness self-diagnosis). Three
 # independent probes, cheap (<= ~16s total), meant to bisect a "the real
 # TP-004/005/006 probes saw nothing at all" result:
+#   (0) window station / interactive-desktop check - see the fifth-round
+#       comment above for why this is the live hypothesis.
 #   (1) cmd.exe under ConPTY - isolates whether the ConPTY mechanism itself
 #       (CreatePseudoConsole/CreateProcessW/the pipe plumbing) works on this
 #       image at all, independent of SudokuSolver.exe.
@@ -597,6 +680,16 @@ function Invoke-ConPtyDiagnostics {
     )
 
     $lines = New-Object System.Collections.Generic.List[string]
+
+    try {
+        $lines.Add('--- (0) window station / interactive-desktop check ---')
+        $lines.Add((Get-WindowStationDiagnostic))
+    }
+    catch {
+        $lines.Add("EXCEPTION in probe (0): $($_.Exception.Message)")
+    }
+
+    $lines.Add('')
 
     try {
         $comspec = $env:ComSpec
