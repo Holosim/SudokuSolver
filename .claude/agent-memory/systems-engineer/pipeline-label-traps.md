@@ -124,3 +124,19 @@ recurring race, not a one-off — worth checking dependency state first,
 before assuming a stray relabel is a real handoff, whenever a feature issue
 arrives on `agent:systems-engineer` (rather than `agent:software-engineer`)
 with `status:on-hold` still attached.
+
+## Not every recurrence is a timing race — sometimes the dependency is genuinely still open
+
+Seen 2026-08-15 (issue #20, `[RTVM-505]`). Same signature (empty thread,
+manual `agent:systems-engineer` + `status:in-progress` added on top of an
+untouched `status:on-hold`) but this time one of the two declared
+Finish-Start deps (#18, `[RTVM-405]`) was **still open** — sitting at
+`agent:cicd`/`status:ready-for-commit`, not yet merged — not merely closed
+late relative to the relabel. Don't assume every occurrence of this shape is
+a beaten sweep cycle; check dependency state fresh each time. Resolution is
+the same either way (drop the stray `agent:*` + `status:in-progress`, leave
+`status:on-hold`, comment explaining why), but when the dependency is
+genuinely open the right "Next:" line is a real blocked-on-dependency status,
+not "the sweep will catch it next cycle" — both end up idle, so the
+distinction is about accurately describing why in the comment, not about a
+different label action.
