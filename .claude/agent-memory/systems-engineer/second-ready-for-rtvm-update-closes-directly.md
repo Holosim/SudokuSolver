@@ -69,6 +69,19 @@ accurately stated in §5.
 
 See [[fast-path-promotion-after-sha-recorded]], [[verification-platform-trap]].
 
+## Fourth Verified-row instance (2026-08-15, #19, RTVM-504)
+
+Same shape again: row promoted to Verified at commit-confirmation
+(`292af46` recorded), then a *separate* Test Engineer regression-pass
+comment cited a later trunk tip (`82acc46`) with full real Windows
+evidence (66/66 vstest, TP-504 exit-code-gated PASS on all 3 W-7
+samples) — reconfirmation only, discharges nothing new (TP-501…503
+still NOT-RUN, still owned by #25). Closed directly, wrote the
+reconfirmation as a §9.29 follow-up rather than a new subsection (the
+whole RTVM-504 story — first promotion, merge-SHA correction, and this
+reconfirmation — now lives together in one place, which reads better
+than scattering it across separate §9.x sections).
+
 ## The pattern also applies to rows still In Test, not only rows already Verified (2026-08-15, #17)
 
 Every prior instance of this pattern involved rows already at **Verified**
