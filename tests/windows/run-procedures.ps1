@@ -613,24 +613,19 @@ Invoke-Section -Name 'TP-004,TP-006' -Body {
         -Observed "gotFirstPrompt=$gotFirstPrompt promptSeconds=$(if ($gotFirstPrompt) { $r.PromptTimestampsSec[0] } else { 'n/a' }) text='$($r.FirstPromptText)'" `
         -Reason $(if (-not $contentOk) { "see $($r.RawOutputPath | Split-Path -Leaf) in the artifact ($($r.RawOutputPath))" } else { $null })
 
-    # ConPTY merges stdout and stderr into one console screen buffer (both
-    # are writes to CONOUT$ when neither is explicitly redirected) - it
-    # cannot show two independently-labelled streams the way Invoke-Sudoku's
-    # separate pipe captures can (that half of TP-004 is what TP-406 already
-    # covers, over a real pipe, elsewhere in this script). What ConPTY *can*
-    # show is whether the S-EASY grid text has appeared at all by the first
-    # prompt - and by construction (docs/SDD.md's single Reporter::report()
-    # call after solve() returns) that can only be true if the process had
-    # already finished, which a still-in-progress long-solve-hook run has
-    # not. A clean merged transcript at this point is therefore genuine
-    # evidence for "nothing on stdout yet", just not proof of which handle
-    # it would have arrived on.
+    # $Exe runs under a cmd.exe intermediary attached to the pseudoconsole
+    # (ConPty.ps1's Start(), "sixth Windows round"): stdin is still the
+    # genuine console handle, but stdout/stderr are cmd's own ordinary file
+    # redirects, independently readable - not inferred from one merged VT
+    # transcript the way rounds 1-5 had to. $r.StdoutBytesAtFirstPrompt is a
+    # real byte count on $r.StdoutPath at the moment the first prompt
+    # appeared on $r.StderrPath.
     $noGridYet = $gotFirstPrompt -and (-not $r.GridSeenBeforeFirstPrompt)
     Add-Check -Checks $Checks -Tp 'TP-004' -Case 'nothing-on-stdout-at-first-prompt' `
         -State $(if ($noGridYet) { 'PASS' } else { 'FAIL' }) `
-        -Expected 'no S-EASY grid content (the "+-------+" separator) visible before the first prompt' `
-        -Observed "gridSeenBeforeFirstPrompt=$($r.GridSeenBeforeFirstPrompt)" `
-        -Reason $(if (-not $noGridYet) { "see $($r.RawOutputPath | Split-Path -Leaf) in the artifact; note ConPTY merges stdout/stderr into one buffer (see Expected) so this is inferred from ordering, not stream identity - see $($r.RawOutputPath)" } else { $null })
+        -Expected 'stdout.txt is still 0 bytes at the moment the first prompt appears on stderr.txt' `
+        -Observed "stdoutBytesAtFirstPrompt=$($r.StdoutBytesAtFirstPrompt)" `
+        -Reason $(if (-not $noGridYet) { "see $($r.StdoutPath | Split-Path -Leaf)/$($r.StderrPath | Split-Path -Leaf) in the artifact: $($r.StdoutPath)" } else { $null })
 
     $fourPrompts = $r.PromptTimestampsSec.Count -ge 4
     $gapOk = ($null -eq $r.MaxGapAfterFirstPromptSec) -or ($r.MaxGapAfterFirstPromptSec -le 11.0)
@@ -689,9 +684,9 @@ Invoke-Section -Name 'TP-005' -Body {
     $contentOk = $r.AbandonedTextSeen -and $r.StdoutStayedEmpty
     Add-Check -Checks $Checks -Tp 'TP-005' -Case 'abandonment-message-and-empty-stdout' `
         -State $(if ($contentOk) { 'PASS' } else { 'FAIL' }) `
-        -Expected 'a line containing "abandoned at" appears, and the S-EASY grid never appears (stdout stays empty)' `
+        -Expected 'stderr.txt gains a line containing "abandoned at"; stdout.txt stays 0 bytes throughout (RTVM-404)' `
         -Observed "abandonedTextSeen=$($r.AbandonedTextSeen) stdoutStayedEmpty=$($r.StdoutStayedEmpty)" `
-        -Reason $(if (-not $contentOk) { "see $($r.RawOutputPath | Split-Path -Leaf) in the artifact ($($r.RawOutputPath)); note ConPTY merges stdout/stderr (see the TP-004 case above) so 'stayed empty' is read off the merged transcript, not a separately-captured stdout stream" } else { $null })
+        -Reason $(if (-not $contentOk) { "see $($r.StdoutPath | Split-Path -Leaf)/$($r.StderrPath | Split-Path -Leaf) in the artifact: $($r.StdoutPath)" } else { $null })
 }
 
 # ===========================================================================

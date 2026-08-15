@@ -199,10 +199,34 @@ namespace SudokuTests
         // exactly the pattern Common.ps1's Invoke-Sudoku already uses for
         // the pipe/file harness (set, launch, restore).
         //
-        // Never throws — every failure path sets LastError and returns
-        // false, so a caller can always report a specific reason rather
-        // than an unhandled exception (mirrors Common.ps1's C1).
-        public bool Start(string exePath, string arguments, short columns, short rows)
+        // Sixth Windows round (issue #25): rounds 1-5 proved CreatePseudoConsole/
+        // CreateProcessW/the pipe plumbing itself works (conhost's own
+        // negotiation-and-first-repaint burst arrives intact, byte for
+        // byte, on both a trivial cmd.exe control case and SudokuSolver.exe
+        // alike) but that no *subsequently written* character output - not
+        // delayed, not truncated, simply absent - ever reaches the reader
+        // thread from either process, even measured well after the child
+        // has exited. That points at conhost's render pass on this image,
+        // not at anything specific to SudokuSolver.exe or to this harness's
+        // reading code. stdoutRedirectPath/stderrRedirectPath below stop
+        // depending on that render pass for the actual TP-004/005/006
+        // assertions: when given, 'exePath arguments' is wrapped in
+        // "cmd.exe /c ...1>out 2>err" and *cmd.exe* is what gets attached
+        // to the pseudoconsole. cmd inherits its own stdin from the
+        // pseudoconsole and never touches it, but opens the redirect
+        // targets as ordinary Win32 file handles for the child it spawns -
+        // exactly what a person gets typing "program > out.txt 2> err.txt"
+        // at an interactive prompt. StdinChannel.cpp's Console StdinKind
+        // branch still sees a genuine console handle; stdout/stderr become
+        // independently readable files instead of one merged VT transcript,
+        // which also finally gives TP-004's "nothing on stdout" and TP-005's
+        // "stdout stays empty" a real separate stream to assert against
+        // instead of inferring it from transcript ordering. cmd.exe /c
+        // forwards its child's exit code as its own (documented behaviour),
+        // so ExitCode/HasExited below - which read this process's own
+        // handle, i.e. cmd.exe's - still report exePath's real exit code
+        // unchanged.
+        public bool Start(string exePath, string arguments, short columns, short rows, string stdoutRedirectPath = null, string stderrRedirectPath = null)
         {
             IntPtr inputRead = IntPtr.Zero, inputWrite = IntPtr.Zero;
             IntPtr outputRead = IntPtr.Zero, outputWrite = IntPtr.Zero;
@@ -278,7 +302,24 @@ namespace SudokuTests
                 si.StartupInfo.cb = Marshal.SizeOf(typeof(STARTUPINFOEX));
                 si.lpAttributeList = _attrList;
 
-                string fullCommand = "\"" + exePath + "\"" + (string.IsNullOrEmpty(arguments) ? "" : " " + arguments);
+                string fullCommand;
+                if (!string.IsNullOrEmpty(stdoutRedirectPath) || !string.IsNullOrEmpty(stderrRedirectPath))
+                {
+                    string comspec = Environment.GetEnvironmentVariable("ComSpec");
+                    if (string.IsNullOrEmpty(comspec)) comspec = "C:\\Windows\\System32\\cmd.exe";
+                    string inner = "\"" + exePath + "\"" + (string.IsNullOrEmpty(arguments) ? "" : " " + arguments);
+                    if (!string.IsNullOrEmpty(stdoutRedirectPath)) inner += " 1>\"" + stdoutRedirectPath + "\"";
+                    if (!string.IsNullOrEmpty(stderrRedirectPath)) inner += " 2>\"" + stderrRedirectPath + "\"";
+                    // Doubled outer quote around the whole /c argument is
+                    // deliberate cmd.exe quoting, not a typo - the accepted
+                    // workaround for cmd's own argument parser when the
+                    // command it must run already contains quoted paths.
+                    fullCommand = "\"" + comspec + "\" /c \"" + inner + "\"";
+                }
+                else
+                {
+                    fullCommand = "\"" + exePath + "\"" + (string.IsNullOrEmpty(arguments) ? "" : " " + arguments);
+                }
                 var cmd = new StringBuilder(fullCommand, fullCommand.Length + 32);
 
                 PROCESS_INFORMATION pi;
@@ -480,6 +521,40 @@ function Initialize-ConPtyTypes {
     }
 }
 
+# Polls a redirected stdout/stderr file (see the sixth-round Start() comment
+# above) until its content matches $Pattern or $TimeoutMs elapses. Returns
+# @{ Matched; ElapsedMs; Text }. Never throws - a file that does not exist
+# yet (the child hasn't opened it) reads as empty, not an error.
+function Wait-ForRedirectedTextMatch {
+    param(
+        [Parameter(Mandatory)][string]$Path,
+        [Parameter(Mandatory)][string]$Pattern,
+        [Parameter(Mandatory)][int]$TimeoutMs,
+        [int]$PollMs = 100
+    )
+
+    $sw = [System.Diagnostics.Stopwatch]::StartNew()
+    $text = ''
+    while ($sw.Elapsed.TotalMilliseconds -lt $TimeoutMs) {
+        $text = Get-Content -LiteralPath $Path -Raw -ErrorAction SilentlyContinue
+        if (-not $text) { $text = '' }
+        if ($text -match $Pattern) {
+            return @{ Matched = $true; ElapsedMs = $sw.Elapsed.TotalMilliseconds; Text = $text }
+        }
+        Start-Sleep -Milliseconds $PollMs
+    }
+    return @{ Matched = $false; ElapsedMs = $sw.Elapsed.TotalMilliseconds; Text = $text }
+}
+
+# Byte length of a redirected file, 0 if it does not exist yet - used to
+# assert "stayed empty" against a real, independently-captured stream
+# instead of inferring it from the merged ConPTY transcript's ordering.
+function Get-RedirectedFileLength {
+    param([Parameter(Mandatory)][string]$Path)
+    if (Test-Path -LiteralPath $Path) { return (Get-Item -LiteralPath $Path).Length }
+    return 0
+}
+
 # Strips ANSI/VT escape sequences a real console's rendering can introduce
 # (cursor moves, colour resets, ...) so content checks below can match
 # against the plain text SudokuSolver.exe actually wrote, the same way a
@@ -533,7 +608,14 @@ function New-ConPtyProcess {
         [string]$Arguments = '',
         [hashtable]$EnvVars = @{},
         [int]$Columns = 200,
-        [int]$Rows = 40
+        [int]$Rows = 40,
+        # When given, $Exe is run under a cmd.exe intermediary with its
+        # stdout/stderr redirected to these paths instead of being attached
+        # to the pseudoconsole directly - see the Start() doc comment above
+        # (sixth Windows round) for why. Stdin is unaffected either way: it
+        # is always the real console handle.
+        [string]$StdoutRedirectPath = $null,
+        [string]$StderrRedirectPath = $null
     )
 
     try {
@@ -561,7 +643,7 @@ function New-ConPtyProcess {
     }
 
     try {
-        [void]$proc.Start($Exe, $Arguments, [int16]$Columns, [int16]$Rows)
+        [void]$proc.Start($Exe, $Arguments, [int16]$Columns, [int16]$Rows, $StdoutRedirectPath, $StderrRedirectPath)
     }
     catch {
         # Start() is documented not to throw, but a marshalling-level
@@ -742,6 +824,46 @@ function Invoke-ConPtyDiagnostics {
         $lines.Add("EXCEPTION in probe (2): $($_.Exception.Message)")
     }
 
+    $lines.Add('')
+
+    # (3) Sixth Windows round: the same cmd.exe smoke test as probe (1),
+    # but this time cmd's stdout/stderr are redirected to real files
+    # (Start()'s stdoutRedirectPath/stderrRedirectPath) instead of being
+    # attached to the pseudoconsole. Run in the same job as probes (1)/(2)
+    # specifically so a single evidence artifact shows both results side by
+    # side: if the marker shows up here but not in probe (1), that is
+    # direct, controlled confirmation that conhost's render pass (not
+    # process creation, not the input side, not this harness's env/argument
+    # handling) is what drops output on this image - and that routing
+    # around it, rather than continuing to debug it, is the correct fix.
+    try {
+        $comspec3 = $env:ComSpec
+        if (-not $comspec3) { $comspec3 = 'C:\Windows\System32\cmd.exe' }
+        $lines.Add('--- (3) cmd.exe echo smoke test, stdout/stderr redirected to files (the fix under test) ---')
+        $diagDir = Join-Path $EvidenceDir 'conpty-diag-redirect'
+        New-Item -ItemType Directory -Force -Path $diagDir | Out-Null
+        $out3 = Join-Path $diagDir 'stdout.txt'
+        $err3 = Join-Path $diagDir 'stderr.txt'
+        Write-Utf8NoBom -Path $out3 -Content ''
+        Write-Utf8NoBom -Path $err3 -Content ''
+        $p3 = New-ConPtyProcess -Exe $comspec3 -Arguments '/c "echo CONPTY_REDIRECT_OK & echo CONPTY_REDIRECT_ERR 1>&2 & exit 7"' `
+            -Columns 120 -Rows 30 -StdoutRedirectPath $out3 -StderrRedirectPath $err3
+        $lines.Add("Started=$($p3.Started) LastError=$($p3.LastError) ProcessId=$($p3.ProcessId)")
+        if ($p3.Started) {
+            $exited3 = $p3.WaitForExit(8000)
+            Start-Sleep -Milliseconds 300
+            $stdoutText3 = Get-Content -LiteralPath $out3 -Raw -ErrorAction SilentlyContinue
+            $stderrText3 = Get-Content -LiteralPath $err3 -Raw -ErrorAction SilentlyContinue
+            $lines.Add("exited=$exited3 exitCode=$(if ($exited3) { $p3.ExitCode } else { 'n/a' })")
+            $lines.Add("stdoutFile=[$stdoutText3] stderrFile=[$stderrText3]")
+            if (-not $exited3) { $p3.Kill() }
+            try { $p3.Dispose() } catch { }
+        }
+    }
+    catch {
+        $lines.Add("EXCEPTION in probe (3): $($_.Exception.Message)")
+    }
+
     Write-Utf8NoBom -Path (Join-Path $EvidenceDir 'conpty-diag.txt') -Content ($lines -join "`n")
 }
 
@@ -749,6 +871,15 @@ function Invoke-ConPtyDiagnostics {
 # TP-004 / TP-006 — one long-lived session: the first prompt (TP-004's
 # content/timing/nothing-on-stdout-yet clause) plus all four scheduled
 # prompts through 45s and the final stop-and-exit (TP-006).
+#
+# Sixth Windows round (issue #25): reads $Exe's stderr/stdout off the real,
+# independently-redirected files (StdoutRedirectPath/StderrRedirectPath -
+# see the Start() doc comment) instead of the merged ConPTY transcript the
+# first five rounds depended on and which never delivered $Exe's actual
+# character output on this image. Stdin is still the genuine console handle
+# - only where stdout/stderr are read from changed. The transcript is still
+# captured to disk (RawOutputPath) as a diagnostic, but nothing below is
+# decided from it any more.
 # ---------------------------------------------------------------------------
 function Invoke-ConPty004006Probe {
     param(
@@ -764,17 +895,28 @@ function Invoke-ConPty004006Probe {
         PromptTimestampsSec       = @()
         FirstPromptText           = $null
         GridSeenBeforeFirstPrompt = $false
+        StdoutBytesAtFirstPrompt  = $null
         MaxGapAfterFirstPromptSec = $null
         StillRunningAfterFourth   = $false
         StopExitCode              = $null
         StopLatencyMs             = $null
         RawOutputPath             = $null
-        TotalBytesRead            = $null
-        ReaderReadCallCount       = $null
+        StdoutPath                = $null
+        StderrPath                = $null
     }
 
+    $rawDir = Join-Path $EvidenceDir 'runs/TP-004-006-conpty'
+    New-Item -ItemType Directory -Force -Path $rawDir | Out-Null
+    $out = Join-Path $rawDir 'stdout.txt'
+    $err = Join-Path $rawDir 'stderr.txt'
+    Write-Utf8NoBom -Path $out -Content ''
+    Write-Utf8NoBom -Path $err -Content ''
+    $result.StdoutPath = $out
+    $result.StderrPath = $err
+
     $proc = New-ConPtyProcess -Exe $Exe -Arguments ('"' + $FixtureFile + '"') `
-        -EnvVars @{ SUDOKU_DIAG_MIN_SOLVE_MS = $HookMs } -Columns 200 -Rows 40
+        -EnvVars @{ SUDOKU_DIAG_MIN_SOLVE_MS = $HookMs } -Columns 200 -Rows 40 `
+        -StdoutRedirectPath $out -StderrRedirectPath $err
     if (-not $proc -or -not $proc.Started) {
         $result.StartError = if ($proc) { $proc.LastError } else { 'New-ConPtyProcess returned nothing' }
         return $result
@@ -788,23 +930,27 @@ function Invoke-ConPty004006Probe {
     # leaves margin without letting a stuck run hold the CI job open.
     while ($sw.Elapsed.TotalSeconds -lt 55 -and $seenTimestamps.Count -lt 4) {
         Start-Sleep -Milliseconds 200
-        $clean = Remove-AnsiCodes $proc.PeekOutput()
-        $matches = [regex]::Matches($clean, 'Still working \(\d+s elapsed\)\.')
+        $errText = Get-Content -LiteralPath $err -Raw -ErrorAction SilentlyContinue
+        if (-not $errText) { $errText = '' }
+        $matches = [regex]::Matches($errText, 'Still working \(\d+s elapsed\)\.')
         for ($i = $seenTimestamps.Count; $i -lt $matches.Count; $i++) {
             $seenTimestamps.Add([math]::Round($sw.Elapsed.TotalSeconds, 2))
+            if ($i -eq 0) { $result.StdoutBytesAtFirstPrompt = Get-RedirectedFileLength -Path $out }
         }
     }
     $result.PromptTimestampsSec = @($seenTimestamps)
 
-    $full = Remove-AnsiCodes $proc.PeekOutput()
+    $errFull = Get-Content -LiteralPath $err -Raw -ErrorAction SilentlyContinue
+    if (-not $errFull) { $errFull = '' }
     if ($seenTimestamps.Count -ge 1) {
-        $firstIdx = $full.IndexOf('Still working')
+        $firstIdx = $errFull.IndexOf('Still working')
         if ($firstIdx -ge 0) {
-            $endIdx = $full.IndexOf("`n", $firstIdx)
-            $result.FirstPromptText = if ($endIdx -gt $firstIdx) { $full.Substring($firstIdx, $endIdx - $firstIdx).TrimEnd("`r") } else { $full.Substring($firstIdx).TrimEnd("`r", "`n") }
-            $beforeFirst = $full.Substring(0, $firstIdx)
-            $result.GridSeenBeforeFirstPrompt = [bool]($beforeFirst -match '\+-------\+')
+            $endIdx = $errFull.IndexOf("`n", $firstIdx)
+            $result.FirstPromptText = if ($endIdx -gt $firstIdx) { $errFull.Substring($firstIdx, $endIdx - $firstIdx).TrimEnd("`r") } else { $errFull.Substring($firstIdx).TrimEnd("`r", "`n") }
         }
+        # A real, independently-captured stream now, not an inference from
+        # transcript ordering (see the "sixth Windows round" comment above).
+        $result.GridSeenBeforeFirstPrompt = ($result.StdoutBytesAtFirstPrompt -gt 0)
     }
 
     if ($seenTimestamps.Count -ge 2) {
@@ -826,10 +972,6 @@ function Invoke-ConPty004006Probe {
     if (-not $exited) { $proc.Kill() }
 
     Start-Sleep -Milliseconds 200
-    $result.TotalBytesRead = $proc.TotalBytesRead
-    $result.ReaderReadCallCount = $proc.ReaderReadCallCount
-    $rawDir = Join-Path $EvidenceDir 'runs/TP-004-006-conpty'
-    New-Item -ItemType Directory -Force -Path $rawDir | Out-Null
     $rawPath = Join-Path $rawDir 'transcript.txt'
     Write-Utf8NoBom -Path $rawPath -Content (Remove-AnsiCodes $proc.PeekOutput())
     Write-Utf8NoBom -Path (Join-Path $rawDir 'transcript-raw-escaped.txt') -Content (ConvertTo-VisibleEscapes $proc.PeekOutput())
@@ -843,6 +985,11 @@ function Invoke-ConPty004006Probe {
 # TP-005 — a dedicated, shorter session: respond at the *first* prompt
 # specifically (TP-005's own wording), not the fourth, and measure the
 # response-to-exit latency RTVM-203/TP-005 bound at 1.0s.
+#
+# Sixth Windows round: same StdoutRedirectPath/StderrRedirectPath change as
+# Invoke-ConPty004006Probe above - "stdout stayed empty" is now a real
+# byte-length check on an independently-captured file, not an inference
+# from the merged transcript.
 # ---------------------------------------------------------------------------
 function Invoke-ConPty005Probe {
     param(
@@ -853,36 +1000,40 @@ function Invoke-ConPty005Probe {
     )
 
     $result = [ordered]@{
-        Started           = $false
-        StartError        = $null
+        Started            = $false
+        StartError         = $null
         FirstPromptSeconds = $null
-        StopExitCode      = $null
-        StopLatencyMs     = $null
-        AbandonedTextSeen = $false
-        StdoutStayedEmpty = $null
-        RawOutputPath     = $null
-        TotalBytesRead    = $null
-        ReaderReadCallCount = $null
+        StopExitCode       = $null
+        StopLatencyMs      = $null
+        AbandonedTextSeen  = $false
+        StdoutStayedEmpty  = $null
+        RawOutputPath      = $null
+        StdoutPath         = $null
+        StderrPath         = $null
     }
 
+    $rawDir = Join-Path $EvidenceDir 'runs/TP-005-conpty'
+    New-Item -ItemType Directory -Force -Path $rawDir | Out-Null
+    $out = Join-Path $rawDir 'stdout.txt'
+    $err = Join-Path $rawDir 'stderr.txt'
+    Write-Utf8NoBom -Path $out -Content ''
+    Write-Utf8NoBom -Path $err -Content ''
+    $result.StdoutPath = $out
+    $result.StderrPath = $err
+
     $proc = New-ConPtyProcess -Exe $Exe -Arguments ('"' + $FixtureFile + '"') `
-        -EnvVars @{ SUDOKU_DIAG_MIN_SOLVE_MS = $HookMs } -Columns 200 -Rows 40
+        -EnvVars @{ SUDOKU_DIAG_MIN_SOLVE_MS = $HookMs } -Columns 200 -Rows 40 `
+        -StdoutRedirectPath $out -StderrRedirectPath $err
     if (-not $proc -or -not $proc.Started) {
         $result.StartError = if ($proc) { $proc.LastError } else { 'New-ConPtyProcess returned nothing' }
         return $result
     }
     $result.Started = $true
 
-    $sw = [System.Diagnostics.Stopwatch]::StartNew()
-    $seen = $false
-    while ($sw.Elapsed.TotalSeconds -lt 25 -and -not $seen) {
-        Start-Sleep -Milliseconds 150
-        $clean = Remove-AnsiCodes $proc.PeekOutput()
-        if ($clean -match 'Still working \(\d+s elapsed\)\.') { $seen = $true }
-    }
+    $wait = Wait-ForRedirectedTextMatch -Path $err -Pattern 'Still working \(\d+s elapsed\)\.' -TimeoutMs 25000 -PollMs 150
 
-    if ($seen) {
-        $result.FirstPromptSeconds = [math]::Round($sw.Elapsed.TotalSeconds, 2)
+    if ($wait.Matched) {
+        $result.FirstPromptSeconds = [math]::Round($wait.ElapsedMs / 1000.0, 2)
         $stopSw = [System.Diagnostics.Stopwatch]::StartNew()
         [void]$proc.WriteInput("s`r")
         $exited = $proc.WaitForExit(5000)
@@ -893,15 +1044,12 @@ function Invoke-ConPty005Probe {
         }
         if (-not $exited) { $proc.Kill() }
         Start-Sleep -Milliseconds 200
-        $final = Remove-AnsiCodes $proc.PeekOutput()
-        $result.AbandonedTextSeen = [bool]($final -match '(?i)abandoned at')
-        $result.StdoutStayedEmpty = -not [bool]($final -match '\+-------\+')
+        $finalErr = Get-Content -LiteralPath $err -Raw -ErrorAction SilentlyContinue
+        if (-not $finalErr) { $finalErr = '' }
+        $result.AbandonedTextSeen = [bool]($finalErr -match '(?i)abandoned at')
+        $result.StdoutStayedEmpty = ((Get-RedirectedFileLength -Path $out) -eq 0)
     }
 
-    $result.TotalBytesRead = $proc.TotalBytesRead
-    $result.ReaderReadCallCount = $proc.ReaderReadCallCount
-    $rawDir = Join-Path $EvidenceDir 'runs/TP-005-conpty'
-    New-Item -ItemType Directory -Force -Path $rawDir | Out-Null
     $rawPath = Join-Path $rawDir 'transcript.txt'
     Write-Utf8NoBom -Path $rawPath -Content (Remove-AnsiCodes $proc.PeekOutput())
     Write-Utf8NoBom -Path (Join-Path $rawDir 'transcript-raw-escaped.txt') -Content (ConvertTo-VisibleEscapes $proc.PeekOutput())
