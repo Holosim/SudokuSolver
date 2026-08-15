@@ -13,6 +13,7 @@
 - [checkout -B keeps a dirty worktree](checkout-b-keeps-dirty-worktree.md) — switching branches with `checkout -B` doesn't discard a prior scratch branch's staged resolution; `git reset --hard` first, then restore your backed-up resolution.
 - [Append-conflict closing-brace suffix](append-conflict-closing-brace-suffix.md) — two branches appending `TEST_METHOD`s to one file: git factors the identical trailing braces out, so the first side's last method silently needs its `}` put back.
 - [Test-code-only merge still needs regression](test-code-only-merge-still-needs-regression.md) — #16: new `TEST_METHOD`s with zero `src/` change is a real code merge, not the docs-only carve-out; don't waive the regression-testing note.
+- [RTVM promoted ahead of branch merge](rtvm-promoted-ahead-of-branch-merge.md) — #19: Systems Engineer pushed the RTVM promotion straight to `main` before the branch (real, unmerged PowerShell harness code) was merged; check the full branch diff, not just `docs/`, before reaching for the fast-path label.
 
 ## Build & toolchain notes
 
