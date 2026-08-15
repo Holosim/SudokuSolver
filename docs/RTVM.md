@@ -84,8 +84,8 @@ Blocked / Withdrawn.
 | RTVM-402 | For the `NoSolution` outcome a plain statement that the puzzle has no solution is written to stdout, and no grid is written. | SN-3, SN-4 | Test (TP-402) | In Test | `481c726` |
 | RTVM-403 | For the `InvalidInput` outcome a specific human-readable diagnostic naming the fault is written to **stderr**, and nothing is written to stdout. | SN-4 | Test (TP-403) | Verified | `139d41a` |
 | RTVM-404 | For the `Aborted` outcome a message stating the solve was abandoned at the user's request is written to **stderr**, and nothing is written to stdout. | SN-5 | Test (TP-404) | In Test | `2ca7deb` |
-| RTVM-405 | The process exit code is `0` for `Solved` and `SolvedNotUnique`, `1` for `InvalidInput`, `2` for `NoSolution`, `3` for `Aborted`, with no other exit code reachable. | SN-8, SN-4 | Test (TP-405) | Approved | |
-| RTVM-406 | Across every reachable outcome, stdout carries only the result (grid, non-unique note, no-solution statement). No prompt text, no diagnostic, and no progress output ever reaches stdout. | SN-8 | Test (TP-406) | Approved | |
+| RTVM-405 | The process exit code is `0` for `Solved` and `SolvedNotUnique`, `1` for `InvalidInput`, `2` for `NoSolution`, `3` for `Aborted`, with no other exit code reachable. | SN-8, SN-4 | Test (TP-405) | In Test | |
+| RTVM-406 | Across every reachable outcome, stdout carries only the result (grid, non-unique note, no-solution statement). No prompt text, no diagnostic, and no progress output ever reaches stdout. | SN-8 | Test (TP-406) | In Test | |
 | **NFR — non-functional (§4.4, §5)** | | | | | |
 | RTVM-500 | Any standard 9×9 puzzle, including a hard 17-clue grid, is solved in under 10 s wall clock on a typical desktop (reference machine defined in §6.3). | SN-5 | Test (TP-500) | Verified | `699abde` |
 | RTVM-501 | The first progress prompt is emitted when the solve has been running for 15 s, within a tolerance of ±1.0 s. | SN-5 | Test (TP-501) | In Test | `2ca7deb` |
@@ -1536,7 +1536,7 @@ yet.
 
 | Req | Executed here and passed | Still outstanding |
 | --- | --- | --- |
-| RTVM-300 | TP-300's **type-level half**, in full. The five factories yield five distinct outcomes; every report's payload matches the §2.4 invariant table (`hasGrid()` ⇔ `outcomeCarriesGrid()`, `hasFault()` ⇔ `outcomeCarriesFault()`, never both); asking for a payload the outcome does not carry returns an empty stand-in rather than undefined behaviour (RTVM-505). "Never none" and "never two" are unrepresentable — enforced by `static_assert` plus two `default`-less switches, and confirmed by mutation (below) rather than by a green build | TP-300's **whole-run half** — "drive the application once for each of the five fixture classes … expect exactly one outcome and the five to be distinct". Not runnable until every outcome exists end to end; it is executed under [RTVM-405] (#18), as this issue's description already stated. Plus the MSVC re-execution (V-1) |
+| RTVM-300 | TP-300's **type-level half**, in full. The five factories yield five distinct outcomes; every report's payload matches the §2.4 invariant table (`hasGrid()` ⇔ `outcomeCarriesGrid()`, `hasFault()` ⇔ `outcomeCarriesFault()`, never both); asking for a payload the outcome does not carry returns an empty stand-in rather than undefined behaviour (RTVM-505). "Never none" and "never two" are unrepresentable — enforced by `static_assert` plus two `default`-less switches, and confirmed by mutation (below) rather than by a green build. **TP-300's whole-run half now discharged too** ([RTVM-405]/[RTVM-406], issue #18, §9.29): all five fixture classes driven once each, exactly one outcome apiece, the five pairwise distinct | Only the MSVC re-execution remains (V-1) — the whole-run half itself is no longer outstanding |
 | RTVM-301 | TP-301's **property**, against the §6.1 `S-EASY` solution fixture: all `kCellCount` cells of both the `Solved` and the `SolvedNotUnique` report are digits `1..kGridSize`, no empty cell. The falsifiable half passes too — one blanked cell, one out-of-range digit, and the unsolved `P-EASY` grid each report `false`. The Test Engineer independently re-derived the fixtures: `kSolvedEasy`/`kPuzzleEasy` match §6.1 byte for byte, `P-EASY` has exactly 30 givens, and `S-EASY` is a genuine solution (every row, column and box a permutation of 1–9, consistent with every `P-EASY` given) | TP-301 **as worded** names the *solved results* of `P-EASY` and `P-NONUNIQUE`, which need the solver (#8) and non-uniqueness detection (#12). The assertion does not change when they land — the tests take a real `solve()` result and the expectations stay as they are. Plus the MSVC re-execution |
 | RTVM-302 | TP-302's **fault-object clauses**. The `P-CONTRA-ROW` fault is asserted as data — `RowDuplicate`, line 1, digit `5`, cells `r1c1` and `r1c7`, matching TP-104 case 1 exactly. "No pre-formatted English" is asserted structurally rather than by inspection: a structured binding names every member of `InputFault`, all of which are enums, integers, a `char`, `CellRef`s or a `uint32_t`, and the single `std::string` is `path` (empty for any parser-produced fault). 1-based conversion happens in one function per §7 I-16; an out-of-grid coordinate is *not applicable* rather than wrapped (RTVM-505) | TP-302's **parse-driven half** — "parse `P-CONTRA-ROW`" needs RTVM-104 contradiction detection, which is #10's and still `TODO` in `Parser.cpp`. The fault object asserted here **is** the expectation #10 must produce, so that test grows a `parseGrid` call and no new expectations. Plus the MSVC re-execution |
 
@@ -3519,3 +3519,71 @@ stay exactly as recorded in §9.27**: In Test, Commit(s) `2ca7deb`.
 This closes out #17's own chain. #25 remains `status:on-hold` until this
 issue closes (dependency-check.yml releases it), and is what has to land
 before these nine rows can be reconsidered for Verified.
+
+### 9.29 Exit-code mapping and stdout purity tested across all five outcomes ([RTVM-405], [RTVM-406], issue #18)
+
+State at branch `issue-18` (tip `79b30bb`), tested by the Test Engineer
+2026-08-15 — **PASS**. The last of the aggregate assertions: everything
+this issue needed already existed in `Reporter`/`main.cpp` from
+#10/#11/#12/#17 (none of it credited to those issues, per §9.8.4's note
+that DATA-OUT/OUT rows aren't split finer than the RTVM item they
+belong to); this issue's own contribution is the one test method that
+exercises the aggregate, since no prior issue could — TP-405/TP-406 are
+explicitly about the program as a whole, not any one path, and nothing
+runs all five outcomes back to back until every outcome exists.
+
+**What was exercised.**
+
+- **Unit level.** New `TEST_METHOD`
+  `rtvm405and406_exitCodeAndStdoutPurityAcrossAllFiveOutcomeClasses`
+  (`ReporterTests.cpp`) drives the real parse/solve/report pipeline once
+  per TP-300 fixture class (`P-EASY`→`Solved`, `P-NONUNIQUE`→`SolvedNotUnique`,
+  `P-BADCHAR` via real `parseGrid`→`InvalidInput`, `P-UNSOLVABLE`→`NoSolution`,
+  the `Aborted` factory standing in for the stop-response protocol per the
+  precedent `rtvm404_*` already established), asserting the exit-code
+  sequence `0, 0, 1, 2, 3` (RTVM-405), zero occurrences of `Still working`,
+  `abandoned`, `r1c1`, `Error`, `could not` on stdout across all five runs
+  (RTVM-406), and the five outcomes pairwise distinct (TP-300's whole-run
+  half, §9.6's row, discharged above). Full generated-driver suite 67/67
+  (was 63), core-only driver 49/49 (RTVM-903 split intact) — both figures
+  independently reproduced by the Test Engineer, not taken from the
+  Software Engineer's count.
+- **Process level, real binary.** `easy.txt`/`nonunique.txt`/`malformed.txt`/`unsolvable.txt`
+  run directly against the built `SudokuSolver` binary (no shim): exit
+  codes `0/0/1/2` exactly, stdout/stderr byte counts and grep for the five
+  forbidden substrings all matching RTVM-405/406 — including confirming
+  `r1c1` is permitted on **stderr** (the malformed diagnostic) and simply
+  absent from stdout, which is what RTVM-406 actually constrains.
+- **Source cross-check.** `Reporter.cpp`'s outcome→exit-code switch read
+  directly against RTVM-405's text (`Success`→0 covers both `Solved`/
+  `SolvedNotUnique`, `InvalidInput`→1, `NoSolution`→2, `Aborted`→3, no
+  `default` reachable outside the four), and every string `Messages.cpp`
+  produces cross-checked against `docs/SDD.md` §2.8's stream table — no
+  message exists outside it, so this issue's "finding, if any" clause has
+  nothing to report.
+
+| Req | Executed here and passed | Still outstanding |
+| --- | --- | --- |
+| RTVM-405 | TP-405 in full: exit-code sequence `0, 0, 1, 2, 3` across all five outcome classes, unit level and real-binary process level, both independently re-derived by the Test Engineer | The MSVC re-execution (V-1) |
+| RTVM-406 | TP-406 in full: zero forbidden-substring hits on stdout across all five outcomes, unit level and real-binary process level | Same as above |
+| RTVM-300 (piggybacked, not this issue's own row) | TP-300's whole-run half, discharged — see §9.6's row, updated above | V-1 only |
+
+**Scope confirmed out of this issue's reach, not a gap.** TP-405's
+"additionally run the full TP-505 corpus" clause belongs to RTVM-505,
+not this issue. The `Aborted` case on `tests/windows/run-procedures.ps1`
+stays `NOT-RUN`, the same standing TP-004..008 limitation named at
+§9.26/§9.27/§9.28 — not introduced here and not this issue's to close.
+
+**No status promotion to Verified.** Per standing convention, Verified
+needs a trunk commit SHA in addition to full clause execution, and all
+of this evidence is on branch `issue-18`. **RTVM-405 and RTVM-406 move
+Approved → In Test**, Commit(s) left blank pending CI/CD (§5). RTVM-300
+keeps its existing status (**In Test**) and existing Commit(s)
+(`668f9a4`, from #7's merge) unchanged — this issue's whole-run-half
+work discharges the clause §9.6 left outstanding on that row without
+promoting it, per the discharge-not-promotion pattern established at
+§9.11.
+
+**§7 interpretations raised in this thread: none.**
+
+Handed to CI/CD next with `status:ready-for-commit`.
