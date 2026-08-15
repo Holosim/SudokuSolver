@@ -38,6 +38,7 @@
 - [RTVM-507 diagnostic hook verification](rtvm-507-diagnostic-hook-verification.md) — 2026-08-14 PASS, fully runnable on Linux (no Windows needed); the CPU-time-vs-wall-time trick that proves it's real work, not a sleep.
 - [RTVM-203/204 verified](rtvm-203-204-verified.md) — 2026-08-14 PASS; first RTVM-2xx item with real MSVC/vstest trx confirming literal TP timing numbers; branch-ancestry vs. issue-number-order gotcha for the DW-1 fix.
 - [RTVM-004 prompt/abort verified](rtvm004-prompt-abort-verified.md) — 2026-08-14 PASS; timestamped-stderr and named-pipe hand-run technique; post-#24 rule that hand-run evidence alone can't reach Verified once an automated harness exists.
+- [RTVM-405/406 verified](rtvm-405-406-verified.md) — 2026-08-15 PASS; real-binary exit-code re-derivation beyond the unit test, Messages.cpp-vs-§2.8 cross-check, and the TP-405/TP-505 scope line.
 
 ## Recurring failure patterns
 
