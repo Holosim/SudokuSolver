@@ -100,6 +100,9 @@ namespace SudokuTests
         [DllImport("kernel32.dll")]
         private static extern void ClosePseudoConsole(IntPtr hPC);
 
+        [DllImport("kernel32.dll")]
+        private static extern int ResizePseudoConsole(IntPtr hPC, COORD size);
+
         [DllImport("kernel32.dll", SetLastError = true)]
         private static extern bool CloseHandle(IntPtr hObject);
 
@@ -224,6 +227,23 @@ namespace SudokuTests
                 {
                     LastError = "CreatePseudoConsole failed, hresult=0x" + hr.ToString("X8");
                     return false;
+                }
+
+                // Fourth Windows round (issue #25): with FileStream ruled
+                // out (ReadFile/WriteFile see the exact same 16-byte
+                // handshake and nothing else, against two different child
+                // processes, even 55s later), the remaining suspect is
+                // ConPTY session setup itself never being kicked into
+                // rendering past its initial mode-negotiation burst. A
+                // same-size resize immediately after creation is a
+                // documented-by-experience nudge for exactly that failure
+                // mode in other ConPTY host implementations. Best-effort:
+                // if it fails, that is itself useful evidence (recorded),
+                // not a reason to abandon the session.
+                int resizeHr = ResizePseudoConsole(_hPC, size);
+                if (resizeHr != 0)
+                {
+                    LastError = "ResizePseudoConsole (post-create kick) failed, hresult=0x" + resizeHr.ToString("X8") + " - continuing anyway";
                 }
 
                 // ConPTY duplicates these two handles internally; our copies
