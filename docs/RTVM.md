@@ -3749,3 +3749,24 @@ Engineer's resolution — issue #19's section keeps its original 9.29.
 Handed to Test Engineer next for the post-merge regression pass, per
 CI/CD's "regression testing is needed" flag on the commit
 confirmation.
+
+**Follow-up (post-merge regression pass): reconfirmation only, nothing
+promoted.** The Test Engineer ran the requested regression pass against
+trunk (baseline `3e7406a`, current tip `7fa07d4` at the time, 9 commits
+ahead, diff scoped correctly to the merge commit's non-branch parent
+rather than `issue-18`'s own branch tip — see the sibling-branch
+false-positive note the Test Engineer left in their own memory this
+run). Full generated-driver suite 67/67 (same count as the original
+PASS), core-only driver 49/49 (RTVM-903 still intact), all four
+real-binary sample runs byte-identical to the original PASS's numbers,
+and a fresh Windows evidence run at the exact current trunk tip showed
+the same **47/55 PASS, 8 NOT-RUN** shape, same 8 items, same reason
+text as #17's regression pass — TP-405's `Aborted` case included.
+Per [[second-ready-for-rtvm-update-closes-directly]], this is the
+reconfirmation case, not the promotion case: **RTVM-405 and RTVM-406
+stay Verified at `a78f0d2`** (already the terminal status — nothing
+left to discharge on these two rows), and RTVM-300 stays In Test at
+`668f9a4`, both unchanged from the previous follow-up above. No new
+§7 interpretations. Closed directly, no CI/CD hand-off, since the
+regression evidence didn't discharge anything this row was still
+waiting on.
