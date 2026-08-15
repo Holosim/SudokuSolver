@@ -30,6 +30,7 @@
 - [RTVM-405/406 aggregate conformance](rtvm-405-406-aggregate-conformance.md) — issue #18: the exit-code/stream mapping was already complete from earlier issues; the real gap was a missing aggregate test across all five outcomes, and the process-level half was already scripted by someone else.
 - [RTVM-505 needed no code](rtvm-505-no-code-needed.md) — issue #20: the bounded-read cap, byte-oriented parser and main.cpp catch-all already met the corpus's every clause, and the 26-entry TP-505 harness already existed in run-procedures.ps1.
 - [RTVM-904 README worked example](rtvm-904-readme-worked-example.md) — issue #22: capture the "Run" section output from a real g++ build, not §6.2 transcription; and the RTVM-507 no-mention trap is a real one to check for on this kind of doc issue.
+- [Issue #25 ConPTY input gap](rtvm-issue25-conpty-input-gap.md) — TP-004/most of TP-006 genuinely PASS over real ConPTY; TP-005/TP-006-stop have an isolated negative (console-input delivery never works on the hosted image); also a process-gap lesson on silent multi-round work.
 
 ## Process
 
