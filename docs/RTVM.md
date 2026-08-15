@@ -97,11 +97,11 @@ Blocked / Withdrawn.
 | RTVM-507 | The build provides a documented diagnostic means of forcing a solve to run past the prompt thresholds without altering ordinary behaviour, so that RTVM-004…008 and RTVM-501…504 are verifiable end-to-end. It is documented in `docs/SDD.md`, not in the user-facing README, and is inert in normal use. | SN-5 | Test (TP-507) | Verified | `d39eacd` |
 | **DELIV — deliverable requirements (§6). Verified by inspection.** | | | | | |
 | RTVM-900 | The repository contains a committed, openable Visual Studio 2022 solution and project file(s) — not source files alone. (D-1) | SN-7 | Inspection (TP-900) | In Test | `85bab27` |
-| RTVM-901 | A client engineer can clone, open, build, and run the solution in VS 2022 with no setup step that is not written down in the README. (D-2) | SN-7 | Inspection (TP-901) | In Implementation | `85bab27` |
+| RTVM-901 | A client engineer can clone, open, build, and run the solution in VS 2022 with no setup step that is not written down in the README. (D-2) | SN-7 | Inspection (TP-901) | In Test | `85bab27` |
 | RTVM-902 | The solution builds with the stock VS 2022 toolchain and the C++ standard library alone. No third-party library, package manager, or downloaded dependency of any kind. (D-3) | SN-7 | Inspection (TP-902) | Verified | `85bab27` |
 | RTVM-903 | The solver core is a separate compilation unit / module from the console I/O layer and has no dependency on stdin, stdout, stderr, or command-line parsing. The grid dimension appears as a single named constant, not as literal `9`s scattered through the code. (D-4) | SN-7 | Inspection (TP-903) | Verified | `85bab27` |
-| RTVM-904 | The repository carries a README covering how to build, how to run, and the puzzle input format. (D-5) | SN-7 | Inspection (TP-904) | In Implementation | `85bab27` |
-| RTVM-905 | Automated tests are part of the delivered solution and are runnable by the client through a documented command or VS action. (D-6) | SN-7 | Inspection (TP-905) | In Implementation | `85bab27` |
+| RTVM-904 | The repository carries a README covering how to build, how to run, and the puzzle input format. (D-5) | SN-7 | Inspection (TP-904) | In Test | `85bab27` |
+| RTVM-905 | Automated tests are part of the delivered solution and are runnable by the client through a documented command or VS action. (D-6) | SN-7 | Inspection (TP-905) | In Test | `85bab27` |
 | RTVM-906 | The solution targets C++17 and x64, and is a Visual Studio solution only — the repository contains no CMake or other cross-platform build files. (D-7) | SN-7 | Inspection (TP-906) | Verified | `85bab27` |
 | RTVM-907 | Five sample puzzles ship with the solution and are referenced from the README: easy, hard 17-clue, unsolvable, malformed, and non-unique. (§4.2) | SN-1, SN-7 | Inspection (TP-907) | In Test | `85bab27` |
 
@@ -3845,5 +3845,94 @@ reads the branch-tip evidence SHA `662b6ed`; per the a067772 convention
 (§9.14's follow-up), CI/CD's `--no-ff` merge SHA will replace it in the
 Commit(s) column once reported back, without changing the Verified
 status itself.
+
+**§7 interpretations raised in this thread: none.**
+
+### 9.32 README filled in — RTVM-901/904/905 move In Implementation → In Test, RTVM-907's remaining clause closed (issue #22)
+
+This section's number collided with issue #20's independently-cut
+`### 9.31` when both branches were rebased onto the same trunk tip at
+the same time — each claimed the same next-free number at the point it
+was cut, the same shape as §9.30's collision with issue #19. Per that
+precedent, this section is renumbered **9.32** here as the Systems
+Engineer's resolution; issue #20's section keeps its original 9.31.
+
+State at branch `issue-22` (tip `af71da8`), tested by the Test Engineer
+2026-08-15 — **PASS**. This is the last `DELIV` issue; `README.md` moved
+from the #5 scaffold's TODO stubs (§9.2's row) to the seven required
+`docs/SDD.md` §3.4 sections in full. No `src/`/`tests/` path touched —
+`git diff main...issue-22 --stat` shows only `README.md` and Software
+Engineer memory, confirmed independently by the Test Engineer.
+
+**What was closed, per requirement.**
+
+- **RTVM-904 — every TP-904 content clause now executed and passed.**
+  All seven §3.4 sections present in the required order; the "Run"
+  section's worked example byte-diffed against a real rebuild's stdout
+  (338 bytes, identical); the input-format section states the `0`/`.`
+  clause TP-904 checks for specifically, and the cosmetic "givens;" /
+  capitalised "Both" artefact flagged earlier in this thread (§9.5's
+  note, trunk commit `3497383`) is gone — confirmed by reading the
+  current text, not by re-deriving the claim. §3.4's explicit exclusion
+  holds: no mention of RTVM-507 or `SUDOKU_DIAG_MIN_SOLVE_MS` anywhere
+  in `README.md`. **No clause of TP-904 needs the VS 2022 toolchain**,
+  so nothing is left outstanding on this row once a trunk SHA exists.
+- **RTVM-905 — TP-905's real clause (the one §9.2 left outstanding)
+  is now closed with genuine evidence, not a placeholder.** Real
+  Windows evidence for this exact branch tip (run `31866476995`,
+  `af71da8`, `win25-vs2026`) shows `vstest.console.exe` discovery and
+  execution — 67/67 passed — via exactly the command the new README
+  documents, plus Test Explorer named as the interactive route. Nothing
+  left outstanding on this row either.
+- **RTVM-907 — its remaining clause (§9.2: "the README clause — all
+  five named with their expected outcome") is now closed.** All five
+  `samples/*.txt` are named with the outcome each produces, including
+  the `unsolvable.txt` worked example (exit `2`); the fixture clause
+  (90 bytes each, LF, `.gitattributes`-pinned) was reconfirmed
+  unaffected by this diff. Both TP-907 clauses now hold.
+- **RTVM-901 stays partially outstanding — the VS 2022 loader clause
+  is not closed, and this issue cannot close it.** The build clause is
+  real evidence, not a substitute: `Debug|x64` and `Release|x64` both
+  built clean via exactly `msbuild SudokuSolver.sln
+  /p:Configuration=Release /p:Platform=x64` (Debug equivalent) — no
+  restore step, no `/p:` beyond `Configuration`/`Platform` — matching
+  the README character for character, so the "no undocumented manual
+  step" clause holds on the evidence available. `runtime-procedures.txt`
+  still shows the same standing 8-item NOT-RUN gap seen on every
+  regression pass since #19: `TP-900/TP-901`'s "opens in the actual VS
+  2022 IDE with no migration prompt" clause is `vs-instance-enumeration`
+  (§9.4 A-2, reconfirmed at §9.25) — no VS 2022 image on this runner —
+  and `TP-004/005/006/007/008/405/507` are the interactive-protocol
+  driver owned by #25. Neither is introduced by this issue and neither
+  is this issue's to close.
+
+| Req | Executed here and passed | Still outstanding |
+| --- | --- | --- |
+| RTVM-901 | TP-901's build clause, on the real MSVC toolchain, matching the README's documented command exactly | The VS 2022 loader clause (§9.4 A-2) — unautomatable on this runner image, same standing gap since #21 |
+| RTVM-904 | All of TP-904 | — |
+| RTVM-905 | All of TP-905, on real Windows evidence (67/67 via the documented `vstest.console.exe` command) | — |
+| RTVM-907 | All of TP-907 (fixture clause reconfirmed unaffected; README-naming clause now closed) | — |
+
+**Status at hand-off to CI/CD.** Per standing convention, Verified
+needs a trunk commit SHA in addition to full clause execution, and at
+this point all of the evidence above was taken on branch `issue-22`.
+**RTVM-901, RTVM-904 and RTVM-905 move In Implementation → In Test**
+(§5); Commit(s) left unchanged at `85bab27` (the scaffold SHA they
+still sit on) pending CI/CD's merge SHA. **RTVM-907 keeps its existing
+status (In Test) and existing Commit(s) (`85bab27`)** — its clause is
+closed above without a promotion, the same discharge-not-promotion
+pattern established at §9.11: closing a row's last outstanding clause
+moves it forward only as far as the evidence and the recorded SHA
+jointly support, and no SHA for this new work exists on trunk yet.
+
+Once CI/CD records the merge SHA: per
+[[fast-path-promotion-after-sha-recorded]] and
+[[verified-on-first-commit-confirmation-not-gated-by-v1]], RTVM-904,
+RTVM-905 and RTVM-907 have nothing left to discharge and should
+promote straight to Verified on that first commit confirmation.
+RTVM-901 should **not** promote on that same confirmation — its VS
+2022 loader clause is still open, and per
+[[verification-platform-trap]] a fast-path promotion covers only
+clauses actually discharged, not a row's remaining gaps.
 
 **§7 interpretations raised in this thread: none.**
