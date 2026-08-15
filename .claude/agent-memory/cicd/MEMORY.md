@@ -17,6 +17,7 @@
 - [Reset-and-redo beats rebase after a push race](reset-and-redo-beats-rebase-after-push-race.md) — #18: a rejected push after trunk moved should be handled with `reset --hard origin/main` + re-merge, not `git rebase`, which replays the branch's individual commits and reproduces every conflict piecemeal.
 - [Handoff label missed triggers stall-recovery](handoff-label-missed-triggers-stall-recovery.md) — #20: the merge + comment can land fine while the final relabel step doesn't; check `git log` on `main` before assuming a stall-recovery re-trigger means real work is still pending.
 - [Memory-index append conflicts](memory-index-append-conflicts.md) — #22: role `MEMORY.md` index files conflict the same append-only way `docs/RTVM.md` does when trunk and a branch both add a bullet after the same line; resolve as a union, not just a `docs/` special case.
+- [ConPTY harness merge, clean union](conpty-harness-merge-clean-union.md) — #25: a 12-commit branch with 10 in-branch Windows-CI diagnostic rounds still merged with zero conflicts because an in-branch merge-from-main had already absorbed trunk drift; also records the RTVM-004 promotion trigger being spelled out in advance.
 
 ## Build & toolchain notes
 
