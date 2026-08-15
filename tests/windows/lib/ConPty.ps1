@@ -864,6 +864,68 @@ function Invoke-ConPtyDiagnostics {
         $lines.Add("EXCEPTION in probe (3): $($_.Exception.Message)")
     }
 
+    $lines.Add('')
+
+    # (4) Seventh Windows round: probe (3) proved output redirection works;
+    # the sixth round's real TP-005/TP-006 result (SHA 944bf63, workflow
+    # 31886735121) showed TP-004 and three of TP-006's four clauses now
+    # genuinely PASS with real console evidence, but the stop-response
+    # itself was never recognised (StopExitCode/StopLatencyMs both blank -
+    # the process just never exited within the wait window). The merged
+    # transcript for that run shows nothing past ConPTY's own initial
+    # handshake, but that is *expected* given the already-diagnosed broken
+    # render pass on this image and proves nothing about whether the typed
+    # keystroke ever reached the console's input buffer - rendering and
+    # input are separate paths in conhost, and only the former is known
+    # broken here. This probe isolates that specific question: does a byte
+    # written via WriteInput reach a process reading stdin, under the exact
+    # same two-level "ConPTY -> cmd.exe -> reader" plumbing the real
+    # TP-005/TP-006 probes use (StdoutRedirectPath given, so the answer
+    # comes back on an independently-captured file, not the broken
+    # transcript) - using cmd.exe's own `set /p` builtin as the reader
+    # instead of SudokuSolver.exe, so a positive or negative result here
+    # attributes cleanly to the input path itself, not to anything specific
+    # to the product under test.
+    try {
+        $comspec4 = $env:ComSpec
+        if (-not $comspec4) { $comspec4 = 'C:\Windows\System32\cmd.exe' }
+        $lines.Add('--- (4) console input round-trip test (WriteInput -> nested cmd.exe "set /p"), same redirect-wrapper shape as the real TP-004..006 probes ---')
+        $diagDir4 = Join-Path $EvidenceDir 'conpty-diag-input'
+        New-Item -ItemType Directory -Force -Path $diagDir4 | Out-Null
+        $out4 = Join-Path $diagDir4 'stdout.txt'
+        $err4 = Join-Path $diagDir4 'stderr.txt'
+        Write-Utf8NoBom -Path $out4 -Content ''
+        Write-Utf8NoBom -Path $err4 -Content ''
+        # enabledelayedexpansion + !REPLY! (not %REPLY%): cmd.exe expands
+        # %-variables once, when it first parses the whole line, which is
+        # before `set /p` has run - the classic reason "set /p X=&echo %X%"
+        # on one line prints the *old* value. !REPLY! defers the expansion
+        # to execution time, after set /p has actually assigned it.
+        $p4 = New-ConPtyProcess -Exe $comspec4 `
+            -Arguments '/c "setlocal enabledelayedexpansion & set /p REPLY=& echo GOT:!REPLY!"' `
+            -Columns 120 -Rows 30 -StdoutRedirectPath $out4 -StderrRedirectPath $err4
+        $lines.Add("Started=$($p4.Started) LastError=$($p4.LastError) ProcessId=$($p4.ProcessId)")
+        if ($p4.Started) {
+            # `set /p` needs a moment to actually be waiting on stdin before
+            # a write is guaranteed to be read as its answer rather than
+            # raced against cmd.exe's own startup.
+            Start-Sleep -Milliseconds 1000
+            [void]$p4.WriteInput("hello`r")
+            $exited4 = $p4.WaitForExit(5000)
+            Start-Sleep -Milliseconds 300
+            $stdoutText4 = Get-Content -LiteralPath $out4 -Raw -ErrorAction SilentlyContinue
+            if (-not $stdoutText4) { $stdoutText4 = '' }
+            $lines.Add("exited=$exited4 exitCode=$(if ($exited4) { $p4.ExitCode } else { 'n/a' })")
+            $lines.Add("stdoutFile=[$stdoutText4]")
+            $lines.Add("inputReachedAndWasRead=$([bool]($stdoutText4 -match 'GOT:hello'))")
+            if (-not $exited4) { $p4.Kill() }
+            try { $p4.Dispose() } catch { }
+        }
+    }
+    catch {
+        $lines.Add("EXCEPTION in probe (4): $($_.Exception.Message)")
+    }
+
     Write-Utf8NoBom -Path (Join-Path $EvidenceDir 'conpty-diag.txt') -Content ($lines -join "`n")
 }
 
@@ -900,6 +962,7 @@ function Invoke-ConPty004006Probe {
         StillRunningAfterFourth   = $false
         StopExitCode              = $null
         StopLatencyMs             = $null
+        PromptsAfterStopAttempt   = $null
         RawOutputPath             = $null
         StdoutPath                = $null
         StderrPath                = $null
@@ -962,12 +1025,33 @@ function Invoke-ConPty004006Probe {
 
     # TP-006's closing step: send the stop response and confirm exit 3.
     $stopSw = [System.Diagnostics.Stopwatch]::StartNew()
+    $countAtStop = $seenTimestamps.Count
     [void]$proc.WriteInput("s`r")
     $exited = $proc.WaitForExit(5000)
     $stopSw.Stop()
     if ($exited) {
         $result.StopExitCode = $proc.ExitCode
         $result.StopLatencyMs = [math]::Round($stopSw.Elapsed.TotalMilliseconds, 1)
+    }
+    else {
+        # Distinguishes "the stop response was never recognised" (the
+        # process just keeps running and prompting on its normal schedule,
+        # as if nothing had been typed) from "recognised but slow to
+        # actually exit" - both look identical as a bare WaitForExit
+        # timeout otherwise, and the issue's own instruction is a specific
+        # negative result, not a vague one. Watches for one more scheduled
+        # prompt (~10s after the fourth, per RTVM-502) rather than giving
+        # up the instant the 5s exit-wait elapses.
+        $keepWatching = [System.Diagnostics.Stopwatch]::StartNew()
+        $result.PromptsAfterStopAttempt = 0
+        while ($keepWatching.Elapsed.TotalSeconds -lt 15 -and -not $proc.HasExited) {
+            Start-Sleep -Milliseconds 200
+            $errText2 = Get-Content -LiteralPath $err -Raw -ErrorAction SilentlyContinue
+            if (-not $errText2) { $errText2 = '' }
+            $countNow = ([regex]::Matches($errText2, 'Still working \(\d+s elapsed\)\.')).Count
+            $result.PromptsAfterStopAttempt = $countNow - $countAtStop
+            if ($result.PromptsAfterStopAttempt -gt 0) { break }
+        }
     }
     if (-not $exited) { $proc.Kill() }
 

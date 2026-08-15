@@ -644,8 +644,8 @@ Invoke-Section -Name 'TP-004,TP-006' -Body {
     Add-Check -Checks $Checks -Tp 'TP-006' -Case 'stop-response-exit-3' `
         -State $(if ($stopOk) { 'PASS' } else { 'FAIL' }) `
         -Expected 'sending the stop response over the console input pipe ends the process with exit code 3' `
-        -Observed "stopExitCode=$($r.StopExitCode) stopLatencyMs=$($r.StopLatencyMs)" `
-        -Reason $(if (-not $stopOk) { "see $($r.RawOutputPath | Split-Path -Leaf) in the artifact: $($r.RawOutputPath)" } else { $null })
+        -Observed "stopExitCode=$($r.StopExitCode) stopLatencyMs=$($r.StopLatencyMs) promptsAfterStopAttempt=$($r.PromptsAfterStopAttempt)" `
+        -Reason $(if (-not $stopOk) { "see $($r.RawOutputPath | Split-Path -Leaf) in the artifact: $($r.RawOutputPath) - promptsAfterStopAttempt>0 means the process kept running its normal schedule (the stop response was never recognised, not just slow to act on); 0 means it stopped prompting without exiting either (see conpty-diag.txt probe (4) for whether input delivery itself works on this image)" } else { $null })
 }
 
 # ===========================================================================
