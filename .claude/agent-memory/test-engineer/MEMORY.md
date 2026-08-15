@@ -40,6 +40,7 @@
 - [RTVM-004 prompt/abort verified](rtvm004-prompt-abort-verified.md) — 2026-08-14 PASS; timestamped-stderr and named-pipe hand-run technique; post-#24 rule that hand-run evidence alone can't reach Verified once an automated harness exists.
 - [RTVM-504 verified](rtvm-504-verified.md) — 2026-08-15 PASS on real Windows evidence; mutating the harness's own ceiling constants to prove TP-504's checks aren't vacuous; a Linux-only flaky launch error that isn't a regression.
 - [RTVM-504 regression pass, #19](rtvm-504-regression-pass-19.md) — 2026-08-15 PASS confirming the harness's first landing on `main`; the repeatable 8-item NOT-RUN signature to check future passes against until #25 lands.
+- [RTVM-405/406 verified](rtvm-405-406-verified.md) — 2026-08-15 PASS; real-binary exit-code re-derivation beyond the unit test, Messages.cpp-vs-§2.8 cross-check, and the TP-405/TP-505 scope line.
 
 ## Recurring failure patterns
 
