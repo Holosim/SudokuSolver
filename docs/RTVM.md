@@ -54,11 +54,11 @@ Blocked / Withdrawn.
 | RTVM-001 | On launch the application begins solving immediately. It presents no menu, no mode selection, and asks the user nothing before reading the puzzle. | SN-1, SN-6 | Test (TP-001) | In Test | `62cbb1e` |
 | RTVM-002 | If a first command-line argument is present it is treated as a path to a puzzle file, and the puzzle is read from that file. Any further arguments are ignored. | SN-1, SN-8 | Test (TP-002) | In Test | `62cbb1e` |
 | RTVM-003 | If no command-line argument is present the puzzle is read from standard input. | SN-1, SN-8 | Test (TP-003) | In Test | `62cbb1e` |
-| RTVM-004 | While a solve is still running at a prompt point (RTVM-501/502) the application writes a progress prompt to stderr stating (a) that it is still working, (b) the whole seconds elapsed, (c) how to stop, and (d) that no response is required. | SN-5 | Test (TP-004) | In Test | |
-| RTVM-005 | If the user gives the documented stop response at any prompt, the application stops the solve, reports that it was abandoned at the user's request, and exits with code `3`. | SN-5 | Test (TP-005) | In Test | |
-| RTVM-006 | No prompt requires a response. The application never blocks on reading a prompt reply: continuing is the default and an unanswered prompt simply lapses at the next prompt point. | SN-5, SN-8 | Test (TP-006) | In Test | |
-| RTVM-007 | If the solve finishes while a prompt is outstanding, the result is printed and the application exits normally. It does not wait for a reply to the lapsed prompt. | SN-5 | Test (TP-007) | In Test | |
-| RTVM-008 | An invocation with no interactive console (stdin redirected from a file or pipe, stdout/stderr redirected) is never blocked or delayed by the prompt mechanism, and always terminates with a result and an exit code. | SN-5, SN-8 | Test (TP-008) | In Test | |
+| RTVM-004 | While a solve is still running at a prompt point (RTVM-501/502) the application writes a progress prompt to stderr stating (a) that it is still working, (b) the whole seconds elapsed, (c) how to stop, and (d) that no response is required. | SN-5 | Test (TP-004) | In Test | `2ca7deb` |
+| RTVM-005 | If the user gives the documented stop response at any prompt, the application stops the solve, reports that it was abandoned at the user's request, and exits with code `3`. | SN-5 | Test (TP-005) | In Test | `2ca7deb` |
+| RTVM-006 | No prompt requires a response. The application never blocks on reading a prompt reply: continuing is the default and an unanswered prompt simply lapses at the next prompt point. | SN-5, SN-8 | Test (TP-006) | In Test | `2ca7deb` |
+| RTVM-007 | If the solve finishes while a prompt is outstanding, the result is printed and the application exits normally. It does not wait for a reply to the lapsed prompt. | SN-5 | Test (TP-007) | In Test | `2ca7deb` |
+| RTVM-008 | An invocation with no interactive console (stdin redirected from a file or pipe, stdout/stderr redirected) is never blocked or delayed by the prompt mechanism, and always terminates with a result and an exit code. | SN-5, SN-8 | Test (TP-008) | In Test | `2ca7deb` |
 | RTVM-009 | A file argument that cannot be opened or read is reported as a specific diagnostic naming the path and the reason, and exits with code `1`. | SN-4, SN-8 | Test (TP-009) | Verified | `139d41a` |
 | **DATA-IN — internal representation of input (§4.2)** | | | | | |
 | RTVM-100 | The application parses 9 lines of 9 characters into an internal 9×9 grid in which each cell holds either a given digit 1–9 or "empty". | SN-1, SN-2 | Test (TP-100) | In Test | `3bc1b22` |
@@ -83,14 +83,14 @@ Blocked / Withdrawn.
 | RTVM-401 | For the `SolvedNotUnique` outcome the grid is followed on stdout by a statement that the solution shown is not unique. | SN-3 | Test (TP-401) | Verified | `7ef04ce` |
 | RTVM-402 | For the `NoSolution` outcome a plain statement that the puzzle has no solution is written to stdout, and no grid is written. | SN-3, SN-4 | Test (TP-402) | In Test | `481c726` |
 | RTVM-403 | For the `InvalidInput` outcome a specific human-readable diagnostic naming the fault is written to **stderr**, and nothing is written to stdout. | SN-4 | Test (TP-403) | Verified | `139d41a` |
-| RTVM-404 | For the `Aborted` outcome a message stating the solve was abandoned at the user's request is written to **stderr**, and nothing is written to stdout. | SN-5 | Test (TP-404) | In Test | |
+| RTVM-404 | For the `Aborted` outcome a message stating the solve was abandoned at the user's request is written to **stderr**, and nothing is written to stdout. | SN-5 | Test (TP-404) | In Test | `2ca7deb` |
 | RTVM-405 | The process exit code is `0` for `Solved` and `SolvedNotUnique`, `1` for `InvalidInput`, `2` for `NoSolution`, `3` for `Aborted`, with no other exit code reachable. | SN-8, SN-4 | Test (TP-405) | Approved | |
 | RTVM-406 | Across every reachable outcome, stdout carries only the result (grid, non-unique note, no-solution statement). No prompt text, no diagnostic, and no progress output ever reaches stdout. | SN-8 | Test (TP-406) | Approved | |
 | **NFR — non-functional (§4.4, §5)** | | | | | |
 | RTVM-500 | Any standard 9×9 puzzle, including a hard 17-clue grid, is solved in under 10 s wall clock on a typical desktop (reference machine defined in §6.3). | SN-5 | Test (TP-500) | Verified | `699abde` |
-| RTVM-501 | The first progress prompt is emitted when the solve has been running for 15 s, within a tolerance of ±1.0 s. | SN-5 | Test (TP-501) | In Test | |
-| RTVM-502 | Progress prompts repeat every 10 s thereafter — at 25 s, 35 s, 45 s and so on — each within ±1.0 s of its nominal time, for as long as the solve is running. | SN-5 | Test (TP-502) | In Test | |
-| RTVM-503 | The solve does not pause while a prompt is displayed or while a reply is awaited: the RTVM-204 search-step count strictly increases across every prompt window. | SN-5 | Test (TP-503) | In Test | |
+| RTVM-501 | The first progress prompt is emitted when the solve has been running for 15 s, within a tolerance of ±1.0 s. | SN-5 | Test (TP-501) | In Test | `2ca7deb` |
+| RTVM-502 | Progress prompts repeat every 10 s thereafter — at 25 s, 35 s, 45 s and so on — each within ±1.0 s of its nominal time, for as long as the solve is running. | SN-5 | Test (TP-502) | In Test | `2ca7deb` |
+| RTVM-503 | The solve does not pause while a prompt is displayed or while a reply is awaited: the RTVM-204 search-step count strictly increases across every prompt window. | SN-5 | Test (TP-503) | In Test | `2ca7deb` |
 | RTVM-504 | The application is never silent while working. From launch to exit the user always has either a result, a diagnostic, or a prompt. The longest permitted interval with no output on either stream is bounded by the RTVM-501 first-prompt threshold **before** the first prompt (15 s + 1.0 s tolerance = 16.0 s) and by the RTVM-502 repeat interval **thereafter** (10 s + 1.0 s tolerance = 11.0 s). See §7 I-12. | SN-5 | Test (TP-504) | Approved | |
 | RTVM-505 | No input causes an unhandled exception, an access violation, an assertion dialog, or a non-zero exit code outside the set in RTVM-405. Every run terminates. | SN-4 | Test (TP-505) | Approved | |
 | RTVM-506 | The delivered executable is a self-contained x64 Windows console application that runs on a clean Windows machine with no installed runtime or third-party component beyond what a stock Windows install provides. | SN-6, SN-7 | Test (TP-506) | Verified | `6166cb4` |
@@ -3440,3 +3440,41 @@ outstanding item, not the trunk SHA.
 **§7 interpretations raised in this thread: none.**
 
 Handed to CI/CD next with `status:ready-for-commit`.
+
+### 9.27 CI/CD merge recorded, RTVM-004/005/006/007/008/404/501/502/503 held at In Test (issue #17, commit confirmation)
+
+CI/CD merged `issue-17` (`7fd699b`) into `main` at merge commit
+**`2ca7deb`** (`--no-ff`), then flagged this issue as **needing
+regression testing** — a real product-code trunk merge
+(`StdinChannel.cpp`, `SolveSession.cpp`, `Messages.cpp`, `Reporter.cpp`,
+`ReporterTests.cpp` all changed), not the docs-only fast path.
+
+`2ca7deb` recorded in the Commit(s) column for all nine rows this issue
+owns (§5). **Status stays In Test, not Verified** — this is the standing
+ruling §9.26 already wrote for this exact hand-back, not a fresh
+decision: per §9.8.1, a UI/OUT row must not reach Verified on hand-run
+evidence alone once #24's harness exists, and the `Console`/tty
+`StdinKind` branch specifically has zero automated coverage of any kind.
+That's why these nine rows don't follow RTVM-203/204's
+"first-commit-confirmation promotes straight to Verified"
+precedent ([[verified-on-first-commit-confirmation-not-gated-by-v1]]) —
+that precedent applies when genuine MSVC `TEST_METHOD` evidence backs
+the row; here the one code path this issue could not exercise anywhere
+in the pipeline is exactly the one the rows still name as verification
+method. Same shape as RTVM-001/002/003 (§9.8.1 itself, commit `62cbb1e`
+recorded, status held at In Test pending #24 — now #25 for the
+Console-specific gap).
+
+CI/CD's merge comment also confirmed `main` already contained an
+accidental direct-push/revert pair (`8e8baa0`/`4fbf498`) of this same
+promotion, both resolved before the merge started — not a discrepancy
+to reconcile, just noted for the record.
+
+Outstanding item for these nine rows remains unchanged: **#25** (the
+ConPTY/console feasibility spike, Finish-Start on #17) is what has to
+land before the `Console` shape gets any automated coverage and these
+rows can be reconsidered for Verified.
+
+**§7 interpretations raised in this thread: none.**
+
+Handed to Test Engineer next for the regression pass CI/CD requested.
