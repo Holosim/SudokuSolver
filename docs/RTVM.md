@@ -97,13 +97,13 @@ Blocked / Withdrawn.
 | RTVM-507 | The build provides a documented diagnostic means of forcing a solve to run past the prompt thresholds without altering ordinary behaviour, so that RTVM-004…008 and RTVM-501…504 are verifiable end-to-end. It is documented in `docs/SDD.md`, not in the user-facing README, and is inert in normal use. | SN-5 | Test (TP-507) | Verified | `d39eacd` |
 | **DELIV — deliverable requirements (§6). Verified by inspection.** | | | | | |
 | RTVM-900 | The repository contains a committed, openable Visual Studio 2022 solution and project file(s) — not source files alone. (D-1) | SN-7 | Inspection (TP-900) | In Test | `85bab27` |
-| RTVM-901 | A client engineer can clone, open, build, and run the solution in VS 2022 with no setup step that is not written down in the README. (D-2) | SN-7 | Inspection (TP-901) | In Test | `85bab27` |
+| RTVM-901 | A client engineer can clone, open, build, and run the solution in VS 2022 with no setup step that is not written down in the README. (D-2) | SN-7 | Inspection (TP-901) | In Test | `146a5d1` |
 | RTVM-902 | The solution builds with the stock VS 2022 toolchain and the C++ standard library alone. No third-party library, package manager, or downloaded dependency of any kind. (D-3) | SN-7 | Inspection (TP-902) | Verified | `85bab27` |
 | RTVM-903 | The solver core is a separate compilation unit / module from the console I/O layer and has no dependency on stdin, stdout, stderr, or command-line parsing. The grid dimension appears as a single named constant, not as literal `9`s scattered through the code. (D-4) | SN-7 | Inspection (TP-903) | Verified | `85bab27` |
-| RTVM-904 | The repository carries a README covering how to build, how to run, and the puzzle input format. (D-5) | SN-7 | Inspection (TP-904) | In Test | `85bab27` |
-| RTVM-905 | Automated tests are part of the delivered solution and are runnable by the client through a documented command or VS action. (D-6) | SN-7 | Inspection (TP-905) | In Test | `85bab27` |
+| RTVM-904 | The repository carries a README covering how to build, how to run, and the puzzle input format. (D-5) | SN-7 | Inspection (TP-904) | Verified | `146a5d1` |
+| RTVM-905 | Automated tests are part of the delivered solution and are runnable by the client through a documented command or VS action. (D-6) | SN-7 | Inspection (TP-905) | Verified | `146a5d1` |
 | RTVM-906 | The solution targets C++17 and x64, and is a Visual Studio solution only — the repository contains no CMake or other cross-platform build files. (D-7) | SN-7 | Inspection (TP-906) | Verified | `85bab27` |
-| RTVM-907 | Five sample puzzles ship with the solution and are referenced from the README: easy, hard 17-clue, unsolvable, malformed, and non-unique. (§4.2) | SN-1, SN-7 | Inspection (TP-907) | In Test | `85bab27` |
+| RTVM-907 | Five sample puzzles ship with the solution and are referenced from the README: easy, hard 17-clue, unsolvable, malformed, and non-unique. (§4.2) | SN-1, SN-7 | Inspection (TP-907) | Verified | `146a5d1` |
 
 ## Test Procedures
 
@@ -3940,3 +3940,49 @@ RTVM-901 should **not** promote on that same confirmation — its VS
 clauses actually discharged, not a row's remaining gaps.
 
 **§7 interpretations raised in this thread: none.**
+
+### 9.33 CI/CD merge recorded — RTVM-904/905/907 promoted to Verified, RTVM-901 held at In Test (issue #22, commit confirmation)
+
+CI/CD merged `issue-22` into `main` `--no-ff` at merge commit
+**`146a5d1`** (branch head `018704d`), and flagged this as **not**
+needing regression testing — the merge brings only `README.md` plus
+Software Engineer/Test Engineer memory to trunk, no `src/`/`tests/`
+path touched, matching what both the Software Engineer and Test
+Engineer independently confirmed on `issue-22` (§9.32).
+
+Per §9.32's own pre-committed plan and
+[[verified-on-first-commit-confirmation-not-gated-by-v1]]:
+
+- **RTVM-904, RTVM-905 and RTVM-907 promote In Test → Verified.**
+  Each had nothing left to discharge once a trunk SHA existed — §9.32
+  already closed every clause of TP-904 and TP-907, and TP-905's real
+  clause on genuine Windows `vstest.console.exe` evidence (67/67). No
+  regression pass is a precondition for this promotion; that's what a
+  later regression run (not requested here) would be for, not what
+  Verified is gated on.
+- **RTVM-901 stays In Test, not promoted** — its VS 2022 loader clause
+  (§9.4 A-2: no VS 2022 image on this runner, opens-with-no-migration-
+  prompt cannot be exercised) remains open, the same standing gap since
+  #21. Per [[verification-platform-trap]], a commit confirmation
+  promotes only the clauses it actually discharged; this row's
+  outstanding clause carries forward unchanged.
+- **Commit(s) updated to `146a5d1` for all four rows this issue owns —
+  RTVM-901, RTVM-904, RTVM-905, RTVM-907 — including RTVM-901 despite
+  it staying In Test.** Per §9.27's precedent (commit SHA recorded for
+  all rows a merge touches regardless of whether status promotes),
+  updating Commit(s) is not conditioned on promotion to Verified; it
+  records which tree the row's current evidence — including RTVM-901's
+  reconfirmed build clause — was actually taken against. The merge SHA
+  is recorded per [[commit-sha-recorded-is-the-merge-commit]], not the
+  pre-merge evidence SHA `af71da8` the Test Engineer's run was pinned
+  to (that SHA remains the citation of record in §9.32's prose above).
+
+This is the last `DELIV` issue and the last row-owning issue in this
+thread; no further work is queued against RTVM-901/904/905/907 beyond
+the standing VS-2022-image gap tracked at §9.4 A-2, which is not this
+issue's to close.
+
+**§7 interpretations raised in this thread: none.**
+
+**Regression testing needed: no**, per CI/CD's hand-back — closing this
+issue outright rather than routing to Test Engineer.
