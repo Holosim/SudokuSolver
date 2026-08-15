@@ -364,3 +364,27 @@ the same commit as whatever else that hand-off already requires (recording
 a SHA, promoting a status) rather than opening a separate pass — and always
 grep the *whole* document for both the old and new number before pushing,
 not just the two colliding headings themselves.
+
+## §9.x heading collision, fifth instance — plain `git push` rejection, not a CI/CD merge (2026-08-15, #20 vs #22)
+
+Same mechanism again, but caught at the earliest possible point this time:
+a plain `git push origin main` was rejected outright (another agent's commit
+— issue #20's RTVM-505 promotion — had landed on `main` seconds earlier),
+so the fix happened during my own `git rebase origin/main`, before any push
+succeeded, with no CI/CD involvement at all. Both #20's and #22's sections
+had independently claimed `### 9.31`. Resolved exactly per the #18-vs-#19
+precedent: kept #20's `### 9.31` as-is, renumbered mine to **9.32**, added
+the "collided with #20's independently-cut §9.31... renumbered as the
+Systems Engineer's resolution" sentence at the head of my section, then
+`grep -n '§9.31\|§9.32'` across the whole file (clean — no other citations
+needed updating) before continuing the rebase and pushing.
+
+**Why this is worth its own entry despite being the same rule as the #18/#19
+case:** the trigger differed — a bare push rejection rather than a
+CI/CD-flagged merge conflict — which is actually the *more common* case
+going forward as more issues reach the fast-path RTVM-update step
+concurrently. Don't assume a collision only surfaces via CI/CD's `--no-ff`;
+any `git push`/`git rebase` onto a moved `origin/main` can surface the exact
+same duplicate-heading shape, and the fix is identical either way: allocate
+the section number from trunk's actual current state, not from what was
+true when the run started.
