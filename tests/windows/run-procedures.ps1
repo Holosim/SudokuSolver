@@ -49,6 +49,7 @@ param(
 
 . (Join-Path $PSScriptRoot 'lib/Common.ps1')
 . (Join-Path $PSScriptRoot 'lib/Fixtures.ps1')
+. (Join-Path $PSScriptRoot 'lib/ConPty.ps1')
 
 if (-not $RepoRoot) {
     $RepoRoot = (Resolve-Path (Join-Path $PSScriptRoot '..\..')).Path
@@ -561,14 +562,140 @@ Invoke-Section -Name 'TP-505' -Body {
 }
 
 # ===========================================================================
-# P4 - the NOT-RUN set, with a measured reason rather than an assumed one.
+# P4a - TP-004/005/006 under a real ConPTY (issue #25, docs/RTVM.md §9.4
+# A-4). Everything else in this script drives $Exe over a pipe or a file
+# (Invoke-Sudoku, Common.ps1) - StdinChannel's `Console` `StdinKind` branch
+# (GetFileType==console, PeekConsoleInput, ReadConsoleA) is never entered
+# that way. This section puts a genuine Windows console handle in front of
+# it instead, via ConPty.ps1's CreatePseudoConsole-based driver.
+#
+# TP-007/TP-008 and TP-507's active-hook clause are deliberately left in the
+# P4b NOT-RUN set below, unchanged - the issue that added this section
+# scoped the ConPTY attempt to TP-004/005/006 specifically (RTVM-007/008
+# already have hand-run pipe/file/Null evidence that doesn't turn on which
+# StdinKind was used; TP-507's hook-is-active clause is a property of the
+# environment variable, not of the console, so Test-DiagHookActive's
+# existing pipe-based probe already speaks to it as far as this script
+# goes).
+Invoke-Section -Name 'TP-004,TP-006' -Body {
+    $r = Invoke-ConPty004006Probe -Exe $Exe -FixtureFile $FixturePaths['P-EASY'] -EvidenceDir $EvidenceDir
+
+    if (-not $r.Started) {
+        # The honest negative result the issue asks for: precisely what was
+        # tried (CreatePseudoConsole + CreateProcessW under EXTENDED_STARTUPINFO_PRESENT)
+        # and precisely what stopped it, not "consoles are hard".
+        foreach ($case in @('prompt-content-and-timing', 'nothing-on-stdout-at-first-prompt')) {
+            Add-Check -Checks $Checks -Tp 'TP-004' -Case $case -State 'NOT-RUN' `
+                -Reason "ConPTY session did not start: $($r.StartError)"
+        }
+        foreach ($case in @('four-scheduled-prompts-no-long-gap', 'still-running-past-45s', 'stop-response-exit-3')) {
+            Add-Check -Checks $Checks -Tp 'TP-006' -Case $case -State 'NOT-RUN' `
+                -Reason "ConPTY session did not start: $($r.StartError)"
+        }
+        return
+    }
+
+    $gotFirstPrompt = $r.PromptTimestampsSec.Count -ge 1
+    $contentOk = $gotFirstPrompt -and
+        $r.FirstPromptText -match 'Still working \(\d+s elapsed\)\.' -and
+        $r.FirstPromptText -match '(?i)stop' -and
+        $r.FirstPromptText -match '(?i)no response'
+    Add-Check -Checks $Checks -Tp 'TP-004' -Case 'prompt-content-and-timing' `
+        -State $(if ($contentOk) { 'PASS' } else { 'FAIL' }) `
+        -Expected 'a line matching "Still working (Ns elapsed)." plus the stop gesture and "no response needed", visible at the first prompt over a real console handle' `
+        -Observed "gotFirstPrompt=$gotFirstPrompt promptSeconds=$(if ($gotFirstPrompt) { $r.PromptTimestampsSec[0] } else { 'n/a' }) text='$($r.FirstPromptText)'" `
+        -Reason $(if (-not $contentOk) { "see $($r.RawOutputPath | Split-Path -Leaf) in the artifact ($($r.RawOutputPath))" } else { $null })
+
+    # ConPTY merges stdout and stderr into one console screen buffer (both
+    # are writes to CONOUT$ when neither is explicitly redirected) - it
+    # cannot show two independently-labelled streams the way Invoke-Sudoku's
+    # separate pipe captures can (that half of TP-004 is what TP-406 already
+    # covers, over a real pipe, elsewhere in this script). What ConPTY *can*
+    # show is whether the S-EASY grid text has appeared at all by the first
+    # prompt - and by construction (docs/SDD.md's single Reporter::report()
+    # call after solve() returns) that can only be true if the process had
+    # already finished, which a still-in-progress long-solve-hook run has
+    # not. A clean merged transcript at this point is therefore genuine
+    # evidence for "nothing on stdout yet", just not proof of which handle
+    # it would have arrived on.
+    $noGridYet = $gotFirstPrompt -and (-not $r.GridSeenBeforeFirstPrompt)
+    Add-Check -Checks $Checks -Tp 'TP-004' -Case 'nothing-on-stdout-at-first-prompt' `
+        -State $(if ($noGridYet) { 'PASS' } else { 'FAIL' }) `
+        -Expected 'no S-EASY grid content (the "+-------+" separator) visible before the first prompt' `
+        -Observed "gridSeenBeforeFirstPrompt=$($r.GridSeenBeforeFirstPrompt)" `
+        -Reason $(if (-not $noGridYet) { "see $($r.RawOutputPath | Split-Path -Leaf) in the artifact; note ConPTY merges stdout/stderr into one buffer (see Expected) so this is inferred from ordering, not stream identity - see $($r.RawOutputPath)" } else { $null })
+
+    $fourPrompts = $r.PromptTimestampsSec.Count -ge 4
+    $gapOk = ($null -eq $r.MaxGapAfterFirstPromptSec) -or ($r.MaxGapAfterFirstPromptSec -le 11.0)
+    Add-Check -Checks $Checks -Tp 'TP-006' -Case 'four-scheduled-prompts-no-long-gap' `
+        -State $(if ($fourPrompts -and $gapOk) { 'PASS' } else { 'FAIL' }) `
+        -Expected 'prompts at ~15/25/35/45s (4 total) and no gap between them over 11.0s (§7 I-12)' `
+        -Observed "timestampsSec=$($r.PromptTimestampsSec -join ', ') maxGapSec=$($r.MaxGapAfterFirstPromptSec)" `
+        -Reason $(if (-not ($fourPrompts -and $gapOk)) { "see $($r.RawOutputPath | Split-Path -Leaf) in the artifact: $($r.RawOutputPath)" } else { $null })
+
+    Add-Check -Checks $Checks -Tp 'TP-006' -Case 'still-running-past-45s' `
+        -State $(if ($r.StillRunningAfterFourth) { 'PASS' } else { 'FAIL' }) `
+        -Expected 'process still running (not exited) once the fourth prompt has appeared' `
+        -Observed "stillRunningAfterFourth=$($r.StillRunningAfterFourth)"
+
+    $stopOk = $r.StopExitCode -eq 3
+    Add-Check -Checks $Checks -Tp 'TP-006' -Case 'stop-response-exit-3' `
+        -State $(if ($stopOk) { 'PASS' } else { 'FAIL' }) `
+        -Expected 'sending the stop response over the console input pipe ends the process with exit code 3' `
+        -Observed "stopExitCode=$($r.StopExitCode) stopLatencyMs=$($r.StopLatencyMs)" `
+        -Reason $(if (-not $stopOk) { "see $($r.RawOutputPath | Split-Path -Leaf) in the artifact: $($r.RawOutputPath)" } else { $null })
+}
+
 # ===========================================================================
-Invoke-Section -Name 'TP-004..008,507' -Body {
+# P4b - TP-005, a dedicated (shorter) ConPTY session: the stop response has
+# to land at the *first* prompt specifically (TP-005's own wording, as
+# opposed to TP-006's fourth), and the 1.0s response-to-exit bound is its
+# own assertion.
+# ===========================================================================
+Invoke-Section -Name 'TP-005' -Body {
+    $r = Invoke-ConPty005Probe -Exe $Exe -FixtureFile $FixturePaths['P-EASY'] -EvidenceDir $EvidenceDir
+
+    if (-not $r.Started) {
+        foreach ($case in @('exit-3-within-1s', 'abandonment-message-and-empty-stdout')) {
+            Add-Check -Checks $Checks -Tp 'TP-005' -Case $case -State 'NOT-RUN' `
+                -Reason "ConPTY session did not start: $($r.StartError)"
+        }
+        return
+    }
+
+    if ($null -eq $r.FirstPromptSeconds) {
+        foreach ($case in @('exit-3-within-1s', 'abandonment-message-and-empty-stdout')) {
+            Add-Check -Checks $Checks -Tp 'TP-005' -Case $case -State 'FAIL' `
+                -Reason "no prompt appeared within the 25s ceiling - see $($r.RawOutputPath | Split-Path -Leaf): $($r.RawOutputPath)"
+        }
+        return
+    }
+
+    $latencyOk = ($null -ne $r.StopLatencyMs) -and ($r.StopLatencyMs -lt 1000)
+    $exitOk = $r.StopExitCode -eq 3
+    Add-Check -Checks $Checks -Tp 'TP-005' -Case 'exit-3-within-1s' `
+        -State $(if ($latencyOk -and $exitOk) { 'PASS' } else { 'FAIL' }) `
+        -Expected 'responding at the first prompt over a real console handle ends the process with exit 3 within 1.0s (RTVM-203)' `
+        -Observed "firstPromptSeconds=$($r.FirstPromptSeconds) stopExitCode=$($r.StopExitCode) stopLatencyMs=$($r.StopLatencyMs)" `
+        -Reason $(if (-not ($latencyOk -and $exitOk)) { "see $($r.RawOutputPath | Split-Path -Leaf) in the artifact: $($r.RawOutputPath)" } else { $null })
+
+    $contentOk = $r.AbandonedTextSeen -and $r.StdoutStayedEmpty
+    Add-Check -Checks $Checks -Tp 'TP-005' -Case 'abandonment-message-and-empty-stdout' `
+        -State $(if ($contentOk) { 'PASS' } else { 'FAIL' }) `
+        -Expected 'a line containing "abandoned at" appears, and the S-EASY grid never appears (stdout stays empty)' `
+        -Observed "abandonedTextSeen=$($r.AbandonedTextSeen) stdoutStayedEmpty=$($r.StdoutStayedEmpty)" `
+        -Reason $(if (-not $contentOk) { "see $($r.RawOutputPath | Split-Path -Leaf) in the artifact ($($r.RawOutputPath)); note ConPTY merges stdout/stderr (see the TP-004 case above) so 'stayed empty' is read off the merged transcript, not a separately-captured stdout stream" } else { $null })
+}
+
+# ===========================================================================
+# P4c - the remaining NOT-RUN set, with a measured reason rather than an
+# assumed one. TP-004/005/006 moved to the sections above (issue #25);
+# TP-007/008 and TP-507's active-hook clause are unaffected by this issue -
+# see the comment on the P4a section for why.
+# ===========================================================================
+Invoke-Section -Name 'TP-007,TP-008,TP-507' -Body {
     $probe = Test-DiagHookActive -Exe $Exe -FixtureFile $FixturePaths['P-EASY'] -EvidenceDir $EvidenceDir
     $rows = @(
-        @{ Tp = 'TP-004'; Case = 'prompt-content-and-destination' },
-        @{ Tp = 'TP-005'; Case = 'abort' },
-        @{ Tp = 'TP-006'; Case = 'no-response-required' },
         @{ Tp = 'TP-007'; Case = 'lapsed-prompt-abandoned' },
         @{ Tp = 'TP-008'; Case = 'non-interactive-invocation' },
         @{ Tp = 'TP-507'; Case = 'active-hook-demonstration' }
