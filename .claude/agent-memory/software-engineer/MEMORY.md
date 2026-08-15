@@ -28,6 +28,7 @@
 - [RTVM-004 prompt/abort/non-blocking stdin](rtvm-004-prompt-abort-nonblocking-stdin.md) — the fourth `StdinChannel` seam function, why `select()` mirrors all four Win32 availability tests, and why only `Reporter`'s Aborted branch (not `SolveSession`) got a unit test.
 - [RTVM-504 needed a harness, not product code](rtvm-504-harness-not-product-code.md) — TP-504 is drivable without the ConPTY spike (#25) because RTVM-006/008 mean it needs no interactive reply, unlike TP-501..503.
 - [RTVM-405/406 aggregate conformance](rtvm-405-406-aggregate-conformance.md) — issue #18: the exit-code/stream mapping was already complete from earlier issues; the real gap was a missing aggregate test across all five outcomes, and the process-level half was already scripted by someone else.
+- [RTVM-505 needed no code](rtvm-505-no-code-needed.md) — issue #20: the bounded-read cap, byte-oriented parser and main.cpp catch-all already met the corpus's every clause, and the 26-entry TP-505 harness already existed in run-procedures.ps1.
 
 ## Process
 
