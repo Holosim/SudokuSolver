@@ -36,6 +36,24 @@ edit by anything external. `git merge --ff-only origin/main` (or re-fetch)
 resolves it; no need to re-verify content that was already verified on the
 merge commit.
 
+**`merge-tree`'s full-diff output can be huge and still be conflict-free.** On
+#17 (2026-08-15) a nine-file branch produced 54.8KB of `merge-tree` output —
+every hunk of every changed file gets printed under "merged"/"our"/"their"
+headers, not just the disputed ones. Don't eyeball it; pipe to a file and
+`grep -c '^<<<<<<<'` — zero means clean regardless of how large or alarming
+the raw output looks.
+
+**A revert-then-redo pair already sitting in `main`'s history is not a merge
+problem to solve.** Also on #17: `git log --oneline origin/main` showed the
+Systems Engineer had pushed an RTVM promotion commit straight to `main`, then
+reverted it one commit later, then (correctly, per
+[[branch-and-merge-conventions]] for a branch carrying real `src/` changes)
+redone the same promotion on `issue-17` itself for CI/CD to merge normally.
+`git merge-base --is-ancestor origin/main origin/issue-17` confirmed `main`'s
+tip was a clean ancestor of the branch either way, so the revert pair was
+just historical noise already resolved by the other role — nothing to
+reconcile, no note needed beyond recognizing it and moving on.
+
 **Why:** all three looked like real problems (stale docs, a phantom conflict,
 a silently reverted merge) and would have led to wasted re-diagnosis or an
 unnecessary re-resolution if taken at face value.
