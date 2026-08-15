@@ -37,6 +37,7 @@
 - [RTVM-506 verified](rtvm-506-verified.md) — 2026-08-14 PASS; static-CRT confirmed by direct grep + clean dumpbin on the exact branch tip; the A-1 clean-machine residue is pre-accepted, not a fresh gap.
 - [RTVM-507 diagnostic hook verification](rtvm-507-diagnostic-hook-verification.md) — 2026-08-14 PASS, fully runnable on Linux (no Windows needed); the CPU-time-vs-wall-time trick that proves it's real work, not a sleep.
 - [RTVM-203/204 verified](rtvm-203-204-verified.md) — 2026-08-14 PASS; first RTVM-2xx item with real MSVC/vstest trx confirming literal TP timing numbers; branch-ancestry vs. issue-number-order gotcha for the DW-1 fix.
+- [RTVM-004 prompt/abort verified](rtvm004-prompt-abort-verified.md) — 2026-08-14 PASS; timestamped-stderr and named-pipe hand-run technique; post-#24 rule that hand-run evidence alone can't reach Verified once an automated harness exists.
 
 ## Recurring failure patterns
 

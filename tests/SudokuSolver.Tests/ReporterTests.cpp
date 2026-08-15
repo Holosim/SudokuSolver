@@ -93,6 +93,28 @@ public:
         Assert::AreEqual(std::string{}, out.str());
         Assert::IsFalse(err.str().empty());
     }
+
+    // TP-404: the Aborted outcome writes the abandonment message to stderr
+    // and stdout stays byte-empty, exit code Aborted (RTVM-404, §7 I-5). The
+    // Aborted path has no dependency on timing or stdin, so — exactly like
+    // the cases above — it is testable here with std::ostringstream rather
+    // than a spawned process.
+    TEST_METHOD(rtvm404_abortedReportsAbandonmentMessageOffStdout)
+    {
+        std::ostringstream out;
+        std::ostringstream err;
+        const cli::Reporter reporter(out, err);
+
+        const cli::ExitCode code = reporter.report(SolveReport::aborted(12345));
+
+        Assert::IsTrue(code == cli::ExitCode::Aborted);
+        Assert::AreEqual(std::string{}, out.str(),
+            L"stdout must be byte-empty for Aborted (RTVM-404, RTVM-406)");
+        Assert::AreEqual(cli::messages::aborted(), err.str(),
+            L"stderr must carry exactly the abandonment message and nothing else");
+        Assert::IsTrue(err.str().find("abandoned at") != std::string::npos,
+            L"TP-005/TP-404 look for the substring \"abandoned at\"");
+    }
 };
 
 } // namespace sudoku::test

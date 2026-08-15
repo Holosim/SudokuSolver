@@ -14,10 +14,11 @@
 // line").
 // #12 ([RTVM-401]) filled in `notUniqueNote` — the reference wording of
 // docs/RTVM.md 6.2, newline-terminated the same way for the same reason.
-//
-// TODO(RTVM-404, RTVM-004): real wording for `aborted` and
-// `progressPrompt`. (RTVM-400 is `GridFormat.cpp::formatGrid`, not a
-// function in this file.)
+// #17 ([RTVM-004]) filled in `aborted` and `progressPrompt` — the reference
+// wording of docs/RTVM.md 6.2 / docs/SDD.md 2.8, newline-terminated the same
+// way for the same reason. (RTVM-400 is `GridFormat.cpp::formatGrid`, not a
+// function in this file.) `internalError` (docs/SDD.md 2.9, RTVM-505) is
+// still a scaffold.
 //
 // docs/RTVM.md 6.2 pins exact wording for RTVM-401, RTVM-402, RTVM-404 and
 // the progress prompt; RTVM-102..105, RTVM-009 and RTVM-403 are unpinned —
@@ -143,14 +144,21 @@ std::string noSolution()
 
 std::string aborted()
 {
-    return std::string{};
+    // Reference wording, docs/RTVM.md 6.2 / 7 I-5. stderr only; TP-005/
+    // TP-404 look for "abandoned at" and stdout stays byte-empty (RTVM-404).
+    return "Solve abandoned at user request.\n";
 }
 
 std::string progressPrompt(int elapsedSeconds, std::uint64_t nodesExplored)
 {
-    static_cast<void>(elapsedSeconds);
-    static_cast<void>(nodesExplored);
-    return std::string{};
+    // Pinned verbatim by docs/SDD.md 2.8 / docs/RTVM.md 6.2. The leading
+    // "Still working (Ns elapsed)." sentence must stay unbroken so TP-004's
+    // regex `Still working \(\d+s elapsed\)\.` matches as written; the step
+    // count is the live RTVM-204 counter, which is what makes RTVM-503 ("the
+    // solve did not pause") observable from stderr alone.
+    return "Still working (" + std::to_string(elapsedSeconds) + "s elapsed). "
+        + std::to_string(nodesExplored) + " steps taken. "
+          "Type s then Enter to stop; no response needed - the solve continues.\n";
 }
 
 std::string internalError()

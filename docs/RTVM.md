@@ -54,11 +54,11 @@ Blocked / Withdrawn.
 | RTVM-001 | On launch the application begins solving immediately. It presents no menu, no mode selection, and asks the user nothing before reading the puzzle. | SN-1, SN-6 | Test (TP-001) | In Test | `62cbb1e` |
 | RTVM-002 | If a first command-line argument is present it is treated as a path to a puzzle file, and the puzzle is read from that file. Any further arguments are ignored. | SN-1, SN-8 | Test (TP-002) | In Test | `62cbb1e` |
 | RTVM-003 | If no command-line argument is present the puzzle is read from standard input. | SN-1, SN-8 | Test (TP-003) | In Test | `62cbb1e` |
-| RTVM-004 | While a solve is still running at a prompt point (RTVM-501/502) the application writes a progress prompt to stderr stating (a) that it is still working, (b) the whole seconds elapsed, (c) how to stop, and (d) that no response is required. | SN-5 | Test (TP-004) | Approved | |
-| RTVM-005 | If the user gives the documented stop response at any prompt, the application stops the solve, reports that it was abandoned at the user's request, and exits with code `3`. | SN-5 | Test (TP-005) | Approved | |
-| RTVM-006 | No prompt requires a response. The application never blocks on reading a prompt reply: continuing is the default and an unanswered prompt simply lapses at the next prompt point. | SN-5, SN-8 | Test (TP-006) | Approved | |
-| RTVM-007 | If the solve finishes while a prompt is outstanding, the result is printed and the application exits normally. It does not wait for a reply to the lapsed prompt. | SN-5 | Test (TP-007) | Approved | |
-| RTVM-008 | An invocation with no interactive console (stdin redirected from a file or pipe, stdout/stderr redirected) is never blocked or delayed by the prompt mechanism, and always terminates with a result and an exit code. | SN-5, SN-8 | Test (TP-008) | Approved | |
+| RTVM-004 | While a solve is still running at a prompt point (RTVM-501/502) the application writes a progress prompt to stderr stating (a) that it is still working, (b) the whole seconds elapsed, (c) how to stop, and (d) that no response is required. | SN-5 | Test (TP-004) | In Test | |
+| RTVM-005 | If the user gives the documented stop response at any prompt, the application stops the solve, reports that it was abandoned at the user's request, and exits with code `3`. | SN-5 | Test (TP-005) | In Test | |
+| RTVM-006 | No prompt requires a response. The application never blocks on reading a prompt reply: continuing is the default and an unanswered prompt simply lapses at the next prompt point. | SN-5, SN-8 | Test (TP-006) | In Test | |
+| RTVM-007 | If the solve finishes while a prompt is outstanding, the result is printed and the application exits normally. It does not wait for a reply to the lapsed prompt. | SN-5 | Test (TP-007) | In Test | |
+| RTVM-008 | An invocation with no interactive console (stdin redirected from a file or pipe, stdout/stderr redirected) is never blocked or delayed by the prompt mechanism, and always terminates with a result and an exit code. | SN-5, SN-8 | Test (TP-008) | In Test | |
 | RTVM-009 | A file argument that cannot be opened or read is reported as a specific diagnostic naming the path and the reason, and exits with code `1`. | SN-4, SN-8 | Test (TP-009) | Verified | `139d41a` |
 | **DATA-IN — internal representation of input (§4.2)** | | | | | |
 | RTVM-100 | The application parses 9 lines of 9 characters into an internal 9×9 grid in which each cell holds either a given digit 1–9 or "empty". | SN-1, SN-2 | Test (TP-100) | In Test | `3bc1b22` |
@@ -83,14 +83,14 @@ Blocked / Withdrawn.
 | RTVM-401 | For the `SolvedNotUnique` outcome the grid is followed on stdout by a statement that the solution shown is not unique. | SN-3 | Test (TP-401) | Verified | `7ef04ce` |
 | RTVM-402 | For the `NoSolution` outcome a plain statement that the puzzle has no solution is written to stdout, and no grid is written. | SN-3, SN-4 | Test (TP-402) | In Test | `481c726` |
 | RTVM-403 | For the `InvalidInput` outcome a specific human-readable diagnostic naming the fault is written to **stderr**, and nothing is written to stdout. | SN-4 | Test (TP-403) | Verified | `139d41a` |
-| RTVM-404 | For the `Aborted` outcome a message stating the solve was abandoned at the user's request is written to **stderr**, and nothing is written to stdout. | SN-5 | Test (TP-404) | Approved | |
+| RTVM-404 | For the `Aborted` outcome a message stating the solve was abandoned at the user's request is written to **stderr**, and nothing is written to stdout. | SN-5 | Test (TP-404) | In Test | |
 | RTVM-405 | The process exit code is `0` for `Solved` and `SolvedNotUnique`, `1` for `InvalidInput`, `2` for `NoSolution`, `3` for `Aborted`, with no other exit code reachable. | SN-8, SN-4 | Test (TP-405) | Approved | |
 | RTVM-406 | Across every reachable outcome, stdout carries only the result (grid, non-unique note, no-solution statement). No prompt text, no diagnostic, and no progress output ever reaches stdout. | SN-8 | Test (TP-406) | Approved | |
 | **NFR — non-functional (§4.4, §5)** | | | | | |
 | RTVM-500 | Any standard 9×9 puzzle, including a hard 17-clue grid, is solved in under 10 s wall clock on a typical desktop (reference machine defined in §6.3). | SN-5 | Test (TP-500) | Verified | `699abde` |
-| RTVM-501 | The first progress prompt is emitted when the solve has been running for 15 s, within a tolerance of ±1.0 s. | SN-5 | Test (TP-501) | Approved | |
-| RTVM-502 | Progress prompts repeat every 10 s thereafter — at 25 s, 35 s, 45 s and so on — each within ±1.0 s of its nominal time, for as long as the solve is running. | SN-5 | Test (TP-502) | Approved | |
-| RTVM-503 | The solve does not pause while a prompt is displayed or while a reply is awaited: the RTVM-204 search-step count strictly increases across every prompt window. | SN-5 | Test (TP-503) | Approved | |
+| RTVM-501 | The first progress prompt is emitted when the solve has been running for 15 s, within a tolerance of ±1.0 s. | SN-5 | Test (TP-501) | In Test | |
+| RTVM-502 | Progress prompts repeat every 10 s thereafter — at 25 s, 35 s, 45 s and so on — each within ±1.0 s of its nominal time, for as long as the solve is running. | SN-5 | Test (TP-502) | In Test | |
+| RTVM-503 | The solve does not pause while a prompt is displayed or while a reply is awaited: the RTVM-204 search-step count strictly increases across every prompt window. | SN-5 | Test (TP-503) | In Test | |
 | RTVM-504 | The application is never silent while working. From launch to exit the user always has either a result, a diagnostic, or a prompt. The longest permitted interval with no output on either stream is bounded by the RTVM-501 first-prompt threshold **before** the first prompt (15 s + 1.0 s tolerance = 16.0 s) and by the RTVM-502 repeat interval **thereafter** (10 s + 1.0 s tolerance = 11.0 s). See §7 I-12. | SN-5 | Test (TP-504) | Approved | |
 | RTVM-505 | No input causes an unhandled exception, an access violation, an assertion dialog, or a non-zero exit code outside the set in RTVM-405. Every run terminates. | SN-4 | Test (TP-505) | Approved | |
 | RTVM-506 | The delivered executable is a self-contained x64 Windows console application that runs on a clean Windows machine with no installed runtime or third-party component beyond what a stock Windows install provides. | SN-6, SN-7 | Test (TP-506) | Verified | `6166cb4` |
@@ -1350,7 +1350,7 @@ than for a plan.
 | A-1 | **TP-506** — run the exe on a clean Windows machine with no VS, no redistributable, no build tools | Every hosted Windows image ships the full VS toolchain and the VC++ runtimes, so "runs where the runtime was never installed" cannot be demonstrated there — the negative is unobservable on the only machine we have | `dumpbin /dependents` asserting the import list is stock system DLLs only (`KERNEL32`, `USER32`, …) with no `MSVCP140.dll` / `VCRUNTIME140*.dll` — TP-506's own last sentence, and it is strong evidence | **Closed 2026-08-14 (§9.20, issue #14) — Test Engineer PASS.** The `dumpbin` clause re-executed and clean at `9e801cd` (run `31811410503`): `KERNEL32.dll` only, no `MSVCP140.dll` / `VCRUNTIME140*.dll`. The one residual sentence — "launches on a machine that never had the VC++ runtime installed" — is accepted per this row's own standing ruling, not re-litigated: no rentable/hosted image can ever demonstrate it. TP-506 treated as fully discharged on that basis; RTVM-506 promoted to In Test pending CI/CD's trunk-commit confirmation (§9.2's second Verified precondition), then to **Verified** 2026-08-14 once CI/CD reported merge commit `6166cb4` (§9.2's second precondition satisfied) |
 | A-2 | **TP-900** — the solution *opening* in VS 2022 with no "project unavailable" and no migration prompt | The prompt is modal GUI behaviour; a headless runner never renders it | `devenv.exe SudokuSolver.sln /Build "Debug\|x64"` uses the same solution loader as the IDE and fails or hangs where the IDE would prompt; combined with a toolset/`ToolsVersion` inspection this covers the substance | **Genuine V-4 item — measured 2026-08-13 (§9.1.6), not a suspicion.** `vswhere -legacy -all -products *` (P2, `run-procedures.ps1`) confirms **no VS `17.x` instance exists on `win25-vs2026`**, on both the pre-fix and post-fix runs. The toolset half is covered — the build ran on `PlatformToolset=v143` / MSVC 14.44, the VS 2022 toolset shipped side-by-side. What remains, and cannot be automated on this image, is one sentence: *"the solution opens in the VS 2022 IDE itself with no migration prompt."* Ready to go forward with A-1 once A-4 is attempted (V-5) |
 | A-3 | **TP-905** — tests appearing in **Test Explorer** | Test Explorer is a GUI surface | `vstest.console.exe` is the discovery and execution engine Test Explorer drives; if it discovers and runs both methods, the substantive claim holds | **CLOSED 2026-08-13 (§9.1.6, DW-1 fixed).** `run-procedures.ps1` now runs `vstest.console.exe /ListTests:<dll>` for discovery and a separate `/Logger:trx` execution; both artifacts exist at SHA `3658728` (Windows run `31739274812`): 25/25 tests discovered, 25/25 executed and passed. No longer a V-4 candidate |
-| A-4 | **TP-004…008** — the console-handle behaviour (`PeekConsoleInput`, `GetFileType` = console, an interactive-equivalent stdin held open) | A runner step has no interactive console attached: stdin is a pipe or `NUL`, so `GetFileType` never reports a console and the console path is never entered. TP-008's redirected half runs fine; TP-004/005/006's do not | Drive the exe under a **ConPTY pseudoconsole** (`CreatePseudoConsole`, available on Windows Server 2022) from a small harness, so the child genuinely sees a console handle. This is the same mechanism Windows Terminal uses and it is not exotic | **Undecided — needs a feasibility spike on #17** before it goes anywhere near the client. If ConPTY works this whole row disappears, and it is the largest row on the list. **2026-08-13: the spike is now actually possible** — there is a live Windows job to try it against, and the image is Windows Server 2025, where `CreatePseudoConsole` is long-established. The spike belongs in `tests/windows/run-procedures.ps1` (W-10). Worth doing on its own terms even if it fails: *"we drove the exe under a pseudo-console and here is precisely what it still could not observe"* is a far stronger thing to put to a client than *"consoles are hard"* |
+| A-4 | **TP-004…008** — the console-handle behaviour (`PeekConsoleInput`, `GetFileType` = console, an interactive-equivalent stdin held open) | A runner step has no interactive console attached: stdin is a pipe or `NUL`, so `GetFileType` never reports a console and the console path is never entered. TP-008's redirected half runs fine; TP-004/005/006's do not | Drive the exe under a **ConPTY pseudoconsole** (`CreatePseudoConsole`, available on Windows Server 2022) from a small harness, so the child genuinely sees a console handle. This is the same mechanism Windows Terminal uses and it is not exotic | **Still undecided — the #17 spike was not attempted.** §9.26: the console-handle *product* code shipped on #17 (RTVM-004…008 promoted to In Test) but both the Software Engineer and Test Engineer independently declined the ConPTY harness spike itself as out of scope for a feature branch ("no pty available in this harness"), same reasoning #24 gave for splitting `ProcessRunner` into its own issue. **Reassigned to #25**, a dedicated issue, Finish-Start on #17. Still the largest row on this list if it closes |
 | A-5 | **TP-500…504** — the timing set | Shared-tenant runner jitter against a ±1.0 s tolerance (§7 I-6) | W-7: three samples, Release build, all reported | **Not a V-4 item, and now has real data behind that call.** `tests/windows/run-timing.ps1` lands 2026-08-13 (§9.1.6) and, once DW-4's exit-code gate was fixed, produced genuine TP-500 evidence at SHA `3658728`: `easy`/`hard17` max 20–30 ms, `unsolvable` max ~12 ms, 30/30 runs at the correct exit code, all three W-7 samples present. Nowhere close to the 10 s ceiling on this modest 2-core/4-logical machine, so §7 I-6's tolerance is not in question yet. **Superseded 2026-08-14 (§9.14, issue #15)** by fresher, issue-scoped evidence gathered at pre-merge SHA `00d0c38` on the `win25-vs2026` image: `easy` max 22.2 ms, `hard17` max 28.6 ms, `unsolvable` max 10.7 ms, all three W-7 samples exit-code-gated (0/0/2). RTVM-500 promoted to Verified, Commit(s) recorded as merge commit `699abde` per the standing "record the trunk merge SHA" convention (§9.5, §9.8.5, §9.11). TP-501…504 stay NOT-RUN pending the RTVM-507 diagnostic hook |
 | A-6 | **TP-901** — build "on a machine that has never built this project" | — none; a fresh hosted runner satisfies this clause **better** than a client engineer's machine, which has VS configured and a warm state | n/a | **Not a V-4 item.** Recorded only to stop it being added later by association |
 
@@ -3356,3 +3356,87 @@ Per the fast-path instruction, this promotion is handed to CI/CD with
 `docs/RTVM.md`/memory — see
 [[fast-path-promotion-after-sha-recorded]]'s "why this still routes to
 CI/CD" reasoning.
+
+### 9.26 Progress prompt, abort, and non-blocking stdin tested ([RTVM-004], issue #17)
+
+State at branch `issue-17` (tip `091e914`), tested by the Test Engineer
+2026-08-14 — **PASS**. Deliberately the largest single issue in the plan
+(nine line items, one mechanism — `SolveSession`'s poll-driven timer/stop
+check plus `StdinChannel`'s non-blocking read), per `docs/SDD.md` §1.2/§1.3.
+
+**What was exercised.**
+
+- **Unit level.** 66/66 `TEST_METHOD`s pass, g++-native and cross-checked
+  against real MSVC `vstest.console.exe` discovery-and-execution (Windows
+  run `31846192066`, `win25-vs2026`, headSha `091e914` — tree-identical, no
+  diff needed): 66 discovered, 66 passed, matching exactly. One new method,
+  `rtvm404_abortedReportsAbandonmentMessageOffStdout`
+  (`ReporterTests.cpp`), following the RTVM-403 precedent of taking streams
+  by reference so the `Aborted` branch is directly unit-testable without a
+  process — mutated and confirmed falsifiable independently by both the
+  Software Engineer and the Test Engineer.
+- **Process level, hand-run (g++ build).** TP-004/005/006/007/008,
+  TP-404, TP-501/502/503 all executed and passed, independently reproduced
+  by the Test Engineer rather than re-read from the Software Engineer's
+  numbers: prompt timing at 15.009/25.009/35.006/45.005/55.006s (all within
+  ~9ms of nominal, well inside ±1.0s — RTVM-501/502); step counts strictly
+  increasing across all five windows (RTVM-503); stop-response abort via a
+  named pipe, exit `3`, stdout byte-empty, stderr carries both the prompt
+  and the abandonment message (RTVM-005/RTVM-404); an unrelated line and a
+  blank line both ignored silently, process kept running (RTVM-006); a
+  lapsed-prompt run finishing at 18s ends under the TP-007 20s bound
+  (RTVM-007); `Null` `StdinKind` (`< /dev/null`) still prompts on schedule
+  and never blocks (RTVM-008); the single-owner-buffer edge case (a stop
+  response already sitting in a file's trailing content, picked up on the
+  very first poll, well before any prompt fires — confirms RTVM-005 isn't
+  gated on a prompt having fired first, §7 I-17's rule extended). Full
+  regression sweep (easy/hard17/malformed/unsolvable/nonunique) unchanged.
+- **Windows evidence, compile + unit only.** Debug and Release both
+  compile clean under MSVC 14.44 `/W4`, `StdinChannel.cpp`/`SolveSession.cpp`
+  present in both logs. As expected and **not a regression**:
+  `runtime-procedures.txt` reports TP-004/005/006/007/008/TP-507's active
+  clause `NOT-RUN`, reason *"process still running after the 5s probe
+  ceiling; hook appears active but this script does not yet drive its
+  interactive prompt/abort protocol"* — the same gap §9.8.1 named for
+  TP-001…003 before #24, now applying to this issue's TPs because #24's
+  `ProcessRunner` drives pipe/file stdin, not a real console, and nobody on
+  this issue built the console driver either (see the A-4 note below).
+
+| Req | Executed here and passed | Still outstanding |
+| --- | --- | --- |
+| RTVM-004, RTVM-501, RTVM-502, RTVM-503 | TP-004/501/502/503 in full, hand-run, g++ build, two independent runs (Software Engineer + Test Engineer) | Automated harness execution (A-4, reassigned to #25) plus V-1's standing MSVC/vstest re-execution of the *process*-level clause specifically (the unit suite already re-executes clean under MSVC — see above — this is about the end-to-end procedure) |
+| RTVM-005, RTVM-404 | TP-005/404 in full: hand-run process-level pass, **plus** RTVM-404's own clause now has genuine automated unit coverage (`rtvm404_*`) discovered and executed under real `vstest.console.exe` | Same as above for the process-level clause; RTVM-404's unit clause has none |
+| RTVM-006 | TP-006 in full, hand-run: garbage line, blank/whitespace-only line, uppercase `STOP`, bare `s` all confirmed ignored-or-accepted correctly | Automated harness (A-4, #25) |
+| RTVM-007 | TP-007 in full, hand-run: 18s hook, unanswered prompt, exit `0` under 20s | Automated harness (A-4, #25) |
+| RTVM-008 | TP-008 in full, hand-run: `Null` `StdinKind`, hook active, prompts still on schedule, never blocks | Automated harness (Pipe/File shapes already covered by #24's `ProcessRunner`; the `Console` shape is A-4/#25) |
+
+**Known, explicitly flagged gap — the `Console`/tty `StdinKind` branch
+itself is unexercised by anything in this pipeline.** Neither the g++
+build (POSIX `select()` stand-in only covers Pipe/File shapes, no pty
+available) nor the Windows run (compile + unit only, no interactive driver
+in `run-procedures.ps1`) has put a real console handle in front of
+`StdinChannel`'s `consoleLineReady`/`ReadConsoleA` path. This is exactly
+§9.4's pre-existing A-4 row, which the standing instruction (§9.1.6)
+named #17 as the issue to attempt it on. **That attempt did not happen on
+#17** — both roles independently treated a ConPTY harness spike as out of
+scope for a feature branch, which is a reasonable call for them to make
+but leaves the row genuinely open rather than closed. **Reassigned to
+#25**, a dedicated issue (Finish-Start on #17), same reasoning #24 used to
+split `ProcessRunner` out of #9. §9.4's A-4 row updated accordingly.
+
+**Status outcome.** Per §9.8.1's ruling — *"a UI or OUT row must not reach
+Verified on hand-run evidence alone once #24 exists"* — and because the
+`Console` shape specifically has **zero** automated evidence of any kind
+(not even a partial one), these nine rows do not follow RTVM-203/204's
+precedent ([[verified-on-first-commit-confirmation-not-gated-by-v1]]) of
+promoting straight to Verified on the next commit confirmation. **RTVM-004,
+RTVM-005, RTVM-006, RTVM-007, RTVM-008, RTVM-404, RTVM-501, RTVM-502 and
+RTVM-503 move Approved → In Test** (§5), Commit(s) left blank pending
+CI/CD. Flagged explicitly for whoever processes the next CI/CD
+commit-confirmation on this issue: **do not promote these nine rows to
+Verified on that hand-back alone** — the harness gap (#25) is the
+outstanding item, not the trunk SHA.
+
+**§7 interpretations raised in this thread: none.**
+
+Handed to CI/CD next with `status:ready-for-commit`.
