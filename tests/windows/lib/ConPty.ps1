@@ -145,6 +145,16 @@ namespace SudokuTests
         public string LastError { get; private set; }
         public int ProcessId { get; private set; }
 
+        // Diagnostics only (issue #25, second Windows round): the first
+        // real run showed Started=true, correct exit codes, correct
+        // elapsed time (proving process creation/args/env all work), but
+        // PeekOutput() came back empty for the whole run - these three
+        // fields narrow down whether the reader thread ever ran, ever
+        // called Read(), and whether Read() ever threw.
+        public string ReaderException { get; private set; }
+        public long ReaderReadCallCount;
+        public bool ReaderThreadAlive { get { return _readerThread != null && _readerThread.IsAlive; } }
+
         // Spawns 'exePath arguments' attached to a fresh pseudoconsole. Any
         // extra environment the caller wants the child to see must already
         // be set in *this* process's environment before calling Start() —
@@ -277,16 +287,20 @@ namespace SudokuTests
                 while (!_stopReader)
                 {
                     int n = _outputStream.Read(buf, 0, buf.Length);
+                    Interlocked.Increment(ref ReaderReadCallCount);
                     if (n <= 0) break;
                     string text = Encoding.UTF8.GetString(buf, 0, n);
                     lock (_bufferLock) { _outputBuffer.Append(text); }
                 }
             }
-            catch
+            catch (Exception ex)
             {
-                // The stream was closed under us (Dispose) or the pipe
-                // broke because the child/ConPTY went away — either way
-                // there is nothing left to read, so the thread just ends.
+                // Recorded rather than swallowed (issue #25 diagnostics) -
+                // the stream being closed under us at Dispose time is the
+                // expected/benign case, but this also catches a genuine
+                // read-side failure that would otherwise look identical to
+                // "nothing was ever written".
+                ReaderException = ex.ToString();
             }
         }
 
@@ -480,7 +494,9 @@ function Invoke-ConPtyDiagnostics {
                 if ((Remove-AnsiCodes $p1.PeekOutput()) -match 'CONPTY_SMOKE_OK') { $seen = $true }
             }
             $exited = $p1.WaitForExit(3000)
+            Start-Sleep -Milliseconds 300  # let the reader thread catch up to a just-exited process
             $lines.Add("seenMarker=$seen exited=$exited exitCode=$(if ($exited) { $p1.ExitCode } else { 'n/a' }) hasExited=$($p1.HasExited)")
+            $lines.Add("readerThreadAlive=$($p1.ReaderThreadAlive) readerReadCallCount=$($p1.ReaderReadCallCount) readerException=$($p1.ReaderException)")
             $lines.Add('raw: [' + (Remove-AnsiCodes $p1.PeekOutput()) + ']')
             if (-not $exited) { $p1.Kill() }
             try { $p1.Dispose() } catch { }
@@ -500,7 +516,9 @@ function Invoke-ConPtyDiagnostics {
         if ($p2.Started) {
             $sw2 = [System.Diagnostics.Stopwatch]::StartNew()
             while ($sw2.Elapsed.TotalSeconds -lt 8 -and -not $p2.HasExited) { Start-Sleep -Milliseconds 200 }
+            Start-Sleep -Milliseconds 300  # let the reader thread catch up to a just-exited process
             $lines.Add("elapsedSec=$([math]::Round($sw2.Elapsed.TotalSeconds,1)) hasExitedAfter8s=$($p2.HasExited) exitCode=$(if ($p2.HasExited) { $p2.ExitCode } else { 'n/a' })")
+            $lines.Add("readerThreadAlive=$($p2.ReaderThreadAlive) readerReadCallCount=$($p2.ReaderReadCallCount) readerException=$($p2.ReaderException)")
             $lines.Add('raw: [' + (Remove-AnsiCodes $p2.PeekOutput()) + ']')
             if (-not $p2.HasExited) { $p2.Kill() }
             try { $p2.Dispose() } catch { }
