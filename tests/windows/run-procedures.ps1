@@ -645,7 +645,7 @@ Invoke-Section -Name 'TP-004,TP-006' -Body {
         -State $(if ($stopOk) { 'PASS' } else { 'FAIL' }) `
         -Expected 'sending the stop response over the console input pipe ends the process with exit code 3' `
         -Observed "stopExitCode=$($r.StopExitCode) stopLatencyMs=$($r.StopLatencyMs) stopWriteOk=$($r.StopWriteOk) stopWriteError=$($r.StopWriteError) promptsAfterStopAttempt=$($r.PromptsAfterStopAttempt)" `
-        -Reason $(if (-not $stopOk) { "see $($r.RawOutputPath | Split-Path -Leaf) in the artifact: $($r.RawOutputPath) - promptsAfterStopAttempt>0 means the process kept running its normal schedule (the stop response was never recognised, not just slow to act on); 0 means it stopped prompting without exiting either (see conpty-diag.txt probe (4) for whether input delivery itself works on this image)" } else { $null })
+        -Reason $(if (-not $stopOk) { "see $($r.RawOutputPath | Split-Path -Leaf) in the artifact: $($r.RawOutputPath) - promptsAfterStopAttempt>0 means the process kept running its normal schedule (the stop response was never recognised, not just slow to act on); 0 means it stopped prompting without exiting either. Root cause isolated in conpty-diag.txt probe (6) (round 10, the true-direct-attachment case with no cmd.exe and no redirect wrapper anywhere in the chain): host-written bytes reach $Exe's pty input pipe (WriteFile succeeds) but never arrive as a console input event on this hosted image - GetNumberOfConsoleInputEvents stays 0 and ReadConsoleA never unblocks, even measured from inside the directly-attached child itself. Not a defect in StdinChannel.cpp or SolveSession.cpp - the console handle this harness attaches never receives the write in the first place." } else { $null })
 }
 
 # ===========================================================================
@@ -679,14 +679,14 @@ Invoke-Section -Name 'TP-005' -Body {
         -State $(if ($latencyOk -and $exitOk) { 'PASS' } else { 'FAIL' }) `
         -Expected 'responding at the first prompt over a real console handle ends the process with exit 3 within 1.0s (RTVM-203)' `
         -Observed "firstPromptSeconds=$($r.FirstPromptSeconds) stopExitCode=$($r.StopExitCode) stopLatencyMs=$($r.StopLatencyMs) stopWriteOk=$($r.StopWriteOk) stopWriteError=$($r.StopWriteError)" `
-        -Reason $(if (-not ($latencyOk -and $exitOk)) { "see $($r.RawOutputPath | Split-Path -Leaf) in the artifact: $($r.RawOutputPath)" } else { $null })
+        -Reason $(if (-not ($latencyOk -and $exitOk)) { "see $($r.RawOutputPath | Split-Path -Leaf) in the artifact: $($r.RawOutputPath) - same root cause as TP-006/stop-response-exit-3: see conpty-diag.txt probe (6), the true-direct-attachment isolation showing host-written input never becomes a console input event on this hosted image, independent of cmd.exe wrapping or encoding" } else { $null })
 
     $contentOk = $r.AbandonedTextSeen -and $r.StdoutStayedEmpty
     Add-Check -Checks $Checks -Tp 'TP-005' -Case 'abandonment-message-and-empty-stdout' `
         -State $(if ($contentOk) { 'PASS' } else { 'FAIL' }) `
         -Expected 'stderr.txt gains a line containing "abandoned at"; stdout.txt stays 0 bytes throughout (RTVM-404)' `
         -Observed "abandonedTextSeen=$($r.AbandonedTextSeen) stdoutStayedEmpty=$($r.StdoutStayedEmpty)" `
-        -Reason $(if (-not $contentOk) { "see $($r.StdoutPath | Split-Path -Leaf)/$($r.StderrPath | Split-Path -Leaf) in the artifact: $($r.StdoutPath)" } else { $null })
+        -Reason $(if (-not $contentOk) { "see $($r.StdoutPath | Split-Path -Leaf)/$($r.StderrPath | Split-Path -Leaf) in the artifact: $($r.StdoutPath) - the stop response written by this probe is subject to the same conpty-diag.txt probe (6) input-delivery gap, so the process runs its normal (non-abandoned) schedule instead of exiting via the stop path" } else { $null })
 }
 
 # ===========================================================================

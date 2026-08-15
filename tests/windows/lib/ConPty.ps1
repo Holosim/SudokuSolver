@@ -1142,6 +1142,25 @@ $visible = $line.Replace("`r", '<CR>').Replace("`n", '<LF>')
         $lines.Add("EXCEPTION in probe (6): $($_.Exception.Message)")
     }
 
+    # Round 10 conclusion (issue #25): probes (4), (5) and (6) each isolate
+    # console *input* delivery a step further than the last - nested cmd.exe
+    # "set /p", direct powershell.exe via -EncodedCommand with no cmd.exe,
+    # then true direct attachment with no redirect wrapper anywhere in the
+    # chain, reporting its result via a file write from inside the child so
+    # even the render-pass failure probe (1) found can't hide a real event.
+    # All three, independently, see inputReachedConsoleInputBuffer=False /
+    # EVENTS=0: bytes written host-side to the pty's input pipe (WriteFile
+    # succeeds, GetLastError is clean) never surface as a console input
+    # record on this hosted image, regardless of what process shape or
+    # encoding is attached to the other end. That is the specific negative
+    # result for TP-005/TP-006's stop-response clauses: this harness cannot
+    # observe the stop-response path over a real console handle on
+    # windows-latest, not because SolveSession.cpp/StdinChannel.cpp mis-
+    # behaves, but because the host side of ConPTY's own input pipe is not
+    # being translated into console input events here. TP-004's two clauses
+    # and TP-006's prompt-cadence/still-running clauses do not depend on
+    # input delivery and are unaffected - see the PASS results those get in
+    # runtime-procedures.txt.
     Write-Utf8NoBom -Path (Join-Path $EvidenceDir 'conpty-diag.txt') -Content ($lines -join "`n")
 }
 
