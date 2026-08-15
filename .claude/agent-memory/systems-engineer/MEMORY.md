@@ -24,6 +24,7 @@
 - [Cancel-in-progress shifts trunk-arrival SHA](cancel-in-progress-shifts-trunk-arrival-sha.md) — CI/CD's own follow-up commit can cancel the regression run targeting its `--no-ff` merge SHA via `cancel-in-progress`; record whichever SHA the workflow actually re-targets, not the literal merge commit, after confirming the two are tree-identical outside agent memory.
 - [RTVM-505 closure and label residue](rtvm-505-closure-and-label-residue.md) — closed the last plan item cleanly on the merge-SHA convention; `gh issue close` doesn't strip labels, check and clean up after.
 - [Commit SHA updates even without promotion](commit-sha-updates-even-without-promotion.md) — on a multi-row commit confirmation, update Commit(s) for every row with new evidence even if it stays In Test; only skip the update if a row got no new evidence at all.
+- [Partial TP-group discharge and branch-checkout gotcha](partial-tp-group-discharge-and-branch-checkout-gotcha.md) — a grouped row set's shared "outstanding" note doesn't discharge uniformly (#25 ConPTY spike: RTVM-004 in full, RTVM-501/502/503 partial per V-6); also a `git stash push -- <pathspec>` trap when switching a main-based checkout onto an existing `origin/issue-N` branch mid-edit.
 
 ## Project context
 
