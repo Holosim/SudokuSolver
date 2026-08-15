@@ -444,6 +444,75 @@ function New-ConPtyProcess {
     return $proc
 }
 
+# Diagnostic only - never asserted against any TP, written straight to
+# <EvidenceDir>/conpty-diag.txt rather than through Add-Check (C4/C5: the
+# evidence ledger is for TP evidence, not harness self-diagnosis). Two
+# independent probes, cheap (<= ~16s total), meant to bisect a "the real
+# TP-004/005/006 probes saw nothing at all" result:
+#   (1) cmd.exe under ConPTY - isolates whether the ConPTY mechanism itself
+#       (CreatePseudoConsole/CreateProcessW/the pipe plumbing) works on this
+#       image at all, independent of SudokuSolver.exe.
+#   (2) SudokuSolver.exe under ConPTY with a short (3s, not 15s+) hook -
+#       isolates whether spawning the real exe and passing the
+#       SUDOKU_DIAG_MIN_SOLVE_MS env var through produces any observable
+#       output at all, without waiting for the first scheduled prompt.
+function Invoke-ConPtyDiagnostics {
+    param(
+        [Parameter(Mandatory)][string]$Exe,
+        [Parameter(Mandatory)][string]$FixtureFile,
+        [Parameter(Mandatory)][string]$EvidenceDir
+    )
+
+    $lines = New-Object System.Collections.Generic.List[string]
+
+    try {
+        $comspec = $env:ComSpec
+        if (-not $comspec) { $comspec = 'C:\Windows\System32\cmd.exe' }
+        $lines.Add('--- (1) cmd.exe echo smoke test ---')
+        $lines.Add("comspec=$comspec")
+        $p1 = New-ConPtyProcess -Exe $comspec -Arguments '/c "echo CONPTY_SMOKE_OK & exit 7"' -Columns 120 -Rows 30
+        $lines.Add("Started=$($p1.Started) LastError=$($p1.LastError) ProcessId=$($p1.ProcessId)")
+        if ($p1.Started) {
+            $sw = [System.Diagnostics.Stopwatch]::StartNew()
+            $seen = $false
+            while ($sw.Elapsed.TotalSeconds -lt 8 -and -not $seen) {
+                Start-Sleep -Milliseconds 200
+                if ((Remove-AnsiCodes $p1.PeekOutput()) -match 'CONPTY_SMOKE_OK') { $seen = $true }
+            }
+            $exited = $p1.WaitForExit(3000)
+            $lines.Add("seenMarker=$seen exited=$exited exitCode=$(if ($exited) { $p1.ExitCode } else { 'n/a' }) hasExited=$($p1.HasExited)")
+            $lines.Add('raw: [' + (Remove-AnsiCodes $p1.PeekOutput()) + ']')
+            if (-not $exited) { $p1.Kill() }
+            try { $p1.Dispose() } catch { }
+        }
+    }
+    catch {
+        $lines.Add("EXCEPTION in probe (1): $($_.Exception.Message)")
+    }
+
+    $lines.Add('')
+
+    try {
+        $lines.Add('--- (2) SudokuSolver.exe short-hook smoke test (3s hook, no wait for a 15s prompt) ---')
+        $p2 = New-ConPtyProcess -Exe $Exe -Arguments ('"' + $FixtureFile + '"') `
+            -EnvVars @{ SUDOKU_DIAG_MIN_SOLVE_MS = 3000 } -Columns 120 -Rows 30
+        $lines.Add("Started=$($p2.Started) LastError=$($p2.LastError) ProcessId=$($p2.ProcessId)")
+        if ($p2.Started) {
+            $sw2 = [System.Diagnostics.Stopwatch]::StartNew()
+            while ($sw2.Elapsed.TotalSeconds -lt 8 -and -not $p2.HasExited) { Start-Sleep -Milliseconds 200 }
+            $lines.Add("elapsedSec=$([math]::Round($sw2.Elapsed.TotalSeconds,1)) hasExitedAfter8s=$($p2.HasExited) exitCode=$(if ($p2.HasExited) { $p2.ExitCode } else { 'n/a' })")
+            $lines.Add('raw: [' + (Remove-AnsiCodes $p2.PeekOutput()) + ']')
+            if (-not $p2.HasExited) { $p2.Kill() }
+            try { $p2.Dispose() } catch { }
+        }
+    }
+    catch {
+        $lines.Add("EXCEPTION in probe (2): $($_.Exception.Message)")
+    }
+
+    Write-Utf8NoBom -Path (Join-Path $EvidenceDir 'conpty-diag.txt') -Content ($lines -join "`n")
+}
+
 # ---------------------------------------------------------------------------
 # TP-004 / TP-006 — one long-lived session: the first prompt (TP-004's
 # content/timing/nothing-on-stdout-yet clause) plus all four scheduled

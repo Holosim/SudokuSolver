@@ -561,6 +561,13 @@ Invoke-Section -Name 'TP-505' -Body {
         -Observed "$($entries.Count) entries run; distinct exit codes seen: $((($exitCodesSeen | Sort-Object -Unique) -join ', '))"
 }
 
+# Diagnostic only, not a TP - see the doc comment on Invoke-ConPtyDiagnostics.
+# Written to conpty-diag.txt in the artifact so a "the real probes saw
+# nothing" result below can be bisected without a second Windows run.
+Invoke-Section -Name 'ConPTY-diag' -Body {
+    Invoke-ConPtyDiagnostics -Exe $Exe -FixtureFile $FixturePaths['P-EASY'] -EvidenceDir $EvidenceDir
+}
+
 # ===========================================================================
 # P4a - TP-004/005/006 under a real ConPTY (issue #25, docs/RTVM.md §9.4
 # A-4). Everything else in this script drives $Exe over a pipe or a file
