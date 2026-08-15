@@ -68,3 +68,23 @@ issue's job is done once that's recorded and the row's true state is
 accurately stated in §5.
 
 See [[fast-path-promotion-after-sha-recorded]], [[verification-platform-trap]].
+
+## The pattern also applies to rows still In Test, not only rows already Verified (2026-08-15, #17)
+
+Every prior instance of this pattern involved rows already at **Verified**
+reconfirming with nothing left to discharge. #17 (RTVM-004/005/006/007/
+008/404/501/502/503, §9.27→§9.28) is the same shape one rung earlier: the
+rows were **In Test**, with a specific named outstanding clause (A-4 —
+automated coverage of the `Console`/tty `StdinKind` branch, reassigned to
+#25). The regression pass (trunk `c33bb1d`, 14 commits of docs/memory-only
+diff ahead of the last-tested tip) reconfirmed cleanly but produced
+exactly the same NOT-RUN TPs/reason as the commit-confirmation evidence
+already on record — it didn't touch the one clause that would have
+promoted the rows. Closed directly, no CI/CD hand-off, rows left exactly
+as §9.27 recorded them (In Test, SHA already present).
+
+**How to apply:** don't assume this pattern is Verified-rows-only. The
+test is always the same regardless of which status the rows currently
+sit at: does this regression evidence actually discharge the *specific*
+clause the last write-up named as outstanding? If not — reconfirm and
+close, whatever status the rows happen to be at.
