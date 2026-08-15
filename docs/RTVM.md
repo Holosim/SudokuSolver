@@ -3627,3 +3627,28 @@ stands (it was promoted on the first commit-confirmation above, per
 [[verified-on-first-commit-confirmation-not-gated-by-v1]]) while the
 regression pass itself routes to Test Engineer as downstream
 confirmation, not a precondition for the promotion already recorded.
+
+**Follow-up (post-merge regression pass): reconfirmation only, no
+promotion, closed directly.** Test Engineer ran the standing regression
+baseline against trunk tip `82acc46` (6 commits ahead of the pre-merge
+tip `71ca759`, diff scoped to `tests/windows/lib/Common.ps1`,
+`tests/windows/run-timing.ps1`, `docs/RTVM.md`, and agent memory only —
+no `src/` change). Linux substitute: clean build, full driver 66/66,
+core-only driver 49/49, both matching prior counts exactly. Real
+Windows evidence found already in-flight for this exact tip (run
+`31864164827`, `win25-vs2026`), polled to completion: `tests.trx`
+66/66 vstest Passed; `runtime-procedures.txt` 47/55 PASS, 8 NOT-RUN
+(same known gaps, same reason — TP-900/901 no-2022-image;
+TP-004/005/006/007/008/405/507 blocked on #25's ConPTY spike), 0 FAIL;
+TP-504's five cases cross-checked against each sample's `exitCode`
+field, exit 0/0/2/1 every time, first byte 23–83 ms / ~15.0–15.04 s
+(hook), max gap 101–120 ms / ~10.01–10.02 s — all inside the 16.0 s/
+11.0 s I-12 ceilings. This row was already **Verified** with `292af46`
+recorded (above); the regression pass discharges nothing new — it
+reconfirms the same evidence shape already on record, not a fresh
+clause. Per
+[[second-ready-for-rtvm-update-closes-directly]], a second
+`status:ready-for-rtvm-update` handoff that promotes nothing closes
+the issue directly rather than making a third CI/CD round trip over a
+docs-only reconfirmation. Status and Commit(s) unchanged: **Verified**,
+`292af46`. TP-501…503 stay NOT-RUN, unaffected, still owned by #25.
