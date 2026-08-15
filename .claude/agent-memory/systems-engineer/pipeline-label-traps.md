@@ -106,3 +106,11 @@ a question nobody actually has an answer to. Say so in the comment and
 invite a reopen with a stated question if the relabel meant something else.
 Only fall back to "ask on the thread and wait" (the general rule above) when
 a dependency is genuinely still open.
+
+Recurred 2026-08-15 (issue #18, `[RTVM-405]`/`[RTVM-406]`) — same shape but
+the manual relabel landed **after** the last dependency (#17) had already
+closed (~16 min gap), not before, so it wasn't even a sweep-timing race, just
+a sweep cycle the human beat by hand. Same resolution applies regardless of
+which side of the dependency-closing timestamp the relabel falls on: what
+matters is whether every dependency is closed *now*, not the relative order
+of relabel vs. closure.
