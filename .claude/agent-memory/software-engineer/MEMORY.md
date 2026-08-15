@@ -29,6 +29,7 @@
 - [RTVM-504 needed a harness, not product code](rtvm-504-harness-not-product-code.md) — TP-504 is drivable without the ConPTY spike (#25) because RTVM-006/008 mean it needs no interactive reply, unlike TP-501..503.
 - [RTVM-405/406 aggregate conformance](rtvm-405-406-aggregate-conformance.md) — issue #18: the exit-code/stream mapping was already complete from earlier issues; the real gap was a missing aggregate test across all five outcomes, and the process-level half was already scripted by someone else.
 - [RTVM-505 needed no code](rtvm-505-no-code-needed.md) — issue #20: the bounded-read cap, byte-oriented parser and main.cpp catch-all already met the corpus's every clause, and the 26-entry TP-505 harness already existed in run-procedures.ps1.
+- [RTVM-904 README worked example](rtvm-904-readme-worked-example.md) — issue #22: capture the "Run" section output from a real g++ build, not §6.2 transcription; and the RTVM-507 no-mention trap is a real one to check for on this kind of doc issue.
 
 ## Process
 

@@ -42,6 +42,7 @@
 - [RTVM-504 regression pass, #19](rtvm-504-regression-pass-19.md) — 2026-08-15 PASS confirming the harness's first landing on `main`; the repeatable 8-item NOT-RUN signature to check future passes against until #25 lands.
 - [RTVM-405/406 verified](rtvm-405-406-verified.md) — 2026-08-15 PASS; real-binary exit-code re-derivation beyond the unit test, Messages.cpp-vs-§2.8 cross-check, and the TP-405/TP-505 scope line.
 - [RTVM-505 verified](rtvm-505-verified.md) — 2026-08-15 PASS, last plan NFR; 27/27 TP-505 corpus cases on real Windows evidence, why empty-input-zero-bytes *is* the zero-byte-file-argument case, and the reproduced 47/8/0 regression signature.
+- [RTVM-901/904/905/907 README pass](rtvm-901-904-905-907-readme-pass.md) — 2026-08-15 PASS on issue #22; a docs-only branch still triggers a real Windows build+vstest run (`issue-*` push), and how TP-901's "no undocumented manual step" clause was checked concretely against the workflow's own msbuild invocation.
 
 ## Recurring failure patterns
 
