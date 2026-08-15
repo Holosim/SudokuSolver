@@ -92,7 +92,7 @@ Blocked / Withdrawn.
 | RTVM-502 | Progress prompts repeat every 10 s thereafter — at 25 s, 35 s, 45 s and so on — each within ±1.0 s of its nominal time, for as long as the solve is running. | SN-5 | Test (TP-502) | In Test | `2ca7deb` |
 | RTVM-503 | The solve does not pause while a prompt is displayed or while a reply is awaited: the RTVM-204 search-step count strictly increases across every prompt window. | SN-5 | Test (TP-503) | In Test | `2ca7deb` |
 | RTVM-504 | The application is never silent while working. From launch to exit the user always has either a result, a diagnostic, or a prompt. The longest permitted interval with no output on either stream is bounded by the RTVM-501 first-prompt threshold **before** the first prompt (15 s + 1.0 s tolerance = 16.0 s) and by the RTVM-502 repeat interval **thereafter** (10 s + 1.0 s tolerance = 11.0 s). See §7 I-12. | SN-5 | Test (TP-504) | Verified | `292af46` |
-| RTVM-505 | No input causes an unhandled exception, an access violation, an assertion dialog, or a non-zero exit code outside the set in RTVM-405. Every run terminates. | SN-4 | Test (TP-505) | Approved | |
+| RTVM-505 | No input causes an unhandled exception, an access violation, an assertion dialog, or a non-zero exit code outside the set in RTVM-405. Every run terminates. | SN-4 | Test (TP-505) | Verified | `662b6ed` |
 | RTVM-506 | The delivered executable is a self-contained x64 Windows console application that runs on a clean Windows machine with no installed runtime or third-party component beyond what a stock Windows install provides. | SN-6, SN-7 | Test (TP-506) | Verified | `6166cb4` |
 | RTVM-507 | The build provides a documented diagnostic means of forcing a solve to run past the prompt thresholds without altering ordinary behaviour, so that RTVM-004…008 and RTVM-501…504 are verifiable end-to-end. It is documented in `docs/SDD.md`, not in the user-facing README, and is inert in normal use. | SN-5 | Test (TP-507) | Verified | `d39eacd` |
 | **DELIV — deliverable requirements (§6). Verified by inspection.** | | | | | |
@@ -3770,3 +3770,80 @@ left to discharge on these two rows), and RTVM-300 stays In Test at
 §7 interpretations. Closed directly, no CI/CD hand-off, since the
 regression evidence didn't discharge anything this row was still
 waiting on.
+
+### 9.31 Adversarial-input corpus tested and verified — no code change needed ([RTVM-505], issue #20)
+
+Issue #20 was late in the plan by design (Finish-Start on #5 and #18):
+it asserts a property of the finished program — no input crashes it,
+every exit code lands in the RTVM-405 set — rather than adding new
+behaviour, and it needed every earlier issue's work to exist for a
+corpus to mean anything. The Software Engineer confirmed no product
+code change was needed: `InputSource.cpp`'s bounded reads (§7 I-13,
+`kMaxLineBytes = 4096`), `Parser.cpp`'s byte-oriented parsing (never
+`strlen`, never a NUL-terminator assumption), and `main.cpp`'s
+catch-all mapping any internal fault to exit `1` were all already in
+place from #6/#7/#8/#18. `git diff --stat` over `src/` across
+`issue-20` is empty (Software Engineer's own commit, confirmed
+directly rather than taken on faith) — this matches the
+[[no-code-measurement-still-routes-to-cicd]] shape exactly, a third
+instance after RTVM-500 (§9.14) and RTVM-504 (§9.29).
+
+**What was exercised, real Windows evidence at the branch tip
+(`662b6ed`).** `tests/windows/run-procedures.ps1`'s `TP-505` section
+was already fully scripted (built during #18, unused until this issue)
+and asserts, for each corpus entry, exit code ∈ {0,1,2,3}, no crash
+dialog / unhandled-exception text, and completion under 60 s:
+
+- **27 corpus entries**, comfortably over TP-505's "at least 25": the 8
+  hand-built edge cases named in the issue body (empty input / zero-byte
+  file argument, a single newline, 10 000 lines of digits, a 1 MB
+  single line, an embedded NUL byte, a UTF-8 BOM, full-width digits, and
+  binary content read from a `.exe`), all 17 §6.1 fixtures, and a
+  directory-argument case plus a locked-file-argument case. All 27
+  `[PASS]`.
+- **Not just the summary text.** `runtime-procedures.json`'s per-case
+  `observed` field cross-checked directly: every entry shows
+  `exit=N timedOut=False crashText=False` with N ∈ {0,1,2} (3 —
+  `Aborted` — never exercised by this corpus, expected, not a gap).
+  Several stdout/stderr bodies spot-checked: the NUL-byte case reports
+  "line 1 is too long"; the binary-from-`.exe` case reports an illegal
+  character; the directory/locked-file cases report "Permission
+  denied"; `P-BLANK` (81 empty cells, a valid non-unique puzzle) returns
+  a genuine `SolvedNotUnique` grid and note at exit `0` in ~6.7 ms,
+  confirming the [RTVM-202] `maxSolutions = 2` bound finds its second
+  solution instantly rather than hanging, exactly as this issue's design
+  pointers predicted.
+- **Regression scope unaffected.** Unit driver 67/67 (unchanged from
+  #18); runtime-procedures summary 47/55 PASS, 8 NOT-RUN, 0 FAIL — the
+  same standing 8-item gap as #19's baseline (no VS 2022 image for
+  TP-900/901; TP-004/005/006/007/008/TP-405-aborted/TP-507 still waiting
+  on #25's ConPTY spike), identical reason text each time.
+- **Independent Linux substitute**, not just a read of the Windows
+  artifact: `g++ -std=c++17 -O2 -DNDEBUG -Wall -Wextra` clean build, 0
+  warnings; hand-ran empty input, a bare newline, an embedded-NUL file,
+  and a directory argument directly against the built binary — same
+  shape (exit `1`, sane stderr, no crash) as the Windows evidence.
+
+**One naming nuance, not a gap.** The script passes every corpus entry
+as a file *argument*, never via stdin, so `empty-input-zero-bytes`
+already **is** the "file argument pointing at a zero-byte file" case
+the issue text asks for — no separate case was needed.
+
+| Req | Executed here and passed | Still outstanding |
+| --- | --- | --- |
+| RTVM-505 | TP-505 in full: 27-entry corpus (≥25 required), every case exit-code-gated in {0,1,2,3}, no crash/unhandled-exception text, under 60 s, real Windows evidence at the branch tip | None — this row is the last NFR in the plan |
+
+**Status outcome: RTVM-505 promoted Approved → Verified at `662b6ed`.**
+This is a genuine, first-time promotion for this row — no SHA was
+recorded before this handoff — so per
+[[no-code-measurement-still-routes-to-cicd]] it takes the literal
+fast-path hand-off to `agent:cicd` even though the diff is
+`docs/RTVM.md` and agent memory only, no `src/` or `tests/` change (the
+TP-505 harness itself shipped on #18, not here). No A-row in §9.4
+references TP-505, so nothing there needs updating. Commit(s) currently
+reads the branch-tip evidence SHA `662b6ed`; per the a067772 convention
+(§9.14's follow-up), CI/CD's `--no-ff` merge SHA will replace it in the
+Commit(s) column once reported back, without changing the Verified
+status itself.
+
+**§7 interpretations raised in this thread: none.**

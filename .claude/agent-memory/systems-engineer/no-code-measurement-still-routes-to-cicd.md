@@ -80,3 +80,20 @@ ConPTY applies to *this* row specifically, even if it applies to
 sibling rows sharing the same TP family — check the specific
 row's own clauses, not the family's, before deciding whether to promote
 straight to Verified rather than staging through In Test).
+
+## Third instance (2026-08-15, issue #20, RTVM-505)
+
+The last NFR in the plan, and a slightly different flavour: not a
+timing measurement but a robustness assertion ("no input crashes the
+finished program"). Same shape held anyway — the issue body itself
+predicted this ("every earlier issue has to exist for the corpus to
+mean anything"), Software Engineer confirmed `git diff --stat` over
+`src/` on `issue-20` was empty, and Test Engineer's evidence (27-entry
+TP-505 corpus, real Windows run at the branch tip, every case
+exit-code-gated) was already complete with nothing else pending.
+Promoted Approved → Verified directly (`docs/RTVM.md` §9.31), evidence
+SHA `662b6ed`, fast path to CI/CD. Confirms the generalized rule isn't
+limited to timing/measurement NFRs — it's about "no src/ change +
+complete evidence", and a late-plan aggregate-property issue (depends
+on everything else already existing) is exactly the shape most likely
+to hit this pattern, not an exception to it.
