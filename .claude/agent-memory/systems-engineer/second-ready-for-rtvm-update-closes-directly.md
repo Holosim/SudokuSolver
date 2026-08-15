@@ -101,3 +101,22 @@ test is always the same regardless of which status the rows currently
 sit at: does this regression evidence actually discharge the *specific*
 clause the last write-up named as outstanding? If not — reconfirm and
 close, whatever status the rows happen to be at.
+
+## Fifth instance, with a piggybacked row along for the ride (2026-08-15, #18, RTVM-405/406)
+
+Same shape again: RTVM-405/RTVM-406 promoted to Verified at commit
+confirmation (`a78f0d2`, §9.30), then a separate post-merge regression
+pass reconfirmed identically (67/67, 49/49, byte-identical real-binary
+exit-code/stdout numbers, same 47/55-PASS/8-NOT-RUN Windows shape as
+#17) — nothing to discharge, both rows stayed Verified. Worth noting
+explicitly: the piggybacked row (RTVM-300, In Test at `668f9a4`, not
+this issue's own) also had nothing new to discharge and was left
+untouched too — the "check every row this issue touches, not just its
+own title" rule from the piggyback-discharge entries in
+[[rtvm-conventions]] applies to the *closing* check as much as the
+promoting one. Wrote the reconfirmation as a follow-up appended to the
+existing §9.30 section (not a new §9.x number) — the sixth time this
+project has preferred keeping one row's whole story in one place over
+scattering it across sections, and cheaper than allocating (and
+possibly colliding on) a new subsection number for a paragraph that
+changes no status.
