@@ -285,6 +285,25 @@ this project now has several concurrent feature branches landing on
 `docs/RTVM.md` in parallel routinely enough that a push-then-fetch race is
 the normal case, not the exception.
 
+## Third piggyback instance confirms the pattern generalizes to a row named *in the requirement text itself* (2026-08-15, #18)
+
+RTVM-405/406's own issue description said, in advance, "TP-300's whole-run
+half... is executed under [RTVM-405] (#18)" — §9.6's row already pointed
+forward to this issue by number before #18 existed as a branch. When the
+aggregate test landed (one `TEST_METHOD` driving all five outcome classes,
+since TP-405/406 are explicitly whole-program assertions), the fast-path
+update was again three actions, not one: RTVM-405/RTVM-406 promoted
+Approved → In Test (this issue's own rows, committed on `issue-18` per
+[[rtvm-conventions]]'s "fast-path commit lands on the feature branch"
+entry); RTVM-300 discharged (§9.6's cell updated to name only V-1) but not
+promoted, since only the whole-run clause was this issue's to close — the
+type-level half was already discharged at #7. Third confirmed instance of
+the piggyback-discharge pattern (after #11's `P-SEARCH` and #12's
+RTVM-301) — safe to treat as standing practice: whenever a row's own text
+names a future issue as the thing that will close its outstanding clause,
+check that issue's actual scope against the clause wording before crediting
+more than what was asked for.
+
 ## A second regression pass on an already-Verified row has nothing to discharge (2026-08-14, #12)
 
 RTVM-202/RTVM-401 reached Verified on the *first* commit confirmation
