@@ -114,3 +114,13 @@ a sweep cycle the human beat by hand. Same resolution applies regardless of
 which side of the dependency-closing timestamp the relabel falls on: what
 matters is whether every dependency is closed *now*, not the relative order
 of relabel vs. closure.
+
+Recurred again the same day (issue #19, `[RTVM-504]`) — same after-closure
+shape as #18: on-hold since creation, human added `agent:systems-engineer` +
+`status:in-progress` ~17 min after the last FS dependency (#17) closed,
+empty thread, no doc change actually needed (I-12's piecewise bound was
+already fully written up). Two occurrences same day confirms this is a
+recurring race, not a one-off — worth checking dependency state first,
+before assuming a stray relabel is a real handoff, whenever a feature issue
+arrives on `agent:systems-engineer` (rather than `agent:software-engineer`)
+with `status:on-hold` still attached.
