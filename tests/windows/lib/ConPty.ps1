@@ -955,6 +955,99 @@ function Invoke-ConPtyDiagnostics {
         $lines.Add("EXCEPTION in probe (4): $($_.Exception.Message)")
     }
 
+    $lines.Add('')
+
+    # (5) Eighth Windows round: probe (4)'s round-8 fix did not resolve it
+    # (still literal "GOT:!REPLY!" - see conpty-diag.txt from that run) and
+    # cmd.exe's /V:ON/delayed-expansion behaviour is now a second suspect in
+    # its own right, on top of the original question. That makes probe (4)
+    # a test of "does cmd.exe's delayed expansion behave as documented
+    # here", not cleanly "does console input reach a child process" -
+    # continuing to debug cmd.exe's own quoting/expansion rules is chasing
+    # a different bug than #25 is actually about. This probe asks the
+    # original question directly instead, with no cmd.exe involved at all:
+    # powershell.exe -EncodedCommand (Base64, so no quoting/escaping
+    # hazard survives being embedded in Start()'s own cmd.exe /c redirect
+    # wrapper) P/Invokes GetNumberOfConsoleInputEvents/ReadConsoleA - the
+    # same two Win32 entry points StdinChannel.cpp's consoleLineReady/
+    # tryNonBlockingRead call for the Console StdinKind - against its own
+    # STD_INPUT_HANDLE, polling non-blocking for up to 20s the same way the
+    # product does, then doing one ReadConsoleA once an event is pending.
+    # A clean "EVENTS=1 LINE=[hello]" here is a direct, unambiguous answer:
+    # console input delivery works on this image end to end, independent
+    # of cmd.exe, independent of SudokuSolver.exe, independent of the
+    # render pass already known broken.
+    try {
+        $lines.Add('--- (5) console input round-trip test via powershell.exe -EncodedCommand (GetNumberOfConsoleInputEvents/ReadConsoleA directly, no cmd.exe) ---')
+        $diagDir5 = Join-Path $EvidenceDir 'conpty-diag-input-ps'
+        New-Item -ItemType Directory -Force -Path $diagDir5 | Out-Null
+        $out5 = Join-Path $diagDir5 'stdout.txt'
+        $err5 = Join-Path $diagDir5 'stderr.txt'
+        Write-Utf8NoBom -Path $out5 -Content ''
+        Write-Utf8NoBom -Path $err5 -Content ''
+
+        $psPath = Join-Path $env:SystemRoot 'System32\WindowsPowerShell\v1.0\powershell.exe'
+        if (-not (Test-Path -LiteralPath $psPath)) { $psPath = 'powershell.exe' }
+
+        # Single-quoted here-string (@'...'@): nothing inside is
+        # interpolated by *this* PowerShell before being embedded in the
+        # child's -EncodedCommand payload.
+        $childScript = @'
+Add-Type -Namespace SudokuDiag -Name Con -MemberDefinition @"
+[DllImport("kernel32.dll")] public static extern IntPtr GetStdHandle(int nStdHandle);
+[DllImport("kernel32.dll", SetLastError = true)] public static extern bool GetNumberOfConsoleInputEvents(IntPtr hConsoleInput, out uint lpNumberOfEvents);
+[DllImport("kernel32.dll", SetLastError = true)] public static extern bool ReadConsoleA(IntPtr hConsoleInput, byte[] lpBuffer, uint nNumberOfCharsToRead, out uint lpNumberOfCharsRead, IntPtr lpInputControl);
+"@
+$h = [SudokuDiag.Con]::GetStdHandle(-10)
+$deadline = [DateTime]::UtcNow.AddSeconds(20)
+$events = 0
+while ([DateTime]::UtcNow -lt $deadline) {
+    [uint32]$n = 0
+    [void][SudokuDiag.Con]::GetNumberOfConsoleInputEvents($h, [ref]$n)
+    if ($n -gt 0) { $events = $n; break }
+    Start-Sleep -Milliseconds 100
+}
+$line = ''
+if ($events -gt 0) {
+    $buf = New-Object byte[] 256
+    [uint32]$read = 0
+    [void][SudokuDiag.Con]::ReadConsoleA($h, $buf, 256, [ref]$read, [IntPtr]::Zero)
+    $line = [System.Text.Encoding]::ASCII.GetString($buf, 0, $read)
+}
+$visible = $line.Replace("`r", '<CR>').Replace("`n", '<LF>')
+Write-Output ("EVENTS=" + $events + " LINE=[" + $visible + "]")
+'@
+        $encoded = [Convert]::ToBase64String([System.Text.Encoding]::Unicode.GetBytes($childScript))
+        $psArgs = "-NoProfile -NonInteractive -EncodedCommand $encoded"
+
+        $p5 = New-ConPtyProcess -Exe $psPath -Arguments $psArgs -Columns 120 -Rows 30 -StdoutRedirectPath $out5 -StderrRedirectPath $err5
+        $lines.Add("Started=$($p5.Started) LastError=$($p5.LastError) ProcessId=$($p5.ProcessId)")
+        if ($p5.Started) {
+            # The child polls internally for up to 20s (its own deadline
+            # above) before giving up and printing EVENTS=0 - this needs to
+            # wait at least that long, not race it.
+            Start-Sleep -Milliseconds 1500
+            $writeOk = $p5.WriteInput("hello`r")
+            $writeErr = $p5.LastError
+            $exited5 = $p5.WaitForExit(25000)
+            Start-Sleep -Milliseconds 300
+            $stdoutText5 = Get-Content -LiteralPath $out5 -Raw -ErrorAction SilentlyContinue
+            $stderrText5 = Get-Content -LiteralPath $err5 -Raw -ErrorAction SilentlyContinue
+            if (-not $stdoutText5) { $stdoutText5 = '' }
+            if (-not $stderrText5) { $stderrText5 = '' }
+            $lines.Add("writeInputOk=$writeOk writeInputError=$writeErr")
+            $lines.Add("exited=$exited5 exitCode=$(if ($exited5) { $p5.ExitCode } else { 'n/a' })")
+            $lines.Add("stdoutFile=[$stdoutText5] stderrFile=[$stderrText5]")
+            $lines.Add("inputReachedConsoleInputBuffer=$([bool]($stdoutText5 -match 'EVENTS=[1-9]'))")
+            $lines.Add("readConsoleAGotHello=$([bool]($stdoutText5 -match '<CR>' -or $stdoutText5 -match 'hello'))")
+            if (-not $exited5) { $p5.Kill() }
+            try { $p5.Dispose() } catch { }
+        }
+    }
+    catch {
+        $lines.Add("EXCEPTION in probe (5): $($_.Exception.Message)")
+    }
+
     Write-Utf8NoBom -Path (Join-Path $EvidenceDir 'conpty-diag.txt') -Content ($lines -join "`n")
 }
 
@@ -991,6 +1084,8 @@ function Invoke-ConPty004006Probe {
         StillRunningAfterFourth   = $false
         StopExitCode              = $null
         StopLatencyMs             = $null
+        StopWriteOk               = $null
+        StopWriteError            = $null
         PromptsAfterStopAttempt   = $null
         RawOutputPath             = $null
         StdoutPath                = $null
@@ -1055,7 +1150,8 @@ function Invoke-ConPty004006Probe {
     # TP-006's closing step: send the stop response and confirm exit 3.
     $stopSw = [System.Diagnostics.Stopwatch]::StartNew()
     $countAtStop = $seenTimestamps.Count
-    [void]$proc.WriteInput("s`r")
+    $result.StopWriteOk = $proc.WriteInput("s`r")
+    $result.StopWriteError = $proc.LastError
     $exited = $proc.WaitForExit(5000)
     $stopSw.Stop()
     if ($exited) {
@@ -1118,6 +1214,8 @@ function Invoke-ConPty005Probe {
         FirstPromptSeconds = $null
         StopExitCode       = $null
         StopLatencyMs      = $null
+        StopWriteOk        = $null
+        StopWriteError     = $null
         AbandonedTextSeen  = $false
         StdoutStayedEmpty  = $null
         RawOutputPath      = $null
@@ -1148,7 +1246,8 @@ function Invoke-ConPty005Probe {
     if ($wait.Matched) {
         $result.FirstPromptSeconds = [math]::Round($wait.ElapsedMs / 1000.0, 2)
         $stopSw = [System.Diagnostics.Stopwatch]::StartNew()
-        [void]$proc.WriteInput("s`r")
+        $result.StopWriteOk = $proc.WriteInput("s`r")
+        $result.StopWriteError = $proc.LastError
         $exited = $proc.WaitForExit(5000)
         $stopSw.Stop()
         if ($exited) {

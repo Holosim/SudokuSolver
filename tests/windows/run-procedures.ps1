@@ -644,7 +644,7 @@ Invoke-Section -Name 'TP-004,TP-006' -Body {
     Add-Check -Checks $Checks -Tp 'TP-006' -Case 'stop-response-exit-3' `
         -State $(if ($stopOk) { 'PASS' } else { 'FAIL' }) `
         -Expected 'sending the stop response over the console input pipe ends the process with exit code 3' `
-        -Observed "stopExitCode=$($r.StopExitCode) stopLatencyMs=$($r.StopLatencyMs) promptsAfterStopAttempt=$($r.PromptsAfterStopAttempt)" `
+        -Observed "stopExitCode=$($r.StopExitCode) stopLatencyMs=$($r.StopLatencyMs) stopWriteOk=$($r.StopWriteOk) stopWriteError=$($r.StopWriteError) promptsAfterStopAttempt=$($r.PromptsAfterStopAttempt)" `
         -Reason $(if (-not $stopOk) { "see $($r.RawOutputPath | Split-Path -Leaf) in the artifact: $($r.RawOutputPath) - promptsAfterStopAttempt>0 means the process kept running its normal schedule (the stop response was never recognised, not just slow to act on); 0 means it stopped prompting without exiting either (see conpty-diag.txt probe (4) for whether input delivery itself works on this image)" } else { $null })
 }
 
@@ -678,7 +678,7 @@ Invoke-Section -Name 'TP-005' -Body {
     Add-Check -Checks $Checks -Tp 'TP-005' -Case 'exit-3-within-1s' `
         -State $(if ($latencyOk -and $exitOk) { 'PASS' } else { 'FAIL' }) `
         -Expected 'responding at the first prompt over a real console handle ends the process with exit 3 within 1.0s (RTVM-203)' `
-        -Observed "firstPromptSeconds=$($r.FirstPromptSeconds) stopExitCode=$($r.StopExitCode) stopLatencyMs=$($r.StopLatencyMs)" `
+        -Observed "firstPromptSeconds=$($r.FirstPromptSeconds) stopExitCode=$($r.StopExitCode) stopLatencyMs=$($r.StopLatencyMs) stopWriteOk=$($r.StopWriteOk) stopWriteError=$($r.StopWriteError)" `
         -Reason $(if (-not ($latencyOk -and $exitOk)) { "see $($r.RawOutputPath | Split-Path -Leaf) in the artifact: $($r.RawOutputPath)" } else { $null })
 
     $contentOk = $r.AbandonedTextSeen -and $r.StdoutStayedEmpty
