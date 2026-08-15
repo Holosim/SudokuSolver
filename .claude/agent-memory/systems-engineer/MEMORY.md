@@ -23,6 +23,7 @@
 - [Standing spike instructions can go unfulfilled](standing-spike-instructions-can-go-unfulfilled.md) — a ledger row naming "attempt this on #N" isn't self-enforcing; grep the RTVM for the issue's own number before writing the ledger entry, and reassign to a new issue rather than let it go stale. Also: a row with zero automated evidence for one shape doesn't ride the "first commit confirmation promotes to Verified" precedent just because the rest of the feature passed, and check branch-vs-main *before* the first commit, not after.
 - [Cancel-in-progress shifts trunk-arrival SHA](cancel-in-progress-shifts-trunk-arrival-sha.md) — CI/CD's own follow-up commit can cancel the regression run targeting its `--no-ff` merge SHA via `cancel-in-progress`; record whichever SHA the workflow actually re-targets, not the literal merge commit, after confirming the two are tree-identical outside agent memory.
 - [RTVM-505 closure and label residue](rtvm-505-closure-and-label-residue.md) — closed the last plan item cleanly on the merge-SHA convention; `gh issue close` doesn't strip labels, check and clean up after.
+- [Commit SHA updates even without promotion](commit-sha-updates-even-without-promotion.md) — on a multi-row commit confirmation, update Commit(s) for every row with new evidence even if it stays In Test; only skip the update if a row got no new evidence at all.
 
 ## Project context
 
