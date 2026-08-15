@@ -26,6 +26,7 @@
 - [RTVM-203/204 wall-clock tests](rtvm203-204-wallclock-tests.md) — literal TP-203/204 numbers kept as-is, and the mutation trap: `m_aborted` isn't what decides the outcome during the RTVM-507 extension, the loop's own return-value check is.
 - [PowerShell Mandatory/List gotchas](powershell-mandatory-and-list-gotchas.md) — `return $list` unrolls to `$null`; `Mandatory` rejects empty input; `-RedirectStandardInput 'NUL'` throws on real Windows and can produce false PASSes downstream.
 - [RTVM-004 prompt/abort/non-blocking stdin](rtvm-004-prompt-abort-nonblocking-stdin.md) — the fourth `StdinChannel` seam function, why `select()` mirrors all four Win32 availability tests, and why only `Reporter`'s Aborted branch (not `SolveSession`) got a unit test.
+- [RTVM-405/406 aggregate conformance](rtvm-405-406-aggregate-conformance.md) — issue #18: the exit-code/stream mapping was already complete from earlier issues; the real gap was a missing aggregate test across all five outcomes, and the process-level half was already scripted by someone else.
 
 ## Process
 
