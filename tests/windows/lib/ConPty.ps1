@@ -896,13 +896,26 @@ function Invoke-ConPtyDiagnostics {
         $err4 = Join-Path $diagDir4 'stderr.txt'
         Write-Utf8NoBom -Path $out4 -Content ''
         Write-Utf8NoBom -Path $err4 -Content ''
-        # enabledelayedexpansion + !REPLY! (not %REPLY%): cmd.exe expands
-        # %-variables once, when it first parses the whole line, which is
-        # before `set /p` has run - the classic reason "set /p X=&echo %X%"
-        # on one line prints the *old* value. !REPLY! defers the expansion
-        # to execution time, after set /p has actually assigned it.
+        # !REPLY! (not %REPLY%): cmd.exe expands %-variables once, when it
+        # first parses the whole line, which is before `set /p` has run -
+        # the classic reason "set /p X=&echo %X%" on one line prints the
+        # *old* value. !REPLY! defers the expansion to execution time,
+        # after set /p has actually assigned it - BUT only once delayed
+        # expansion is already active *before* this line is parsed.
+        # `setlocal enabledelayedexpansion & ... & echo !REPLY!` on a
+        # single line does NOT work: cmd.exe decides how to treat every `!`
+        # on a line at the moment it starts parsing that line, before any
+        # of the line's own commands (including the setlocal on it) have
+        # run - the well-known "can't enable and use delayed expansion on
+        # the same line" gotcha, and a real bug in the first version of
+        # this probe (round 7): its "inputReachedAndWasRead=False" result
+        # (literal text "GOT:!REPLY!" in stdoutFile) is exactly what that
+        # bug produces regardless of whether WriteInput's bytes ever
+        # reached cmd.exe at all, so it proved nothing. `/V:ON` enables
+        # delayed expansion for the entire cmd.exe instance before it reads
+        # any command, which is unaffected by this gotcha.
         $p4 = New-ConPtyProcess -Exe $comspec4 `
-            -Arguments '/c "setlocal enabledelayedexpansion & set /p REPLY=& echo GOT:!REPLY!"' `
+            -Arguments '/V:ON /c "set /p REPLY=& echo GOT:!REPLY!"' `
             -Columns 120 -Rows 30 -StdoutRedirectPath $out4 -StderrRedirectPath $err4
         $lines.Add("Started=$($p4.Started) LastError=$($p4.LastError) ProcessId=$($p4.ProcessId)")
         if ($p4.Started) {
