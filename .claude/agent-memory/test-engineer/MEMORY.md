@@ -44,6 +44,7 @@
 - [RTVM-505 verified](rtvm-505-verified.md) — 2026-08-15 PASS, last plan NFR; 27/27 TP-505 corpus cases on real Windows evidence, why empty-input-zero-bytes *is* the zero-byte-file-argument case, and the reproduced 47/8/0 regression signature.
 - [RTVM-901/904/905/907 README pass](rtvm-901-904-905-907-readme-pass.md) — 2026-08-15 PASS on issue #22; a docs-only branch still triggers a real Windows build+vstest run (`issue-*` push), and how TP-901's "no undocumented manual step" clause was checked concretely against the workflow's own msbuild invocation.
 - [TP-004/005/006 ConPTY harness verified](tp004-006-conpty-harness-verified.md) — 2026-08-15 on #25; the A-4 gap finally has a real automated driver. TP-004 PASS, TP-006 partial, TP-005 FAIL — an isolated hosted-image console-input-delivery gap, not a product or harness defect.
+- [RTVM-004 regression pass, #25](rtvm-004-regression-pass-25.md) — 2026-08-15 PASS confirming the ConPTY harness's first landing on `main`; reproduces the identical 51-PASS/3-FAIL/5-NOT-RUN signature, and confirms a reconfirmation pass still uses the full `status:ready-for-rtvm-update` hand-off per #18's precedent.
 
 ## Recurring failure patterns
 
