@@ -84,8 +84,8 @@ Blocked / Withdrawn.
 | RTVM-402 | For the `NoSolution` outcome a plain statement that the puzzle has no solution is written to stdout, and no grid is written. | SN-3, SN-4 | Test (TP-402) | In Test | `481c726` |
 | RTVM-403 | For the `InvalidInput` outcome a specific human-readable diagnostic naming the fault is written to **stderr**, and nothing is written to stdout. | SN-4 | Test (TP-403) | Verified | `139d41a` |
 | RTVM-404 | For the `Aborted` outcome a message stating the solve was abandoned at the user's request is written to **stderr**, and nothing is written to stdout. | SN-5 | Test (TP-404) | In Test | `2ca7deb` |
-| RTVM-405 | The process exit code is `0` for `Solved` and `SolvedNotUnique`, `1` for `InvalidInput`, `2` for `NoSolution`, `3` for `Aborted`, with no other exit code reachable. | SN-8, SN-4 | Test (TP-405) | In Test | |
-| RTVM-406 | Across every reachable outcome, stdout carries only the result (grid, non-unique note, no-solution statement). No prompt text, no diagnostic, and no progress output ever reaches stdout. | SN-8 | Test (TP-406) | In Test | |
+| RTVM-405 | The process exit code is `0` for `Solved` and `SolvedNotUnique`, `1` for `InvalidInput`, `2` for `NoSolution`, `3` for `Aborted`, with no other exit code reachable. | SN-8, SN-4 | Test (TP-405) | Verified | `a78f0d2` |
+| RTVM-406 | Across every reachable outcome, stdout carries only the result (grid, non-unique note, no-solution statement). No prompt text, no diagnostic, and no progress output ever reaches stdout. | SN-8 | Test (TP-406) | Verified | `a78f0d2` |
 | **NFR — non-functional (§4.4, §5)** | | | | | |
 | RTVM-500 | Any standard 9×9 puzzle, including a hard 17-clue grid, is solved in under 10 s wall clock on a typical desktop (reference machine defined in §6.3). | SN-5 | Test (TP-500) | Verified | `699abde` |
 | RTVM-501 | The first progress prompt is emitted when the solve has been running for 15 s, within a tolerance of ±1.0 s. | SN-5 | Test (TP-501) | In Test | `2ca7deb` |
@@ -1536,7 +1536,7 @@ yet.
 
 | Req | Executed here and passed | Still outstanding |
 | --- | --- | --- |
-| RTVM-300 | TP-300's **type-level half**, in full. The five factories yield five distinct outcomes; every report's payload matches the §2.4 invariant table (`hasGrid()` ⇔ `outcomeCarriesGrid()`, `hasFault()` ⇔ `outcomeCarriesFault()`, never both); asking for a payload the outcome does not carry returns an empty stand-in rather than undefined behaviour (RTVM-505). "Never none" and "never two" are unrepresentable — enforced by `static_assert` plus two `default`-less switches, and confirmed by mutation (below) rather than by a green build. **TP-300's whole-run half now discharged too** ([RTVM-405]/[RTVM-406], issue #18, §9.29): all five fixture classes driven once each, exactly one outcome apiece, the five pairwise distinct | Only the MSVC re-execution remains (V-1) — the whole-run half itself is no longer outstanding |
+| RTVM-300 | TP-300's **type-level half**, in full. The five factories yield five distinct outcomes; every report's payload matches the §2.4 invariant table (`hasGrid()` ⇔ `outcomeCarriesGrid()`, `hasFault()` ⇔ `outcomeCarriesFault()`, never both); asking for a payload the outcome does not carry returns an empty stand-in rather than undefined behaviour (RTVM-505). "Never none" and "never two" are unrepresentable — enforced by `static_assert` plus two `default`-less switches, and confirmed by mutation (below) rather than by a green build. **TP-300's whole-run half now discharged too** ([RTVM-405]/[RTVM-406], issue #18, §9.30): all five fixture classes driven once each, exactly one outcome apiece, the five pairwise distinct | Only the MSVC re-execution remains (V-1) — the whole-run half itself is no longer outstanding |
 | RTVM-301 | TP-301's **property**, against the §6.1 `S-EASY` solution fixture: all `kCellCount` cells of both the `Solved` and the `SolvedNotUnique` report are digits `1..kGridSize`, no empty cell. The falsifiable half passes too — one blanked cell, one out-of-range digit, and the unsolved `P-EASY` grid each report `false`. The Test Engineer independently re-derived the fixtures: `kSolvedEasy`/`kPuzzleEasy` match §6.1 byte for byte, `P-EASY` has exactly 30 givens, and `S-EASY` is a genuine solution (every row, column and box a permutation of 1–9, consistent with every `P-EASY` given) | TP-301 **as worded** names the *solved results* of `P-EASY` and `P-NONUNIQUE`, which need the solver (#8) and non-uniqueness detection (#12). The assertion does not change when they land — the tests take a real `solve()` result and the expectations stay as they are. Plus the MSVC re-execution |
 | RTVM-302 | TP-302's **fault-object clauses**. The `P-CONTRA-ROW` fault is asserted as data — `RowDuplicate`, line 1, digit `5`, cells `r1c1` and `r1c7`, matching TP-104 case 1 exactly. "No pre-formatted English" is asserted structurally rather than by inspection: a structured binding names every member of `InputFault`, all of which are enums, integers, a `char`, `CellRef`s or a `uint32_t`, and the single `std::string` is `path` (empty for any parser-produced fault). 1-based conversion happens in one function per §7 I-16; an out-of-grid coordinate is *not applicable* rather than wrapped (RTVM-505) | TP-302's **parse-driven half** — "parse `P-CONTRA-ROW`" needs RTVM-104 contradiction detection, which is #10's and still `TODO` in `Parser.cpp`. The fault object asserted here **is** the expectation #10 must produce, so that test grows a `parseGrid` call and no new expectations. Plus the MSVC re-execution |
 
@@ -3653,14 +3653,7 @@ the issue directly rather than making a third CI/CD round trip over a
 docs-only reconfirmation. Status and Commit(s) unchanged: **Verified**,
 `292af46`. TP-501…503 stay NOT-RUN, unaffected, still owned by #25.
 
-<!-- CI/CD note: the following section landed as "### 9.29" on issue-18,
-     the same next-free number issue-19's section above independently
-     claimed when each branch was cut. Merged as a union per
-     merge-conflicts-that-are-id-collisions — duplicate heading number is
-     deliberate and left for the Systems Engineer to renumber, not
-     resolved here. -->
-
-### 9.29 Exit-code mapping and stdout purity tested across all five outcomes ([RTVM-405], [RTVM-406], issue #18)
+### 9.30 Exit-code mapping and stdout purity tested across all five outcomes ([RTVM-405], [RTVM-406], issue #18)
 
 State at branch `issue-18` (tip `79b30bb`), tested by the Test Engineer
 2026-08-15 — **PASS**. The last of the aggregate assertions: everything
@@ -3714,16 +3707,45 @@ not this issue. The `Aborted` case on `tests/windows/run-procedures.ps1`
 stays `NOT-RUN`, the same standing TP-004..008 limitation named at
 §9.26/§9.27/§9.28 — not introduced here and not this issue's to close.
 
-**No status promotion to Verified.** Per standing convention, Verified
-needs a trunk commit SHA in addition to full clause execution, and all
-of this evidence is on branch `issue-18`. **RTVM-405 and RTVM-406 move
-Approved → In Test**, Commit(s) left blank pending CI/CD (§5). RTVM-300
-keeps its existing status (**In Test**) and existing Commit(s)
-(`668f9a4`, from #7's merge) unchanged — this issue's whole-run-half
-work discharges the clause §9.6 left outstanding on that row without
-promoting it, per the discharge-not-promotion pattern established at
-§9.11.
+**Status at hand-off to CI/CD.** Per standing convention, Verified
+needs a trunk commit SHA in addition to full clause execution, and at
+that point all of this evidence was on branch `issue-18`. **RTVM-405
+and RTVM-406 moved Approved → In Test**, Commit(s) left blank pending
+CI/CD (§5). RTVM-300 kept its existing status (**In Test**) and
+existing Commit(s) (`668f9a4`, from #7's merge) unchanged — this
+issue's whole-run-half work discharges the clause §9.6 left
+outstanding on that row without promoting it, per the
+discharge-not-promotion pattern established at §9.11.
 
 **§7 interpretations raised in this thread: none.**
 
-Handed to CI/CD next with `status:ready-for-commit`.
+**Follow-up (commit confirmation): merge SHA recorded, RTVM-405/406
+promoted to Verified, regression routed to Test Engineer.** CI/CD
+merged `issue-18` into `main` `--no-ff` as **`a78f0d2`** (merging
+branch head `c8c93e0` — matches the SHA CI/CD's prior hand-off named,
+no trailing commits to account for). Two merge attempts exist in the
+git graph (`8c3d528` unpushed, superseded by `a78f0d2` after `main`
+moved via #20's memory-only commit mid-merge); CI/CD diffed the two
+attempts' conflict resolutions and confirmed they're byte-identical,
+so `a78f0d2` is treated as the authoritative trunk arrival for this
+issue's work. Per
+[[verified-on-first-commit-confirmation-not-gated-by-v1]], **RTVM-405
+and RTVM-406 promote In Test → Verified at `a78f0d2`** on
+this first commit confirmation, without waiting on the regression pass
+CI/CD also flagged as needed — real code (`ReporterTests.cpp`'s new
+aggregate `TEST_METHOD`) reached `main` for the first time, so
+`tests/` changing still counts per the standing rule even though no
+`src/` file moved. RTVM-300 (piggybacked, not this issue's own row)
+keeps its existing status (**In Test**) and existing Commit(s)
+(`668f9a4`) unchanged — the discharge recorded above already covers
+what this merge adds; nothing new to promote on that row.
+
+This section's number collided with issue #19's independently-cut
+`### 9.29` when both branches merged to trunk (each claimed the same
+next-free number at the point it was cut); per CI/CD's inline note on
+the merge, this section is renumbered **9.30** here as the Systems
+Engineer's resolution — issue #19's section keeps its original 9.29.
+
+Handed to Test Engineer next for the post-merge regression pass, per
+CI/CD's "regression testing is needed" flag on the commit
+confirmation.
