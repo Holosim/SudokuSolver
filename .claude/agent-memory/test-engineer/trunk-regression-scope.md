@@ -137,3 +137,23 @@ tip as part of a regression pass, before assuming Windows evidence is out
 of scope for a "Linux substitute" regression** — it can hand you the
 platform-specific clause the substitute harness can never itself close,
 at zero extra cost.
+
+**#17's regression pass (2026-08-15)**, no lighter-route offer in CI/CD's
+hand-off, so full default: 66/66 full driver, 49/49 core-only, plus the
+two cheap checks, all clean. `compare/<last-passed-branch-tip>...main`
+(`091e914...c33bb1d`) was product-empty (only `docs/RTVM.md` + agent
+memory, 14 commits ahead) — here the branch-tip baseline was still valid
+because no *other* issue's merge had landed on trunk in between (unlike
+#13's gotcha above), so no need to hunt for the merge commit's second
+parent this time; worth checking which case applies before assuming one
+baseline trick always works. Found a Windows run at the exact trunk tip
+again (`31861447621`, `headSha` = `c33bb1d`) — 66/66 vstest, and
+`run-procedures.ps1` at 47/55 PASS / 8 NOT-RUN, all 8 the same
+already-flagged gaps (TP-900/901 no-2022-image, TP-004/005/006/007/008/
+405/507 lacking the interactive-protocol driver) with identical reason
+text to the Systems Engineer's own §9.26 note — confirms "same reason,
+same TPs" is itself a checkable regression signal, not just "still
+failing." Also spot-checked that the exit-code gate from
+[[false-pass-from-unchecked-exit-codes]]'s fix is still wired on TP-401/
+402/403/406 in this run's JSON, not just that the rows read PASS — the
+fix has now held across at least two regression passes since #23.
