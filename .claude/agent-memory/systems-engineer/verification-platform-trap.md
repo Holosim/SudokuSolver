@@ -391,6 +391,27 @@ mismatch against "every other row here has a SHA and stays In Test" is the
 signal to check for an unexecuted clause before trusting the literal
 instruction text. Cheaper to grep once than to push wrong and correct it.
 
+## A self-written standing ruling from an earlier §9.x section overrides the default "record SHA → Verified" step (2026-08-15, #17)
+
+§9.26 (my own earlier write-up on this same issue) had already pre-ruled
+that the next commit-confirmation for RTVM-004/005/006/007/008/404/501/502/503
+must **not** promote to Verified — the `Console`/tty `StdinKind` branch has
+zero automated coverage anywhere in the pipeline (worse than the general
+V-1/MSVC-timing gap [[verified-on-first-commit-confirmation-not-gated-by-v1]]
+already says doesn't block promotion). CI/CD's merge comment also flagged
+"please do not promote past In Test on this alone", agreeing independently.
+Recorded the SHA (`2ca7deb`), left status at In Test, §9.27. Same shape as
+RTVM-001/002/003 (§9.8.1) — a UI/OUT row can carry a SHA for issues at a time
+without ever reaching Verified, gated on a dedicated harness issue (#25 here,
+#24 there), not on the feature branch's own regression pass.
+
+**How to apply:** when an incoming commit-confirmation already has a §9.x
+paragraph on trunk naming what the *next* hand-back may and may not do,
+treat that as binding over the role file's literal default — it's a
+decision I already made deliberately, not a default to re-derive. Grepping
+for `| Verified |` (the entry above) catches the general case; this is the
+sharper case where the specific row already states its own gate in prose.
+
 ## DW/A/I/V/W numbers: allocate from trunk, and check for the collision pattern
 
 Confirmed again on #23 that new evidence defects continue the *trunk* DW
