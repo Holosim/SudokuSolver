@@ -38,6 +38,7 @@
 - [RTVM-507 diagnostic hook verification](rtvm-507-diagnostic-hook-verification.md) — 2026-08-14 PASS, fully runnable on Linux (no Windows needed); the CPU-time-vs-wall-time trick that proves it's real work, not a sleep.
 - [RTVM-203/204 verified](rtvm-203-204-verified.md) — 2026-08-14 PASS; first RTVM-2xx item with real MSVC/vstest trx confirming literal TP timing numbers; branch-ancestry vs. issue-number-order gotcha for the DW-1 fix.
 - [RTVM-004 prompt/abort verified](rtvm004-prompt-abort-verified.md) — 2026-08-14 PASS; timestamped-stderr and named-pipe hand-run technique; post-#24 rule that hand-run evidence alone can't reach Verified once an automated harness exists.
+- [RTVM-504 verified](rtvm-504-verified.md) — 2026-08-15 PASS on real Windows evidence; mutating the harness's own ceiling constants to prove TP-504's checks aren't vacuous; a Linux-only flaky launch error that isn't a regression.
 
 ## Recurring failure patterns
 
