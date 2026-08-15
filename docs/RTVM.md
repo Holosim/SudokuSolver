@@ -3478,3 +3478,44 @@ rows can be reconsidered for Verified.
 **§7 interpretations raised in this thread: none.**
 
 Handed to Test Engineer next for the regression pass CI/CD requested.
+
+### 9.28 Regression pass reconfirms, nothing discharged (issue #17, closing)
+
+Test Engineer regression-tested trunk tip `c33bb1d` (14 commits ahead of
+the last-tested `091e914`/`7fd699b`, `docs/RTVM.md` and agent-memory only
+— no `src/`/`tests/`/`samples/`/project-file content beyond what §9.26/9.27
+already covered) — **PASS**, but a reconfirmation, not new ground:
+
+- Linux substitute suite rebuilt fresh: full driver 66/66, core-only
+  driver 49/49 (RTVM-903 split still holds). Full product build clean
+  under `-Wall -Wextra -pedantic`. `samples/*.txt` byte counts/LF pin and
+  `.sln`/`.vcxproj` gitignore status both unchanged.
+- Windows evidence at the exact trunk tip (`windows-verification` run
+  `31861447621`, headSha `c33bb1d`): `vstest.console.exe` 66/66 passed, 0
+  failed, matching the Linux count exactly. `run-procedures.ps1`: 47/55
+  PASS, 8 NOT-RUN — TP-900/901 (no VS 17.x/2022 instance, unrelated to
+  #17) and **TP-004/005/006/007/008/507, same reason as §9.26/9.27**
+  ("process still running after the 5s probe ceiling; script does not
+  yet drive the interactive prompt/abort protocol"). `dumpbin` still only
+  `KERNEL32.dll` (RTVM-506 unaffected). Both build logs clean.
+- `docs/RTVM.md` matrix spot-check: all nine rows still read In Test with
+  Commit(s) `2ca7deb`, no corruption.
+
+**Nothing to discharge.** The one clause these nine rows are still
+waiting on — automated coverage of the `Console`/tty `StdinKind` branch
+(A-4, §9.4, reassigned to **#25**, Finish-Start on this issue) — is
+untouched by this evidence: same TPs, same NOT-RUN reason, no ConPTY
+harness landed. Per
+[[second-ready-for-rtvm-update-closes-directly]] this is the
+"reconfirms only" shape (unlike RTVM-009/102…105/403 in §9.12, where a
+corrected harness genuinely discharged the outstanding clause and *did*
+route back through CI/CD despite being a docs-only diff) — no row
+promotes, so there is nothing for CI/CD to commit. **RTVM-004, RTVM-005,
+RTVM-006, RTVM-007, RTVM-008, RTVM-404, RTVM-501, RTVM-502 and RTVM-503
+stay exactly as recorded in §9.27**: In Test, Commit(s) `2ca7deb`.
+
+**§7 interpretations raised in this thread: none.**
+
+This closes out #17's own chain. #25 remains `status:on-hold` until this
+issue closes (dependency-check.yml releases it), and is what has to land
+before these nine rows can be reconsidered for Verified.
