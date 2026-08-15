@@ -91,7 +91,7 @@ Blocked / Withdrawn.
 | RTVM-501 | The first progress prompt is emitted when the solve has been running for 15 s, within a tolerance of ±1.0 s. | SN-5 | Test (TP-501) | In Test | `2ca7deb` |
 | RTVM-502 | Progress prompts repeat every 10 s thereafter — at 25 s, 35 s, 45 s and so on — each within ±1.0 s of its nominal time, for as long as the solve is running. | SN-5 | Test (TP-502) | In Test | `2ca7deb` |
 | RTVM-503 | The solve does not pause while a prompt is displayed or while a reply is awaited: the RTVM-204 search-step count strictly increases across every prompt window. | SN-5 | Test (TP-503) | In Test | `2ca7deb` |
-| RTVM-504 | The application is never silent while working. From launch to exit the user always has either a result, a diagnostic, or a prompt. The longest permitted interval with no output on either stream is bounded by the RTVM-501 first-prompt threshold **before** the first prompt (15 s + 1.0 s tolerance = 16.0 s) and by the RTVM-502 repeat interval **thereafter** (10 s + 1.0 s tolerance = 11.0 s). See §7 I-12. | SN-5 | Test (TP-504) | Approved | |
+| RTVM-504 | The application is never silent while working. From launch to exit the user always has either a result, a diagnostic, or a prompt. The longest permitted interval with no output on either stream is bounded by the RTVM-501 first-prompt threshold **before** the first prompt (15 s + 1.0 s tolerance = 16.0 s) and by the RTVM-502 repeat interval **thereafter** (10 s + 1.0 s tolerance = 11.0 s). See §7 I-12. | SN-5 | Test (TP-504) | Verified | `d4d79b2` |
 | RTVM-505 | No input causes an unhandled exception, an access violation, an assertion dialog, or a non-zero exit code outside the set in RTVM-405. Every run terminates. | SN-4 | Test (TP-505) | Approved | |
 | RTVM-506 | The delivered executable is a self-contained x64 Windows console application that runs on a clean Windows machine with no installed runtime or third-party component beyond what a stock Windows install provides. | SN-6, SN-7 | Test (TP-506) | Verified | `6166cb4` |
 | RTVM-507 | The build provides a documented diagnostic means of forcing a solve to run past the prompt thresholds without altering ordinary behaviour, so that RTVM-004…008 and RTVM-501…504 are verifiable end-to-end. It is documented in `docs/SDD.md`, not in the user-facing README, and is inert in normal use. | SN-5 | Test (TP-507) | Verified | `d39eacd` |
@@ -1351,7 +1351,7 @@ than for a plan.
 | A-2 | **TP-900** — the solution *opening* in VS 2022 with no "project unavailable" and no migration prompt | The prompt is modal GUI behaviour; a headless runner never renders it | `devenv.exe SudokuSolver.sln /Build "Debug\|x64"` uses the same solution loader as the IDE and fails or hangs where the IDE would prompt; combined with a toolset/`ToolsVersion` inspection this covers the substance | **Genuine V-4 item — measured 2026-08-13 (§9.1.6), not a suspicion.** `vswhere -legacy -all -products *` (P2, `run-procedures.ps1`) confirms **no VS `17.x` instance exists on `win25-vs2026`**, on both the pre-fix and post-fix runs. The toolset half is covered — the build ran on `PlatformToolset=v143` / MSVC 14.44, the VS 2022 toolset shipped side-by-side. What remains, and cannot be automated on this image, is one sentence: *"the solution opens in the VS 2022 IDE itself with no migration prompt."* Ready to go forward with A-1 once A-4 is attempted (V-5) |
 | A-3 | **TP-905** — tests appearing in **Test Explorer** | Test Explorer is a GUI surface | `vstest.console.exe` is the discovery and execution engine Test Explorer drives; if it discovers and runs both methods, the substantive claim holds | **CLOSED 2026-08-13 (§9.1.6, DW-1 fixed).** `run-procedures.ps1` now runs `vstest.console.exe /ListTests:<dll>` for discovery and a separate `/Logger:trx` execution; both artifacts exist at SHA `3658728` (Windows run `31739274812`): 25/25 tests discovered, 25/25 executed and passed. No longer a V-4 candidate |
 | A-4 | **TP-004…008** — the console-handle behaviour (`PeekConsoleInput`, `GetFileType` = console, an interactive-equivalent stdin held open) | A runner step has no interactive console attached: stdin is a pipe or `NUL`, so `GetFileType` never reports a console and the console path is never entered. TP-008's redirected half runs fine; TP-004/005/006's do not | Drive the exe under a **ConPTY pseudoconsole** (`CreatePseudoConsole`, available on Windows Server 2022) from a small harness, so the child genuinely sees a console handle. This is the same mechanism Windows Terminal uses and it is not exotic | **Still undecided — the #17 spike was not attempted.** §9.26: the console-handle *product* code shipped on #17 (RTVM-004…008 promoted to In Test) but both the Software Engineer and Test Engineer independently declined the ConPTY harness spike itself as out of scope for a feature branch ("no pty available in this harness"), same reasoning #24 gave for splitting `ProcessRunner` into its own issue. **Reassigned to #25**, a dedicated issue, Finish-Start on #17. Still the largest row on this list if it closes |
-| A-5 | **TP-500…504** — the timing set | Shared-tenant runner jitter against a ±1.0 s tolerance (§7 I-6) | W-7: three samples, Release build, all reported | **Not a V-4 item, and now has real data behind that call.** `tests/windows/run-timing.ps1` lands 2026-08-13 (§9.1.6) and, once DW-4's exit-code gate was fixed, produced genuine TP-500 evidence at SHA `3658728`: `easy`/`hard17` max 20–30 ms, `unsolvable` max ~12 ms, 30/30 runs at the correct exit code, all three W-7 samples present. Nowhere close to the 10 s ceiling on this modest 2-core/4-logical machine, so §7 I-6's tolerance is not in question yet. **Superseded 2026-08-14 (§9.14, issue #15)** by fresher, issue-scoped evidence gathered at pre-merge SHA `00d0c38` on the `win25-vs2026` image: `easy` max 22.2 ms, `hard17` max 28.6 ms, `unsolvable` max 10.7 ms, all three W-7 samples exit-code-gated (0/0/2). RTVM-500 promoted to Verified, Commit(s) recorded as merge commit `699abde` per the standing "record the trunk merge SHA" convention (§9.5, §9.8.5, §9.11). TP-501…504 stay NOT-RUN pending the RTVM-507 diagnostic hook |
+| A-5 | **TP-500…504** — the timing set | Shared-tenant runner jitter against a ±1.0 s tolerance (§7 I-6) | W-7: three samples, Release build, all reported | **Not a V-4 item, and now has real data behind that call.** `tests/windows/run-timing.ps1` lands 2026-08-13 (§9.1.6) and, once DW-4's exit-code gate was fixed, produced genuine TP-500 evidence at SHA `3658728`: `easy`/`hard17` max 20–30 ms, `unsolvable` max ~12 ms, 30/30 runs at the correct exit code, all three W-7 samples present. Nowhere close to the 10 s ceiling on this modest 2-core/4-logical machine, so §7 I-6's tolerance is not in question yet. **Superseded 2026-08-14 (§9.14, issue #15)** by fresher, issue-scoped evidence gathered at pre-merge SHA `00d0c38` on the `win25-vs2026` image: `easy` max 22.2 ms, `hard17` max 28.6 ms, `unsolvable` max 10.7 ms, all three W-7 samples exit-code-gated (0/0/2). RTVM-500 promoted to Verified, Commit(s) recorded as merge commit `699abde` per the standing "record the trunk merge SHA" convention (§9.5, §9.8.5, §9.11). **TP-504 itself discharged 2026-08-15 (§9.29, issue #19)** — it needs no ConPTY (RTVM-006/008 mean non-interactive invocation is never blocked), so it was drivable without waiting on #25: `run-timing.ps1` now asserts the full piecewise I-12 bound (first byte ≤16.0 s, post-first-byte gaps ≤11.0 s) for `P-EASY`/`P-HARD17`/`P-UNSOLVABLE`/`P-BADCHAR`/the long-solve hook, real Windows evidence at `d4d79b2` (run `31863267320`), all 5 PASS, mutation-tested against a false-tightened ceiling to rule out a vacuous check. RTVM-504 promoted to Verified. TP-501…503 stay NOT-RUN pending #25, unaffected |
 | A-6 | **TP-901** — build "on a machine that has never built this project" | — none; a fresh hosted runner satisfies this clause **better** than a client engineer's machine, which has VS configured and a warm state | n/a | **Not a V-4 item.** Recorded only to stop it being added later by association |
 
 Nothing on this list is surfaced to the client until it is down to the
@@ -3519,3 +3519,82 @@ stay exactly as recorded in §9.27**: In Test, Commit(s) `2ca7deb`.
 This closes out #17's own chain. #25 remains `status:on-hold` until this
 issue closes (dependency-check.yml releases it), and is what has to land
 before these nine rows can be reconsidered for Verified.
+
+### 9.29 RTVM-504's piecewise bound tested and verified — no code change needed ([RTVM-504], issue #19)
+
+Issue #19 carried §7 **I-12**'s already-resolved reading of RTVM-504
+verbatim in its body: the bound is piecewise (≤16.0 s to first output,
+≤11.0 s between outputs thereafter), not the single 11.0 s-from-launch
+bound the original wording implied, and no product behaviour changes —
+only the assertion TP-504 makes. That prediction held: `git diff --stat`
+over `src/` across every commit on `issue-19` is empty (confirmed
+directly by the Systems Engineer, not just relayed from Software
+Engineer). The RTVM-501/502 prompt cadence #17 already built is what
+TP-504 measures; this issue only had to teach the test harness to
+measure it correctly.
+
+**Why TP-504 didn't have to wait on #25.** TP-501…503 stay NOT-RUN,
+blocked on the ConPTY spike (#25) because they need a genuine console
+handle attached (A-4, §9.4). TP-504 doesn't: RTVM-006/RTVM-008 guarantee
+a non-interactive invocation is never blocked waiting on a reply, so the
+byte-timestamp/gap measurement TP-504 asks for is fully drivable through
+ordinary redirected stdout/stderr — no pseudoconsole required. Confirmed
+this reading against RTVM-006/008's own text before accepting the
+Software Engineer's framing, rather than taking it on faith.
+
+**Evidence, this issue's own commit (`d4d79b2`, `[RTVM-504] Drive TP-504
+for real in run-timing.ps1`):**
+
+- **Linux substitute** (`g++ -std=c++17 -O2 -DNDEBUG -Wall -Wextra`,
+  clean build; all four `tests/windows/*.ps1` parse clean under `pwsh
+  7.6`): `run-timing.ps1` run twice against that build laid out under a
+  synthetic `x64\Release\` path. TP-504's five cases (`P-EASY`,
+  `P-HARD17`, `P-UNSOLVABLE`, `P-BADCHAR`, the long-solve hook) **PASS**
+  both times — first byte 21–74 ms for the four ordinary fixtures, ~15.0 s
+  for the hook, max gap ~10.0–10.02 s, all inside the 16.0 s/11.0 s
+  ceilings, exit codes correct throughout.
+- **Mutation check, not taken on faith.** A copy of `run-timing.ps1`
+  with `$FirstByteCeilingMs`/`$GapCeilingMs` dropped to `1.0` correctly
+  flipped all five TP-504 rows to `FAIL` with the right reason text
+  against the same build — the checks gate on the measured timestamps,
+  not on a tautology.
+- **Real Windows evidence**, this exact branch tip (`d4d79b2`, run
+  `31863267320`, `win25-vs2026`, headSha match — a completed run, not
+  in-flight): raw log for the timing step has no `##[error]` (only the
+  pre-existing, unrelated TP-905 inline-`vstest` failure, out of scope
+  here). All three W-7 samples: TP-504's five cases **PASS**, first byte
+  22.8–74.3 ms / ~15.0–15.05 s (hook), max gap ~9.99–10.02 s, exit codes
+  0/0/2/1 correct in every case — exit-code-gated, not timing-shaped
+  only. Zero `[FAIL]` rows anywhere in `timing.txt` or
+  `runtime-procedures.txt`. `tests.trx`: 66/66 unit tests passed. Both
+  Debug and Release builds: 0 errors, 0 warnings. TP-501…503 stay
+  NOT-RUN, same reason as §9.26/9.27/9.28 (#25 still open) — unaffected,
+  not a regression.
+
+One Linux-substitute-only flake was reported and ruled out: an
+occasional `Broken pipe`/`-1` exit inside the pre-existing, unmodified
+`Invoke-Sudoku` TP-500 loop, gone on re-run, absent from all three real
+Windows samples, and outside `Invoke-SudokuTimestamped` (this issue's
+own new code path). Not a TP-504 defect — a runner artifact, noted for
+the test-flake pattern list, not handed back.
+
+**Status outcome: RTVM-504 promoted Approved → Verified at `d4d79b2`.**
+This is a genuine, first-time promotion for this row — no SHA was
+recorded before this handoff — so per
+[[no-code-measurement-still-routes-to-cicd]] it takes the literal
+fast-path hand-off to `agent:cicd` even though the diff is
+`tests/windows/*.ps1` and `docs/RTVM.md` only, no `src/` change. This
+mirrors §9.14's RTVM-500 precedent exactly (NFR/timing item, no product
+code, full real-hardware evidence already in hand) rather than the
+Approved→In Test→(wait for CI/CD merge)→Verified path RTVM-203/204 and
+RTVM-004…008/404/501…503 took in §9.22/9.23/9.26/9.27 — those rows had
+genuine product-code changes still awaiting a trunk merge; this one
+doesn't. Commit(s) currently reads the branch-tip evidence SHA
+`d4d79b2`; per the a067772 convention (§9.14's follow-up), CI/CD's
+`--no-ff` merge SHA will replace it in the Commit(s) column once
+reported back, without changing the Verified status itself. §9.4's A-5
+row updated in place to point here.
+
+**§7 interpretations raised in this thread: none** — I-12 was already
+correct as written; this issue only had to make TP-504 measure it as
+documented.
