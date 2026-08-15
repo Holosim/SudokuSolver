@@ -92,7 +92,7 @@ Blocked / Withdrawn.
 | RTVM-502 | Progress prompts repeat every 10 s thereafter — at 25 s, 35 s, 45 s and so on — each within ±1.0 s of its nominal time, for as long as the solve is running. | SN-5 | Test (TP-502) | In Test | `2ca7deb` |
 | RTVM-503 | The solve does not pause while a prompt is displayed or while a reply is awaited: the RTVM-204 search-step count strictly increases across every prompt window. | SN-5 | Test (TP-503) | In Test | `2ca7deb` |
 | RTVM-504 | The application is never silent while working. From launch to exit the user always has either a result, a diagnostic, or a prompt. The longest permitted interval with no output on either stream is bounded by the RTVM-501 first-prompt threshold **before** the first prompt (15 s + 1.0 s tolerance = 16.0 s) and by the RTVM-502 repeat interval **thereafter** (10 s + 1.0 s tolerance = 11.0 s). See §7 I-12. | SN-5 | Test (TP-504) | Verified | `292af46` |
-| RTVM-505 | No input causes an unhandled exception, an access violation, an assertion dialog, or a non-zero exit code outside the set in RTVM-405. Every run terminates. | SN-4 | Test (TP-505) | Verified | `662b6ed` |
+| RTVM-505 | No input causes an unhandled exception, an access violation, an assertion dialog, or a non-zero exit code outside the set in RTVM-405. Every run terminates. | SN-4 | Test (TP-505) | Verified | `68c9cde` |
 | RTVM-506 | The delivered executable is a self-contained x64 Windows console application that runs on a clean Windows machine with no installed runtime or third-party component beyond what a stock Windows install provides. | SN-6, SN-7 | Test (TP-506) | Verified | `6166cb4` |
 | RTVM-507 | The build provides a documented diagnostic means of forcing a solve to run past the prompt thresholds without altering ordinary behaviour, so that RTVM-004…008 and RTVM-501…504 are verifiable end-to-end. It is documented in `docs/SDD.md`, not in the user-facing README, and is inert in normal use. | SN-5 | Test (TP-507) | Verified | `d39eacd` |
 | **DELIV — deliverable requirements (§6). Verified by inspection.** | | | | | |
@@ -3833,18 +3833,22 @@ the issue text asks for — no separate case was needed.
 | --- | --- | --- |
 | RTVM-505 | TP-505 in full: 27-entry corpus (≥25 required), every case exit-code-gated in {0,1,2,3}, no crash/unhandled-exception text, under 60 s, real Windows evidence at the branch tip | None — this row is the last NFR in the plan |
 
-**Status outcome: RTVM-505 promoted Approved → Verified at `662b6ed`.**
-This is a genuine, first-time promotion for this row — no SHA was
-recorded before this handoff — so per
-[[no-code-measurement-still-routes-to-cicd]] it takes the literal
-fast-path hand-off to `agent:cicd` even though the diff is
-`docs/RTVM.md` and agent memory only, no `src/` or `tests/` change (the
-TP-505 harness itself shipped on #18, not here). No A-row in §9.4
-references TP-505, so nothing there needs updating. Commit(s) currently
-reads the branch-tip evidence SHA `662b6ed`; per the a067772 convention
-(§9.14's follow-up), CI/CD's `--no-ff` merge SHA will replace it in the
-Commit(s) column once reported back, without changing the Verified
-status itself.
+**Status outcome: RTVM-505 promoted Approved → Verified.** Test
+evidence was gathered at branch-tip SHA `662b6ed`; this is a genuine,
+first-time promotion for this row — no SHA was recorded before this
+handoff — so per [[no-code-measurement-still-routes-to-cicd]] it took
+the literal fast-path hand-off to `agent:cicd` even though the diff
+was `docs/RTVM.md` and agent memory only, no `src/` or `tests/` change
+(the TP-505 harness itself shipped on #18, not here). No A-row in §9.4
+references TP-505, so nothing there needed updating. CI/CD merged
+`issue-20` `--no-ff` as `68c9cde` (two-parent merge commit, confirmed
+via `git log -1 --format="%P"`); per
+[[commit-sha-recorded-is-the-merge-commit]] the Commit(s) column now
+carries that merge SHA rather than the pre-merge evidence tip. No
+regression testing was flagged as needed (the merged diff was
+memory-files-only — no `src/`, `tests/`, or `docs/` content on the
+branch side; the RTVM promotion itself landed directly on `main`
+separately, at `a238b06`).
 
 **§7 interpretations raised in this thread: none.**
 
