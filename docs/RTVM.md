@@ -91,7 +91,7 @@ Blocked / Withdrawn.
 | RTVM-501 | The first progress prompt is emitted when the solve has been running for 15 s, within a tolerance of ±1.0 s. | SN-5 | Test (TP-501) | In Test | `2ca7deb` |
 | RTVM-502 | Progress prompts repeat every 10 s thereafter — at 25 s, 35 s, 45 s and so on — each within ±1.0 s of its nominal time, for as long as the solve is running. | SN-5 | Test (TP-502) | In Test | `2ca7deb` |
 | RTVM-503 | The solve does not pause while a prompt is displayed or while a reply is awaited: the RTVM-204 search-step count strictly increases across every prompt window. | SN-5 | Test (TP-503) | In Test | `2ca7deb` |
-| RTVM-504 | The application is never silent while working. From launch to exit the user always has either a result, a diagnostic, or a prompt. The longest permitted interval with no output on either stream is bounded by the RTVM-501 first-prompt threshold **before** the first prompt (15 s + 1.0 s tolerance = 16.0 s) and by the RTVM-502 repeat interval **thereafter** (10 s + 1.0 s tolerance = 11.0 s). See §7 I-12. | SN-5 | Test (TP-504) | Verified | `d4d79b2` |
+| RTVM-504 | The application is never silent while working. From launch to exit the user always has either a result, a diagnostic, or a prompt. The longest permitted interval with no output on either stream is bounded by the RTVM-501 first-prompt threshold **before** the first prompt (15 s + 1.0 s tolerance = 16.0 s) and by the RTVM-502 repeat interval **thereafter** (10 s + 1.0 s tolerance = 11.0 s). See §7 I-12. | SN-5 | Test (TP-504) | Verified | `292af46` |
 | RTVM-505 | No input causes an unhandled exception, an access violation, an assertion dialog, or a non-zero exit code outside the set in RTVM-405. Every run terminates. | SN-4 | Test (TP-505) | Approved | |
 | RTVM-506 | The delivered executable is a self-contained x64 Windows console application that runs on a clean Windows machine with no installed runtime or third-party component beyond what a stock Windows install provides. | SN-6, SN-7 | Test (TP-506) | Verified | `6166cb4` |
 | RTVM-507 | The build provides a documented diagnostic means of forcing a solve to run past the prompt thresholds without altering ordinary behaviour, so that RTVM-004…008 and RTVM-501…504 are verifiable end-to-end. It is documented in `docs/SDD.md`, not in the user-facing README, and is inert in normal use. | SN-5 | Test (TP-507) | Verified | `d39eacd` |
@@ -3598,3 +3598,32 @@ row updated in place to point here.
 **§7 interpretations raised in this thread: none** — I-12 was already
 correct as written; this issue only had to make TP-504 measure it as
 documented.
+
+**Follow-up (commit confirmation): merge SHA recorded, regression
+routed to Test Engineer.** CI/CD merged `issue-19` into `main` `--no-ff`
+as `6d3d35e` (merging branch head `1c39759`, three commits: Software
+Engineer code `04d9daf`, Software Engineer memory `d4d79b2`, Test
+Engineer memory `1c39759`). Per
+[[commit-sha-recorded-is-the-merge-commit]] the Commit(s) column takes
+the merge SHA, not the pre-merge evidence SHA — but CI/CD's own
+required memory-write commit (`292af46`, single-parent on top of
+`6d3d35e`) landed immediately after and, via the
+`windows-verification` workflow's `cancel-in-progress` concurrency
+group, cancelled the in-flight run targeting `6d3d35e` (run
+`31863981695`) in favour of a fresh run (`31864021932`) targeting
+`292af46` instead. `292af46` is tree-identical to `6d3d35e` outside
+`.claude/agent-memory` (`git diff --stat` confirms), so nothing about
+the evidence changes — only which SHA the real regression run will
+actually attach to. Recorded `292af46` in the Commit(s) column above
+as the true trunk-arrival point for that reason, not `6d3d35e`.
+
+This was a genuine code-bearing merge — the TP-504 harness
+(`Invoke-SudokuTimestamped`/`Measure-NeverSilent` in
+`tests/windows/lib/Common.ps1`, the TP-504 wiring in
+`tests/windows/run-timing.ps1`) reached `main` for the first time —
+so CI/CD flagged regression testing as needed, and per "Receiving a
+commit confirmation from CI/CD" this row's already-Verified status
+stands (it was promoted on the first commit-confirmation above, per
+[[verified-on-first-commit-confirmation-not-gated-by-v1]]) while the
+regression pass itself routes to Test Engineer as downstream
+confirmation, not a precondition for the promotion already recorded.
