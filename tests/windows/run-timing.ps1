@@ -14,6 +14,13 @@
     the two scripts" (2026-08-13), tests/windows/run-timing.ps1 section,
     contract C1-C7.
 
+    TP-501..503 stay NOT-RUN here (see the hook-probe loop below) — they
+    assert the *interactive* stop/reply protocol, which needs a real
+    console (#25, the ConPTY spike, still open). TP-504 needs no reply at
+    all (RTVM-006/008: an unanswered prompt just lapses, a non-interactive
+    invocation is never blocked), so it's driven for real: issue #19,
+    docs/RTVM.md §7 I-12.
+
     W-7: no retries, no outlier discarding. Every sample this script has
     ever produced for this job is kept and re-merged into timing.json on
     every invocation - "do not overwrite" (C2). A tolerance breach is
@@ -65,10 +72,14 @@ try {
     # must never read as a budget PASS (Test Engineer, issue #23,
     # 2026-08-13: TP-500 was reporting PASS at 0.4-21.2ms against a corpus
     # of runs that all failed to launch).
+    # 'badchar' is only consumed by TP-504 below (TP-500's own loop still
+    # names its three keys explicitly), added here so it shares the same
+    # resolution -> samples/, else a freshly-written fixture -> pass below.
     $fixtureNames = @{
         'easy'       = @{ Tp = 'P-EASY'; Sample = 'easy.txt'; ExpectedExit = 0 }
         'hard17'     = @{ Tp = 'P-HARD17'; Sample = 'hard17.txt'; ExpectedExit = 0 }
         'unsolvable' = @{ Tp = 'P-UNSOLVABLE'; Sample = 'unsolvable.txt'; ExpectedExit = 2 }
+        'badchar'    = @{ Tp = 'P-BADCHAR'; Sample = 'malformed.txt'; ExpectedExit = 1 }
     }
     $Fixtures = Get-Fixtures
     $fixtureDir = Join-Path $EvidenceDir 'fixtures'
@@ -155,15 +166,98 @@ try {
             -Reason $reason
     }
 
-    # --- TP-501..504: NOT-RUN, same hook probe as run-procedures.ps1's P4. ---
+    # --- TP-501..503: still NOT-RUN. These assert the interactive
+    # stop/reply protocol (TP-501/502 time prompts against a reply that is
+    # never sent; TP-503 needs the RTVM-204 step count either side of a
+    # prompt window), which #25's ConPTY spike hasn't landed yet. Kept on
+    # the same hook probe run-procedures.ps1's P4 uses so the reason stays
+    # measured, not assumed.
     $probe = Test-DiagHookActive -Exe $Exe -FixtureFile $resolvedFixtures['easy'] -EvidenceDir $EvidenceDir
     foreach ($row in @(
             @{ Tp = 'TP-501'; Case = 'first-prompt-timing' },
             @{ Tp = 'TP-502'; Case = 'repeat-interval' },
-            @{ Tp = 'TP-503'; Case = 'solve-continues-during-prompt' },
-            @{ Tp = 'TP-504'; Case = 'never-silent' }
+            @{ Tp = 'TP-503'; Case = 'solve-continues-during-prompt' }
         )) {
         Add-Check -Checks $Checks -Tp $row.Tp -Case $row.Case -State 'NOT-RUN' -Reason $probe.Reason
+    }
+
+    # --- TP-504: never silent, piecewise bound (docs/RTVM.md §7 I-12). ---
+    # Unlike TP-501..503, this needs no reply at all (RTVM-006/008), so it
+    # runs for real regardless of whether the interactive protocol has
+    # automated coverage yet.
+    $FirstByteCeilingMs = 16000.0   # RTVM-501's 15s threshold + 1.0s tolerance
+    $GapCeilingMs        = 11000.0  # RTVM-502's 10s interval + 1.0s tolerance
+
+    # Part 1 - the four ordinary fixtures. Each is bounded far more tightly
+    # by RTVM-500 (10s) than the 16.0s TP-504 asks for; run genuinely
+    # timestamped rather than assumed passing.
+    foreach ($key in @('easy', 'hard17', 'unsolvable', 'badchar')) {
+        $fixturePath = $resolvedFixtures[$key]
+        $expectedExit = $fixtureNames[$key].ExpectedExit
+        $ts = Invoke-SudokuTimestamped -Exe $Exe -ArgList @($fixturePath) -TimeoutSec 30
+        $gaps = Measure-NeverSilent -Events $ts.Events -WindowEndMs $ts.WindowEndMs
+
+        $failReason = Get-FailureReason -Result $ts -Fallback $null
+        if (-not $failReason -and $ts.TimedOut) {
+            $failReason = "process still running after the 30s per-run ceiling"
+        }
+        if (-not $failReason -and $ts.ExitCode -ne $expectedExit) {
+            $failReason = "exit code $($ts.ExitCode) did not match the expected $expectedExit for this fixture class - a timing figure from a wrong outcome is not evidence about RTVM-504"
+        }
+        if (-not $failReason -and $null -eq $gaps.FirstByteMs) {
+            $failReason = 'process produced zero bytes on either stream'
+        }
+        if (-not $failReason -and $gaps.FirstByteMs -gt $FirstByteCeilingMs) {
+            $failReason = "first byte at $([math]::Round($gaps.FirstByteMs, 1))ms exceeds the ${FirstByteCeilingMs}ms ceiling"
+        }
+        if (-not $failReason -and $gaps.MaxGapAfterFirstMs -gt $GapCeilingMs) {
+            $failReason = "a $([math]::Round($gaps.MaxGapAfterFirstMs, 1))ms gap after the first byte exceeds the ${GapCeilingMs}ms ceiling"
+        }
+
+        Add-Check -Checks $Checks -Tp 'TP-504' -Case $key -State $(if ($failReason) { 'FAIL' } else { 'PASS' }) `
+            -Expected "first byte <= ${FirstByteCeilingMs}ms, no gap after it > ${GapCeilingMs}ms, exit $expectedExit" `
+            -Observed ([ordered]@{
+                    firstByteMs = if ($null -ne $gaps.FirstByteMs) { [math]::Round($gaps.FirstByteMs, 1) } else { $null }
+                    maxGapAfterFirstMs = if ($null -ne $gaps.MaxGapAfterFirstMs) { [math]::Round($gaps.MaxGapAfterFirstMs, 1) } else { $null }
+                    exitCode    = $ts.ExitCode
+                    eventCount  = $ts.Events.Count
+                } | ConvertTo-Json -Compress) `
+            -Reason $failReason
+    }
+
+    # Part 2 - the long-solve hook run, to 60s. Needs the hook to be
+    # observably active (same probe TP-501..503 use); if it isn't, this is
+    # genuinely NOT-RUN rather than a guess.
+    if ($probe.Active) {
+        $hookMs = 65000
+        $ts = Invoke-SudokuTimestamped -Exe $Exe -ArgList @($resolvedFixtures['easy']) `
+            -EnvVars @{ SUDOKU_DIAG_MIN_SOLVE_MS = $hookMs } -TimeoutSec 60
+        $gaps = Measure-NeverSilent -Events $ts.Events -WindowEndMs $ts.WindowEndMs
+
+        $failReason = Get-FailureReason -Result $ts -Fallback $null
+        if (-not $failReason -and $null -eq $gaps.FirstByteMs) {
+            $failReason = 'process produced zero bytes on either stream in the 60s window'
+        }
+        if (-not $failReason -and $gaps.FirstByteMs -gt $FirstByteCeilingMs) {
+            $failReason = "first byte at $([math]::Round($gaps.FirstByteMs, 1))ms exceeds the ${FirstByteCeilingMs}ms ceiling"
+        }
+        if (-not $failReason -and $gaps.MaxGapAfterFirstMs -gt $GapCeilingMs) {
+            $failReason = "a $([math]::Round($gaps.MaxGapAfterFirstMs, 1))ms gap after the first byte exceeds the ${GapCeilingMs}ms ceiling"
+        }
+
+        Add-Check -Checks $Checks -Tp 'TP-504' -Case 'long-solve-hook' -State $(if ($failReason) { 'FAIL' } else { 'PASS' }) `
+            -Expected "first byte <= ${FirstByteCeilingMs}ms, no gap after it > ${GapCeilingMs}ms, observed to 60000ms (SUDOKU_DIAG_MIN_SOLVE_MS=$hookMs)" `
+            -Observed ([ordered]@{
+                    firstByteMs = if ($null -ne $gaps.FirstByteMs) { [math]::Round($gaps.FirstByteMs, 1) } else { $null }
+                    maxGapAfterFirstMs = if ($null -ne $gaps.MaxGapAfterFirstMs) { [math]::Round($gaps.MaxGapAfterFirstMs, 1) } else { $null }
+                    windowEndMs = [math]::Round($ts.WindowEndMs, 1)
+                    eventCount  = $ts.Events.Count
+                    timedOut    = $ts.TimedOut
+                } | ConvertTo-Json -Compress) `
+            -Reason $failReason
+    }
+    else {
+        Add-Check -Checks $Checks -Tp 'TP-504' -Case 'long-solve-hook' -State 'NOT-RUN' -Reason $probe.Reason
     }
 }
 catch {
