@@ -413,6 +413,174 @@ function Get-FailureReason {
     return $Fallback
 }
 
+# Runs $Exe with every line written to stdout/stderr timestamped at the
+# moment it arrives, for TP-504's gap analysis (docs/RTVM.md §7 I-12):
+# unlike Invoke-Sudoku (whole-run timing only, output read back from disk
+# after the process exits), this is needed wherever the *interval between*
+# two writes matters, not just the total elapsed time.
+#
+# stdin is always closed immediately (RTVM-008: a non-interactive
+# invocation is never blocked, and RTVM-006 means no prompt this drives
+# will ever need a reply) — no $StdinFile parameter, unlike Invoke-Sudoku;
+# every caller passes the puzzle as a file argument instead (TP-002 already
+# establishes a file argument wins over stdin).
+#
+# IMPORTANT — do not replace the polling loop below with a single blocking
+# $proc.WaitForExit(): measured on this harness (pwsh 7.6, both Linux and
+# Windows use the same single-threaded runspace event pump), a blocking
+# wait starves PowerShell's own event queue, so every Register-ObjectEvent
+# -Action invocation queues up and only actually runs once WaitForExit
+# returns — every timestamp comes back clustered within a few ms of the
+# process's exit regardless of when the bytes actually arrived, silently
+# destroying the one thing this function exists to measure. Polling with a
+# short Start-Sleep keeps yielding back to the engine so queued actions are
+# dispatched as they happen.
+#
+# Returns @{ Events; ExitCode; TimedOut; ElapsedMs; WindowEndMs; LaunchError }.
+# Events is a time-ordered list of @{ Stream; Ms; Text } ('Ms' = elapsed
+# milliseconds from process start). WindowEndMs is the point gap analysis
+# should treat as "now": the real elapsed time if the process exited on its
+# own, or $TimeoutSec*1000 if it had to be killed because the observation
+# window closed (the long-solve hook case — TP-504 runs that one "to 60s",
+# not to exit). Never throws (C1).
+function Invoke-SudokuTimestamped {
+    param(
+        [Parameter(Mandatory)][string]$Exe,
+        [string[]]$ArgList = @(),
+        [hashtable]$EnvVars = @{},
+        [Parameter(Mandatory)][int]$TimeoutSec
+    )
+
+    $previous = @{}
+    foreach ($k in $EnvVars.Keys) {
+        $previous[$k] = [Environment]::GetEnvironmentVariable($k)
+        [Environment]::SetEnvironmentVariable($k, [string]$EnvVars[$k])
+    }
+
+    $sync = [hashtable]::Synchronized(@{ Events = [System.Collections.Generic.List[object]]::new() })
+    $sw = [System.Diagnostics.Stopwatch]::StartNew()
+    $subs = @()
+    $proc = $null
+
+    try {
+        $psi = New-Object System.Diagnostics.ProcessStartInfo
+        $psi.FileName = $Exe
+        foreach ($a in $ArgList) { [void]$psi.ArgumentList.Add($a) }
+        $psi.RedirectStandardOutput = $true
+        $psi.RedirectStandardError  = $true
+        $psi.RedirectStandardInput  = $true
+        $psi.UseShellExecute        = $false
+        $psi.CreateNoWindow         = $true
+
+        $proc = New-Object System.Diagnostics.Process
+        $proc.StartInfo = $psi
+
+        $action = {
+            if ($null -ne $EventArgs.Data) {
+                $md = $Event.MessageData
+                $md.Sync.Events.Add(@{ Stream = $md.Stream; Ms = $md.Sw.Elapsed.TotalMilliseconds; Text = $EventArgs.Data })
+            }
+        }
+        $subs += Register-ObjectEvent -InputObject $proc -EventName OutputDataReceived -Action $action `
+            -MessageData ([pscustomobject]@{ Sync = $sync; Sw = $sw; Stream = 'stdout' })
+        $subs += Register-ObjectEvent -InputObject $proc -EventName ErrorDataReceived -Action $action `
+            -MessageData ([pscustomobject]@{ Sync = $sync; Sw = $sw; Stream = 'stderr' })
+
+        [void]$proc.Start()
+        $proc.BeginOutputReadLine()
+        $proc.BeginErrorReadLine()
+        $proc.StandardInput.Close()
+
+        $deadlineMs = $TimeoutSec * 1000
+        while (-not $proc.HasExited -and $sw.Elapsed.TotalMilliseconds -lt $deadlineMs) {
+            Start-Sleep -Milliseconds 20
+        }
+
+        $finished = $proc.HasExited
+        if (-not $finished) {
+            try { $proc.Kill() } catch { }
+            try { $proc.WaitForExit(2000) | Out-Null } catch { }
+        }
+        # Let any already-queued (but not yet dispatched) event actions run
+        # before reading $sync.Events back out.
+        Start-Sleep -Milliseconds 100
+        $sw.Stop()
+
+        $exitCode = -1
+        if ($finished) { try { $exitCode = $proc.ExitCode } catch { $exitCode = -1 } }
+
+        return @{
+            # @(...): a run with exactly one event would otherwise have
+            # Sort-Object's single output unrolled straight into $Events
+            # (see the leading-comma comment on New-CheckList above for the
+            # zero-item version of this same PowerShell pipeline trap) -
+            # then '.Count' silently means "number of hashtable keys" (3)
+            # instead of "number of events" (1), and index access like
+            # $Events[0] becomes a hashtable key lookup that returns $null
+            # instead of the first event. Measured, not theoretical - this
+            # is exactly what produced a false FAIL ("zero bytes observed")
+            # against a real single-event run while writing this function.
+            Events      = @($sync.Events | Sort-Object Ms)
+            ExitCode    = $exitCode
+            TimedOut    = -not $finished
+            ElapsedMs   = $sw.Elapsed.TotalMilliseconds
+            WindowEndMs = if ($finished) { $sw.Elapsed.TotalMilliseconds } else { [double]$deadlineMs }
+            LaunchError = $null
+        }
+    }
+    catch {
+        $sw.Stop()
+        return @{
+            Events      = @()
+            ExitCode    = -1
+            TimedOut    = $false
+            ElapsedMs   = $sw.Elapsed.TotalMilliseconds
+            WindowEndMs = $sw.Elapsed.TotalMilliseconds
+            LaunchError = $_.Exception.Message
+        }
+    }
+    finally {
+        foreach ($s in $subs) { try { Unregister-Event -SourceIdentifier $s.Name -ErrorAction SilentlyContinue } catch { } }
+        if ($proc) { try { $proc.Dispose() } catch { } }
+        foreach ($k in $EnvVars.Keys) { [Environment]::SetEnvironmentVariable($k, $previous[$k]) }
+    }
+}
+
+# TP-504's gap analysis (docs/RTVM.md §7 I-12) over the events
+# Invoke-SudokuTimestamped returns. FirstByteMs is when the first byte on
+# either stream arrived (process-start-relative); $null if there was none
+# at all. MaxGapAfterFirstMs is the longest interval, anywhere from the
+# first byte to $WindowEndMs, with no output on either stream -- the tail
+# from the last event to $WindowEndMs counts too (a run that goes quiet
+# right before the observation window ends is exactly what this bound
+# exists to catch).
+function Measure-NeverSilent {
+    param(
+        [array]$Events,
+        [Parameter(Mandatory)][double]$WindowEndMs
+    )
+
+    $Events = @($Events)
+    if ($Events.Count -eq 0) {
+        return @{ FirstByteMs = $null; MaxGapAfterFirstMs = $null }
+    }
+
+    # @(...): same single-item pipeline-unroll trap as Invoke-SudokuTimestamped
+    # above - without it, a one-event run sorts down to a bare hashtable and
+    # $sorted[0] becomes a key lookup returning $null instead of the event.
+    $sorted = @($Events | Sort-Object Ms)
+    $firstByteMs = $sorted[0].Ms
+    $maxGap = 0.0
+    for ($i = 1; $i -lt $sorted.Count; $i++) {
+        $gap = $sorted[$i].Ms - $sorted[$i - 1].Ms
+        if ($gap -gt $maxGap) { $maxGap = $gap }
+    }
+    $tailGap = $WindowEndMs - $sorted[$sorted.Count - 1].Ms
+    if ($tailGap -gt $maxGap) { $maxGap = $tailGap }
+
+    return @{ FirstByteMs = $firstByteMs; MaxGapAfterFirstMs = $maxGap }
+}
+
 # Probes whether the RTVM-507 diagnostic hook (SUDOKU_DIAG_MIN_SOLVE_MS) is
 # observably active: run P-EASY with the variable set to a value stretching
 # well past a normal solve, with a short wall-clock ceiling. If the process
