@@ -157,3 +157,22 @@ failing." Also spot-checked that the exit-code gate from
 [[false-pass-from-unchecked-exit-codes]]'s fix is still wired on TP-401/
 402/403/406 in this run's JSON, not just that the rows read PASS — the
 fix has now held across at least two regression passes since #23.
+
+**#18's regression pass (2026-08-15)**, another #13-shaped gotcha: the
+branch tip named in the thread (`c8c93e0`) was **not** the right baseline
+— comparing from it showed `tests/windows/lib/Common.ps1`/`run-timing.ps1`
+as changed, which is false-positive noise from #19's parallel branch
+(already regression-tested on its own issue), not from #18's merge. Used
+the merge commit's non-branch parent instead (`git show -s --format='%P'
+<merge-sha>`, here `3e7406a`) compared to `main` — came back exactly
+`docs/RTVM.md` + agent memory + the one test file #18 actually added, 9
+commits ahead. **Always check whether any other issue's branch merged in
+parallel before trusting a comment-stated branch-tip baseline** — a
+sibling-branch false positive looks identical to a real regression at a
+glance. Otherwise standard full-default run: 67/67 full driver, 49/49
+core-only, real-binary byte-for-byte match on all four samples, Windows
+run found already sitting at the exact trunk tip (no need to trigger a
+fresh one) with the identical 47/55 PASS / 8-NOT-RUN signature for a
+third consecutive regression pass, exit-code gate confirmed still wired,
+and the §9.29/§9.30 heading-collision fix (from CI/CD's flag) confirmed
+resolved with no duplicates left in `docs/RTVM.md`.

@@ -1,6 +1,6 @@
 ---
 name: powershell-mandatory-and-list-gotchas
-description: PowerShell surprises that silently break evidence-collection scripts (tests/windows/*.ps1) — List<T> pipeline unrolling, Mandatory params rejecting empty input, and Start-Process -RedirectStandardInput 'NUL' throwing on real Windows
+description: PowerShell surprises that silently break evidence-collection scripts (tests/windows/*.ps1) — List<T>/pipeline unrolling (return AND Sort-Object), Mandatory params rejecting empty input, Start-Process -RedirectStandardInput 'NUL' throwing on real Windows, and Register-ObjectEvent timestamps clustering under a blocking wait
 metadata:
   type: reusable-solution
 ---
@@ -22,6 +22,34 @@ unrelated `try/catch`.
 pipeline item so it isn't unrolled). Applies to *any* collection return,
 not just empty ones, but empty is where it bites first since `New-Object
 List[T]` starts empty by construction.
+
+**1b. The same unroll bites through `Sort-Object`, not just `return` — and
+this time it's the *one-item* case that bites, not the empty one.** Found
+writing `Invoke-SudokuTimestamped`/`Measure-NeverSilent` for issue #19
+(TP-504): `Events = ($sync.Events | Sort-Object Ms)` where `$sync.Events`
+is a `List<object>` of captured stdout/stderr lines. When the run produces
+exactly one line of output, `Sort-Object` emits exactly one pipeline
+object, and assigning a one-object pipeline to an untyped variable gives
+back that bare object, not a one-element array. The bare hashtable's own
+`.Count` (its key count — coincidentally 3, since each event record is
+`@{ Stream; Ms; Text }`) then reads as a plausible-looking event count,
+and `$sorted[0]` becomes a *hashtable key lookup* (key `0`, which doesn't
+exist) returning `$null` instead of the first event. The observable
+symptom was a false FAIL — "process produced zero bytes on either
+stream" — against a run that had genuinely produced one line of output,
+caught only by validating against a real (Linux g++) build before
+handoff, not by reading the code. **Fix:** wrap every `X | Sort-Object
+...` assignment in `@(...)` to force array-ness regardless of item count:
+`Events = @($sync.Events | Sort-Object Ms)`, and again at the consuming
+end (`$sorted = @($Events | Sort-Object Ms)`) — a `[array]`-typed
+parameter auto-wraps a scalar argument back into a one-element array at
+the call boundary (verified directly), but that protection is gone the
+moment the value is re-piped through anything inside the function.
+**Generalizes to:** any pipeline stage (not just `return`) can unroll a
+collection down to its bare single element — treat `@(...)` as mandatory
+around every `| Sort-Object` / `| Where-Object` / `| Select-Object` whose
+result gets indexed or `.Count`-checked afterward, not just at the
+function boundary point 1 already covers.
 
 **2. `[Parameter(Mandatory)]` on a `[string]` or `[string[]]` parameter
 rejects a legitimate empty string/collection**, even with
@@ -76,3 +104,25 @@ content; (b) a result hashtable's error-detail field (here, `LaunchError`)
 is only useful if every caller that builds a FAIL `Reason` actually reads
 it — centralize that into one helper (`Get-FailureReason` in `Common.ps1`)
 rather than trusting each of a dozen call sites to remember.
+
+**4. `Register-ObjectEvent -Action` invocations queue behind a blocking
+call on the same thread — a synchronous `$proc.WaitForExit()` starves
+them until it returns, destroying the very timestamps they exist to
+capture.** Found writing `Invoke-SudokuTimestamped` for issue #19
+(TP-504's byte-level gap analysis over `OutputDataReceived`/
+`ErrorDataReceived`). The .NET event itself fires on a thread-pool thread
+the instant a line arrives, but the actual PowerShell script block passed
+to `-Action` only *runs* when the single-threaded runspace's event queue
+gets pumped — which does not happen while that same thread is blocked
+inside a synchronous `$proc.WaitForExit(ms)`. Measured directly (see the
+polling-vs-blocking comparison in the issue #19 handoff): with a blocking
+wait, three lines written 200ms apart all read back within ~3ms of each
+other, right at process exit — a total, silent loss of the timing signal,
+not a crash or a visible error. **Fix:** replace the blocking wait with a
+short poll loop (`while (-not $proc.HasExited -and ...) { Start-Sleep
+-Milliseconds 20 }`) so the thread yields back to the engine often enough
+for queued actions to actually dispatch as they happen. **Generalizes
+to:** any use of `Register-ObjectEvent` (not just process I/O) on a
+script that also does its own synchronous waiting needs to poll, not
+block, for the same reason — this is a property of the single-threaded
+pwsh runspace, not of `Process` specifically.

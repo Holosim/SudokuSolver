@@ -48,4 +48,14 @@ section first, an explicit note in the later section flagging the duplicate
 number as the Systems Engineer's to renumber — do not renumber it yourself
 just because it's a heading rather than a table row.
 
+**Third §9.x heading-number instance, #18 (2026-08-15):** `main` (via #19's
+merge) and `issue-18` both claimed "### 9.29" as their next-free heading —
+same resolution, union with an inline HTML-comment note flagging the
+duplicate for the Systems Engineer, no renumbering. Confirms this isn't
+just an I-nn/W-nn thing or a #9/#13-era fluke; check for it on every merge
+where two issues' §9.x write-ups could plausibly have been drafted from the
+same pre-merge trunk state. See also [[reset-and-redo-beats-rebase-after-push-race]]
+for what happened next on #18 when the push itself then raced with a third,
+unrelated commit.
+
 Related: [[doc-conflicts-on-merge]], [[lock-before-merging-docs]].

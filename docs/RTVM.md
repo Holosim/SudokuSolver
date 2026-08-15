@@ -84,26 +84,26 @@ Blocked / Withdrawn.
 | RTVM-402 | For the `NoSolution` outcome a plain statement that the puzzle has no solution is written to stdout, and no grid is written. | SN-3, SN-4 | Test (TP-402) | In Test | `481c726` |
 | RTVM-403 | For the `InvalidInput` outcome a specific human-readable diagnostic naming the fault is written to **stderr**, and nothing is written to stdout. | SN-4 | Test (TP-403) | Verified | `139d41a` |
 | RTVM-404 | For the `Aborted` outcome a message stating the solve was abandoned at the user's request is written to **stderr**, and nothing is written to stdout. | SN-5 | Test (TP-404) | In Test | `2ca7deb` |
-| RTVM-405 | The process exit code is `0` for `Solved` and `SolvedNotUnique`, `1` for `InvalidInput`, `2` for `NoSolution`, `3` for `Aborted`, with no other exit code reachable. | SN-8, SN-4 | Test (TP-405) | Approved | |
-| RTVM-406 | Across every reachable outcome, stdout carries only the result (grid, non-unique note, no-solution statement). No prompt text, no diagnostic, and no progress output ever reaches stdout. | SN-8 | Test (TP-406) | Approved | |
+| RTVM-405 | The process exit code is `0` for `Solved` and `SolvedNotUnique`, `1` for `InvalidInput`, `2` for `NoSolution`, `3` for `Aborted`, with no other exit code reachable. | SN-8, SN-4 | Test (TP-405) | Verified | `a78f0d2` |
+| RTVM-406 | Across every reachable outcome, stdout carries only the result (grid, non-unique note, no-solution statement). No prompt text, no diagnostic, and no progress output ever reaches stdout. | SN-8 | Test (TP-406) | Verified | `a78f0d2` |
 | **NFR — non-functional (§4.4, §5)** | | | | | |
 | RTVM-500 | Any standard 9×9 puzzle, including a hard 17-clue grid, is solved in under 10 s wall clock on a typical desktop (reference machine defined in §6.3). | SN-5 | Test (TP-500) | Verified | `699abde` |
 | RTVM-501 | The first progress prompt is emitted when the solve has been running for 15 s, within a tolerance of ±1.0 s. | SN-5 | Test (TP-501) | In Test | `2ca7deb` |
 | RTVM-502 | Progress prompts repeat every 10 s thereafter — at 25 s, 35 s, 45 s and so on — each within ±1.0 s of its nominal time, for as long as the solve is running. | SN-5 | Test (TP-502) | In Test | `2ca7deb` |
 | RTVM-503 | The solve does not pause while a prompt is displayed or while a reply is awaited: the RTVM-204 search-step count strictly increases across every prompt window. | SN-5 | Test (TP-503) | In Test | `2ca7deb` |
-| RTVM-504 | The application is never silent while working. From launch to exit the user always has either a result, a diagnostic, or a prompt. The longest permitted interval with no output on either stream is bounded by the RTVM-501 first-prompt threshold **before** the first prompt (15 s + 1.0 s tolerance = 16.0 s) and by the RTVM-502 repeat interval **thereafter** (10 s + 1.0 s tolerance = 11.0 s). See §7 I-12. | SN-5 | Test (TP-504) | Approved | |
-| RTVM-505 | No input causes an unhandled exception, an access violation, an assertion dialog, or a non-zero exit code outside the set in RTVM-405. Every run terminates. | SN-4 | Test (TP-505) | Approved | |
+| RTVM-504 | The application is never silent while working. From launch to exit the user always has either a result, a diagnostic, or a prompt. The longest permitted interval with no output on either stream is bounded by the RTVM-501 first-prompt threshold **before** the first prompt (15 s + 1.0 s tolerance = 16.0 s) and by the RTVM-502 repeat interval **thereafter** (10 s + 1.0 s tolerance = 11.0 s). See §7 I-12. | SN-5 | Test (TP-504) | Verified | `292af46` |
+| RTVM-505 | No input causes an unhandled exception, an access violation, an assertion dialog, or a non-zero exit code outside the set in RTVM-405. Every run terminates. | SN-4 | Test (TP-505) | Verified | `68c9cde` |
 | RTVM-506 | The delivered executable is a self-contained x64 Windows console application that runs on a clean Windows machine with no installed runtime or third-party component beyond what a stock Windows install provides. | SN-6, SN-7 | Test (TP-506) | Verified | `6166cb4` |
 | RTVM-507 | The build provides a documented diagnostic means of forcing a solve to run past the prompt thresholds without altering ordinary behaviour, so that RTVM-004…008 and RTVM-501…504 are verifiable end-to-end. It is documented in `docs/SDD.md`, not in the user-facing README, and is inert in normal use. | SN-5 | Test (TP-507) | Verified | `d39eacd` |
 | **DELIV — deliverable requirements (§6). Verified by inspection.** | | | | | |
 | RTVM-900 | The repository contains a committed, openable Visual Studio 2022 solution and project file(s) — not source files alone. (D-1) | SN-7 | Inspection (TP-900) | In Test | `85bab27` |
-| RTVM-901 | A client engineer can clone, open, build, and run the solution in VS 2022 with no setup step that is not written down in the README. (D-2) | SN-7 | Inspection (TP-901) | In Implementation | `85bab27` |
+| RTVM-901 | A client engineer can clone, open, build, and run the solution in VS 2022 with no setup step that is not written down in the README. (D-2) | SN-7 | Inspection (TP-901) | In Test | `146a5d1` |
 | RTVM-902 | The solution builds with the stock VS 2022 toolchain and the C++ standard library alone. No third-party library, package manager, or downloaded dependency of any kind. (D-3) | SN-7 | Inspection (TP-902) | Verified | `85bab27` |
 | RTVM-903 | The solver core is a separate compilation unit / module from the console I/O layer and has no dependency on stdin, stdout, stderr, or command-line parsing. The grid dimension appears as a single named constant, not as literal `9`s scattered through the code. (D-4) | SN-7 | Inspection (TP-903) | Verified | `85bab27` |
-| RTVM-904 | The repository carries a README covering how to build, how to run, and the puzzle input format. (D-5) | SN-7 | Inspection (TP-904) | In Implementation | `85bab27` |
-| RTVM-905 | Automated tests are part of the delivered solution and are runnable by the client through a documented command or VS action. (D-6) | SN-7 | Inspection (TP-905) | In Implementation | `85bab27` |
+| RTVM-904 | The repository carries a README covering how to build, how to run, and the puzzle input format. (D-5) | SN-7 | Inspection (TP-904) | Verified | `146a5d1` |
+| RTVM-905 | Automated tests are part of the delivered solution and are runnable by the client through a documented command or VS action. (D-6) | SN-7 | Inspection (TP-905) | Verified | `146a5d1` |
 | RTVM-906 | The solution targets C++17 and x64, and is a Visual Studio solution only — the repository contains no CMake or other cross-platform build files. (D-7) | SN-7 | Inspection (TP-906) | Verified | `85bab27` |
-| RTVM-907 | Five sample puzzles ship with the solution and are referenced from the README: easy, hard 17-clue, unsolvable, malformed, and non-unique. (§4.2) | SN-1, SN-7 | Inspection (TP-907) | In Test | `85bab27` |
+| RTVM-907 | Five sample puzzles ship with the solution and are referenced from the README: easy, hard 17-clue, unsolvable, malformed, and non-unique. (§4.2) | SN-1, SN-7 | Inspection (TP-907) | Verified | `146a5d1` |
 
 ## Test Procedures
 
@@ -1351,7 +1351,7 @@ than for a plan.
 | A-2 | **TP-900** — the solution *opening* in VS 2022 with no "project unavailable" and no migration prompt | The prompt is modal GUI behaviour; a headless runner never renders it | `devenv.exe SudokuSolver.sln /Build "Debug\|x64"` uses the same solution loader as the IDE and fails or hangs where the IDE would prompt; combined with a toolset/`ToolsVersion` inspection this covers the substance | **Genuine V-4 item — measured 2026-08-13 (§9.1.6), not a suspicion.** `vswhere -legacy -all -products *` (P2, `run-procedures.ps1`) confirms **no VS `17.x` instance exists on `win25-vs2026`**, on both the pre-fix and post-fix runs. The toolset half is covered — the build ran on `PlatformToolset=v143` / MSVC 14.44, the VS 2022 toolset shipped side-by-side. What remains, and cannot be automated on this image, is one sentence: *"the solution opens in the VS 2022 IDE itself with no migration prompt."* Ready to go forward with A-1 once A-4 is attempted (V-5) |
 | A-3 | **TP-905** — tests appearing in **Test Explorer** | Test Explorer is a GUI surface | `vstest.console.exe` is the discovery and execution engine Test Explorer drives; if it discovers and runs both methods, the substantive claim holds | **CLOSED 2026-08-13 (§9.1.6, DW-1 fixed).** `run-procedures.ps1` now runs `vstest.console.exe /ListTests:<dll>` for discovery and a separate `/Logger:trx` execution; both artifacts exist at SHA `3658728` (Windows run `31739274812`): 25/25 tests discovered, 25/25 executed and passed. No longer a V-4 candidate |
 | A-4 | **TP-004…008** — the console-handle behaviour (`PeekConsoleInput`, `GetFileType` = console, an interactive-equivalent stdin held open) | A runner step has no interactive console attached: stdin is a pipe or `NUL`, so `GetFileType` never reports a console and the console path is never entered. TP-008's redirected half runs fine; TP-004/005/006's do not | Drive the exe under a **ConPTY pseudoconsole** (`CreatePseudoConsole`, available on Windows Server 2022) from a small harness, so the child genuinely sees a console handle. This is the same mechanism Windows Terminal uses and it is not exotic | **Still undecided — the #17 spike was not attempted.** §9.26: the console-handle *product* code shipped on #17 (RTVM-004…008 promoted to In Test) but both the Software Engineer and Test Engineer independently declined the ConPTY harness spike itself as out of scope for a feature branch ("no pty available in this harness"), same reasoning #24 gave for splitting `ProcessRunner` into its own issue. **Reassigned to #25**, a dedicated issue, Finish-Start on #17. Still the largest row on this list if it closes |
-| A-5 | **TP-500…504** — the timing set | Shared-tenant runner jitter against a ±1.0 s tolerance (§7 I-6) | W-7: three samples, Release build, all reported | **Not a V-4 item, and now has real data behind that call.** `tests/windows/run-timing.ps1` lands 2026-08-13 (§9.1.6) and, once DW-4's exit-code gate was fixed, produced genuine TP-500 evidence at SHA `3658728`: `easy`/`hard17` max 20–30 ms, `unsolvable` max ~12 ms, 30/30 runs at the correct exit code, all three W-7 samples present. Nowhere close to the 10 s ceiling on this modest 2-core/4-logical machine, so §7 I-6's tolerance is not in question yet. **Superseded 2026-08-14 (§9.14, issue #15)** by fresher, issue-scoped evidence gathered at pre-merge SHA `00d0c38` on the `win25-vs2026` image: `easy` max 22.2 ms, `hard17` max 28.6 ms, `unsolvable` max 10.7 ms, all three W-7 samples exit-code-gated (0/0/2). RTVM-500 promoted to Verified, Commit(s) recorded as merge commit `699abde` per the standing "record the trunk merge SHA" convention (§9.5, §9.8.5, §9.11). TP-501…504 stay NOT-RUN pending the RTVM-507 diagnostic hook |
+| A-5 | **TP-500…504** — the timing set | Shared-tenant runner jitter against a ±1.0 s tolerance (§7 I-6) | W-7: three samples, Release build, all reported | **Not a V-4 item, and now has real data behind that call.** `tests/windows/run-timing.ps1` lands 2026-08-13 (§9.1.6) and, once DW-4's exit-code gate was fixed, produced genuine TP-500 evidence at SHA `3658728`: `easy`/`hard17` max 20–30 ms, `unsolvable` max ~12 ms, 30/30 runs at the correct exit code, all three W-7 samples present. Nowhere close to the 10 s ceiling on this modest 2-core/4-logical machine, so §7 I-6's tolerance is not in question yet. **Superseded 2026-08-14 (§9.14, issue #15)** by fresher, issue-scoped evidence gathered at pre-merge SHA `00d0c38` on the `win25-vs2026` image: `easy` max 22.2 ms, `hard17` max 28.6 ms, `unsolvable` max 10.7 ms, all three W-7 samples exit-code-gated (0/0/2). RTVM-500 promoted to Verified, Commit(s) recorded as merge commit `699abde` per the standing "record the trunk merge SHA" convention (§9.5, §9.8.5, §9.11). **TP-504 itself discharged 2026-08-15 (§9.29, issue #19)** — it needs no ConPTY (RTVM-006/008 mean non-interactive invocation is never blocked), so it was drivable without waiting on #25: `run-timing.ps1` now asserts the full piecewise I-12 bound (first byte ≤16.0 s, post-first-byte gaps ≤11.0 s) for `P-EASY`/`P-HARD17`/`P-UNSOLVABLE`/`P-BADCHAR`/the long-solve hook, real Windows evidence at `d4d79b2` (run `31863267320`), all 5 PASS, mutation-tested against a false-tightened ceiling to rule out a vacuous check. RTVM-504 promoted to Verified. TP-501…503 stay NOT-RUN pending #25, unaffected |
 | A-6 | **TP-901** — build "on a machine that has never built this project" | — none; a fresh hosted runner satisfies this clause **better** than a client engineer's machine, which has VS configured and a warm state | n/a | **Not a V-4 item.** Recorded only to stop it being added later by association |
 
 Nothing on this list is surfaced to the client until it is down to the
@@ -1536,7 +1536,7 @@ yet.
 
 | Req | Executed here and passed | Still outstanding |
 | --- | --- | --- |
-| RTVM-300 | TP-300's **type-level half**, in full. The five factories yield five distinct outcomes; every report's payload matches the §2.4 invariant table (`hasGrid()` ⇔ `outcomeCarriesGrid()`, `hasFault()` ⇔ `outcomeCarriesFault()`, never both); asking for a payload the outcome does not carry returns an empty stand-in rather than undefined behaviour (RTVM-505). "Never none" and "never two" are unrepresentable — enforced by `static_assert` plus two `default`-less switches, and confirmed by mutation (below) rather than by a green build | TP-300's **whole-run half** — "drive the application once for each of the five fixture classes … expect exactly one outcome and the five to be distinct". Not runnable until every outcome exists end to end; it is executed under [RTVM-405] (#18), as this issue's description already stated. Plus the MSVC re-execution (V-1) |
+| RTVM-300 | TP-300's **type-level half**, in full. The five factories yield five distinct outcomes; every report's payload matches the §2.4 invariant table (`hasGrid()` ⇔ `outcomeCarriesGrid()`, `hasFault()` ⇔ `outcomeCarriesFault()`, never both); asking for a payload the outcome does not carry returns an empty stand-in rather than undefined behaviour (RTVM-505). "Never none" and "never two" are unrepresentable — enforced by `static_assert` plus two `default`-less switches, and confirmed by mutation (below) rather than by a green build. **TP-300's whole-run half now discharged too** ([RTVM-405]/[RTVM-406], issue #18, §9.30): all five fixture classes driven once each, exactly one outcome apiece, the five pairwise distinct | Only the MSVC re-execution remains (V-1) — the whole-run half itself is no longer outstanding |
 | RTVM-301 | TP-301's **property**, against the §6.1 `S-EASY` solution fixture: all `kCellCount` cells of both the `Solved` and the `SolvedNotUnique` report are digits `1..kGridSize`, no empty cell. The falsifiable half passes too — one blanked cell, one out-of-range digit, and the unsolved `P-EASY` grid each report `false`. The Test Engineer independently re-derived the fixtures: `kSolvedEasy`/`kPuzzleEasy` match §6.1 byte for byte, `P-EASY` has exactly 30 givens, and `S-EASY` is a genuine solution (every row, column and box a permutation of 1–9, consistent with every `P-EASY` given) | TP-301 **as worded** names the *solved results* of `P-EASY` and `P-NONUNIQUE`, which need the solver (#8) and non-uniqueness detection (#12). The assertion does not change when they land — the tests take a real `solve()` result and the expectations stay as they are. Plus the MSVC re-execution |
 | RTVM-302 | TP-302's **fault-object clauses**. The `P-CONTRA-ROW` fault is asserted as data — `RowDuplicate`, line 1, digit `5`, cells `r1c1` and `r1c7`, matching TP-104 case 1 exactly. "No pre-formatted English" is asserted structurally rather than by inspection: a structured binding names every member of `InputFault`, all of which are enums, integers, a `char`, `CellRef`s or a `uint32_t`, and the single `std::string` is `path` (empty for any parser-produced fault). 1-based conversion happens in one function per §7 I-16; an out-of-grid coordinate is *not applicable* rather than wrapped (RTVM-505) | TP-302's **parse-driven half** — "parse `P-CONTRA-ROW`" needs RTVM-104 contradiction detection, which is #10's and still `TODO` in `Parser.cpp`. The fault object asserted here **is** the expectation #10 must produce, so that test grows a `parseGrid` call and no new expectations. Plus the MSVC re-execution |
 
@@ -3519,3 +3519,470 @@ stay exactly as recorded in §9.27**: In Test, Commit(s) `2ca7deb`.
 This closes out #17's own chain. #25 remains `status:on-hold` until this
 issue closes (dependency-check.yml releases it), and is what has to land
 before these nine rows can be reconsidered for Verified.
+
+### 9.29 RTVM-504's piecewise bound tested and verified — no code change needed ([RTVM-504], issue #19)
+
+Issue #19 carried §7 **I-12**'s already-resolved reading of RTVM-504
+verbatim in its body: the bound is piecewise (≤16.0 s to first output,
+≤11.0 s between outputs thereafter), not the single 11.0 s-from-launch
+bound the original wording implied, and no product behaviour changes —
+only the assertion TP-504 makes. That prediction held: `git diff --stat`
+over `src/` across every commit on `issue-19` is empty (confirmed
+directly by the Systems Engineer, not just relayed from Software
+Engineer). The RTVM-501/502 prompt cadence #17 already built is what
+TP-504 measures; this issue only had to teach the test harness to
+measure it correctly.
+
+**Why TP-504 didn't have to wait on #25.** TP-501…503 stay NOT-RUN,
+blocked on the ConPTY spike (#25) because they need a genuine console
+handle attached (A-4, §9.4). TP-504 doesn't: RTVM-006/RTVM-008 guarantee
+a non-interactive invocation is never blocked waiting on a reply, so the
+byte-timestamp/gap measurement TP-504 asks for is fully drivable through
+ordinary redirected stdout/stderr — no pseudoconsole required. Confirmed
+this reading against RTVM-006/008's own text before accepting the
+Software Engineer's framing, rather than taking it on faith.
+
+**Evidence, this issue's own commit (`d4d79b2`, `[RTVM-504] Drive TP-504
+for real in run-timing.ps1`):**
+
+- **Linux substitute** (`g++ -std=c++17 -O2 -DNDEBUG -Wall -Wextra`,
+  clean build; all four `tests/windows/*.ps1` parse clean under `pwsh
+  7.6`): `run-timing.ps1` run twice against that build laid out under a
+  synthetic `x64\Release\` path. TP-504's five cases (`P-EASY`,
+  `P-HARD17`, `P-UNSOLVABLE`, `P-BADCHAR`, the long-solve hook) **PASS**
+  both times — first byte 21–74 ms for the four ordinary fixtures, ~15.0 s
+  for the hook, max gap ~10.0–10.02 s, all inside the 16.0 s/11.0 s
+  ceilings, exit codes correct throughout.
+- **Mutation check, not taken on faith.** A copy of `run-timing.ps1`
+  with `$FirstByteCeilingMs`/`$GapCeilingMs` dropped to `1.0` correctly
+  flipped all five TP-504 rows to `FAIL` with the right reason text
+  against the same build — the checks gate on the measured timestamps,
+  not on a tautology.
+- **Real Windows evidence**, this exact branch tip (`d4d79b2`, run
+  `31863267320`, `win25-vs2026`, headSha match — a completed run, not
+  in-flight): raw log for the timing step has no `##[error]` (only the
+  pre-existing, unrelated TP-905 inline-`vstest` failure, out of scope
+  here). All three W-7 samples: TP-504's five cases **PASS**, first byte
+  22.8–74.3 ms / ~15.0–15.05 s (hook), max gap ~9.99–10.02 s, exit codes
+  0/0/2/1 correct in every case — exit-code-gated, not timing-shaped
+  only. Zero `[FAIL]` rows anywhere in `timing.txt` or
+  `runtime-procedures.txt`. `tests.trx`: 66/66 unit tests passed. Both
+  Debug and Release builds: 0 errors, 0 warnings. TP-501…503 stay
+  NOT-RUN, same reason as §9.26/9.27/9.28 (#25 still open) — unaffected,
+  not a regression.
+
+One Linux-substitute-only flake was reported and ruled out: an
+occasional `Broken pipe`/`-1` exit inside the pre-existing, unmodified
+`Invoke-Sudoku` TP-500 loop, gone on re-run, absent from all three real
+Windows samples, and outside `Invoke-SudokuTimestamped` (this issue's
+own new code path). Not a TP-504 defect — a runner artifact, noted for
+the test-flake pattern list, not handed back.
+
+**Status outcome: RTVM-504 promoted Approved → Verified at `d4d79b2`.**
+This is a genuine, first-time promotion for this row — no SHA was
+recorded before this handoff — so per
+[[no-code-measurement-still-routes-to-cicd]] it takes the literal
+fast-path hand-off to `agent:cicd` even though the diff is
+`tests/windows/*.ps1` and `docs/RTVM.md` only, no `src/` change. This
+mirrors §9.14's RTVM-500 precedent exactly (NFR/timing item, no product
+code, full real-hardware evidence already in hand) rather than the
+Approved→In Test→(wait for CI/CD merge)→Verified path RTVM-203/204 and
+RTVM-004…008/404/501…503 took in §9.22/9.23/9.26/9.27 — those rows had
+genuine product-code changes still awaiting a trunk merge; this one
+doesn't. Commit(s) currently reads the branch-tip evidence SHA
+`d4d79b2`; per the a067772 convention (§9.14's follow-up), CI/CD's
+`--no-ff` merge SHA will replace it in the Commit(s) column once
+reported back, without changing the Verified status itself. §9.4's A-5
+row updated in place to point here.
+
+**§7 interpretations raised in this thread: none** — I-12 was already
+correct as written; this issue only had to make TP-504 measure it as
+documented.
+
+**Follow-up (commit confirmation): merge SHA recorded, regression
+routed to Test Engineer.** CI/CD merged `issue-19` into `main` `--no-ff`
+as `6d3d35e` (merging branch head `1c39759`, three commits: Software
+Engineer code `04d9daf`, Software Engineer memory `d4d79b2`, Test
+Engineer memory `1c39759`). Per
+[[commit-sha-recorded-is-the-merge-commit]] the Commit(s) column takes
+the merge SHA, not the pre-merge evidence SHA — but CI/CD's own
+required memory-write commit (`292af46`, single-parent on top of
+`6d3d35e`) landed immediately after and, via the
+`windows-verification` workflow's `cancel-in-progress` concurrency
+group, cancelled the in-flight run targeting `6d3d35e` (run
+`31863981695`) in favour of a fresh run (`31864021932`) targeting
+`292af46` instead. `292af46` is tree-identical to `6d3d35e` outside
+`.claude/agent-memory` (`git diff --stat` confirms), so nothing about
+the evidence changes — only which SHA the real regression run will
+actually attach to. Recorded `292af46` in the Commit(s) column above
+as the true trunk-arrival point for that reason, not `6d3d35e`.
+
+This was a genuine code-bearing merge — the TP-504 harness
+(`Invoke-SudokuTimestamped`/`Measure-NeverSilent` in
+`tests/windows/lib/Common.ps1`, the TP-504 wiring in
+`tests/windows/run-timing.ps1`) reached `main` for the first time —
+so CI/CD flagged regression testing as needed, and per "Receiving a
+commit confirmation from CI/CD" this row's already-Verified status
+stands (it was promoted on the first commit-confirmation above, per
+[[verified-on-first-commit-confirmation-not-gated-by-v1]]) while the
+regression pass itself routes to Test Engineer as downstream
+confirmation, not a precondition for the promotion already recorded.
+
+**Follow-up (post-merge regression pass): reconfirmation only, no
+promotion, closed directly.** Test Engineer ran the standing regression
+baseline against trunk tip `82acc46` (6 commits ahead of the pre-merge
+tip `71ca759`, diff scoped to `tests/windows/lib/Common.ps1`,
+`tests/windows/run-timing.ps1`, `docs/RTVM.md`, and agent memory only —
+no `src/` change). Linux substitute: clean build, full driver 66/66,
+core-only driver 49/49, both matching prior counts exactly. Real
+Windows evidence found already in-flight for this exact tip (run
+`31864164827`, `win25-vs2026`), polled to completion: `tests.trx`
+66/66 vstest Passed; `runtime-procedures.txt` 47/55 PASS, 8 NOT-RUN
+(same known gaps, same reason — TP-900/901 no-2022-image;
+TP-004/005/006/007/008/405/507 blocked on #25's ConPTY spike), 0 FAIL;
+TP-504's five cases cross-checked against each sample's `exitCode`
+field, exit 0/0/2/1 every time, first byte 23–83 ms / ~15.0–15.04 s
+(hook), max gap 101–120 ms / ~10.01–10.02 s — all inside the 16.0 s/
+11.0 s I-12 ceilings. This row was already **Verified** with `292af46`
+recorded (above); the regression pass discharges nothing new — it
+reconfirms the same evidence shape already on record, not a fresh
+clause. Per
+[[second-ready-for-rtvm-update-closes-directly]], a second
+`status:ready-for-rtvm-update` handoff that promotes nothing closes
+the issue directly rather than making a third CI/CD round trip over a
+docs-only reconfirmation. Status and Commit(s) unchanged: **Verified**,
+`292af46`. TP-501…503 stay NOT-RUN, unaffected, still owned by #25.
+
+### 9.30 Exit-code mapping and stdout purity tested across all five outcomes ([RTVM-405], [RTVM-406], issue #18)
+
+State at branch `issue-18` (tip `79b30bb`), tested by the Test Engineer
+2026-08-15 — **PASS**. The last of the aggregate assertions: everything
+this issue needed already existed in `Reporter`/`main.cpp` from
+#10/#11/#12/#17 (none of it credited to those issues, per §9.8.4's note
+that DATA-OUT/OUT rows aren't split finer than the RTVM item they
+belong to); this issue's own contribution is the one test method that
+exercises the aggregate, since no prior issue could — TP-405/TP-406 are
+explicitly about the program as a whole, not any one path, and nothing
+runs all five outcomes back to back until every outcome exists.
+
+**What was exercised.**
+
+- **Unit level.** New `TEST_METHOD`
+  `rtvm405and406_exitCodeAndStdoutPurityAcrossAllFiveOutcomeClasses`
+  (`ReporterTests.cpp`) drives the real parse/solve/report pipeline once
+  per TP-300 fixture class (`P-EASY`→`Solved`, `P-NONUNIQUE`→`SolvedNotUnique`,
+  `P-BADCHAR` via real `parseGrid`→`InvalidInput`, `P-UNSOLVABLE`→`NoSolution`,
+  the `Aborted` factory standing in for the stop-response protocol per the
+  precedent `rtvm404_*` already established), asserting the exit-code
+  sequence `0, 0, 1, 2, 3` (RTVM-405), zero occurrences of `Still working`,
+  `abandoned`, `r1c1`, `Error`, `could not` on stdout across all five runs
+  (RTVM-406), and the five outcomes pairwise distinct (TP-300's whole-run
+  half, §9.6's row, discharged above). Full generated-driver suite 67/67
+  (was 63), core-only driver 49/49 (RTVM-903 split intact) — both figures
+  independently reproduced by the Test Engineer, not taken from the
+  Software Engineer's count.
+- **Process level, real binary.** `easy.txt`/`nonunique.txt`/`malformed.txt`/`unsolvable.txt`
+  run directly against the built `SudokuSolver` binary (no shim): exit
+  codes `0/0/1/2` exactly, stdout/stderr byte counts and grep for the five
+  forbidden substrings all matching RTVM-405/406 — including confirming
+  `r1c1` is permitted on **stderr** (the malformed diagnostic) and simply
+  absent from stdout, which is what RTVM-406 actually constrains.
+- **Source cross-check.** `Reporter.cpp`'s outcome→exit-code switch read
+  directly against RTVM-405's text (`Success`→0 covers both `Solved`/
+  `SolvedNotUnique`, `InvalidInput`→1, `NoSolution`→2, `Aborted`→3, no
+  `default` reachable outside the four), and every string `Messages.cpp`
+  produces cross-checked against `docs/SDD.md` §2.8's stream table — no
+  message exists outside it, so this issue's "finding, if any" clause has
+  nothing to report.
+
+| Req | Executed here and passed | Still outstanding |
+| --- | --- | --- |
+| RTVM-405 | TP-405 in full: exit-code sequence `0, 0, 1, 2, 3` across all five outcome classes, unit level and real-binary process level, both independently re-derived by the Test Engineer | The MSVC re-execution (V-1) |
+| RTVM-406 | TP-406 in full: zero forbidden-substring hits on stdout across all five outcomes, unit level and real-binary process level | Same as above |
+| RTVM-300 (piggybacked, not this issue's own row) | TP-300's whole-run half, discharged — see §9.6's row, updated above | V-1 only |
+
+**Scope confirmed out of this issue's reach, not a gap.** TP-405's
+"additionally run the full TP-505 corpus" clause belongs to RTVM-505,
+not this issue. The `Aborted` case on `tests/windows/run-procedures.ps1`
+stays `NOT-RUN`, the same standing TP-004..008 limitation named at
+§9.26/§9.27/§9.28 — not introduced here and not this issue's to close.
+
+**Status at hand-off to CI/CD.** Per standing convention, Verified
+needs a trunk commit SHA in addition to full clause execution, and at
+that point all of this evidence was on branch `issue-18`. **RTVM-405
+and RTVM-406 moved Approved → In Test**, Commit(s) left blank pending
+CI/CD (§5). RTVM-300 kept its existing status (**In Test**) and
+existing Commit(s) (`668f9a4`, from #7's merge) unchanged — this
+issue's whole-run-half work discharges the clause §9.6 left
+outstanding on that row without promoting it, per the
+discharge-not-promotion pattern established at §9.11.
+
+**§7 interpretations raised in this thread: none.**
+
+**Follow-up (commit confirmation): merge SHA recorded, RTVM-405/406
+promoted to Verified, regression routed to Test Engineer.** CI/CD
+merged `issue-18` into `main` `--no-ff` as **`a78f0d2`** (merging
+branch head `c8c93e0` — matches the SHA CI/CD's prior hand-off named,
+no trailing commits to account for). Two merge attempts exist in the
+git graph (`8c3d528` unpushed, superseded by `a78f0d2` after `main`
+moved via #20's memory-only commit mid-merge); CI/CD diffed the two
+attempts' conflict resolutions and confirmed they're byte-identical,
+so `a78f0d2` is treated as the authoritative trunk arrival for this
+issue's work. Per
+[[verified-on-first-commit-confirmation-not-gated-by-v1]], **RTVM-405
+and RTVM-406 promote In Test → Verified at `a78f0d2`** on
+this first commit confirmation, without waiting on the regression pass
+CI/CD also flagged as needed — real code (`ReporterTests.cpp`'s new
+aggregate `TEST_METHOD`) reached `main` for the first time, so
+`tests/` changing still counts per the standing rule even though no
+`src/` file moved. RTVM-300 (piggybacked, not this issue's own row)
+keeps its existing status (**In Test**) and existing Commit(s)
+(`668f9a4`) unchanged — the discharge recorded above already covers
+what this merge adds; nothing new to promote on that row.
+
+This section's number collided with issue #19's independently-cut
+`### 9.29` when both branches merged to trunk (each claimed the same
+next-free number at the point it was cut); per CI/CD's inline note on
+the merge, this section is renumbered **9.30** here as the Systems
+Engineer's resolution — issue #19's section keeps its original 9.29.
+
+Handed to Test Engineer next for the post-merge regression pass, per
+CI/CD's "regression testing is needed" flag on the commit
+confirmation.
+
+**Follow-up (post-merge regression pass): reconfirmation only, nothing
+promoted.** The Test Engineer ran the requested regression pass against
+trunk (baseline `3e7406a`, current tip `7fa07d4` at the time, 9 commits
+ahead, diff scoped correctly to the merge commit's non-branch parent
+rather than `issue-18`'s own branch tip — see the sibling-branch
+false-positive note the Test Engineer left in their own memory this
+run). Full generated-driver suite 67/67 (same count as the original
+PASS), core-only driver 49/49 (RTVM-903 still intact), all four
+real-binary sample runs byte-identical to the original PASS's numbers,
+and a fresh Windows evidence run at the exact current trunk tip showed
+the same **47/55 PASS, 8 NOT-RUN** shape, same 8 items, same reason
+text as #17's regression pass — TP-405's `Aborted` case included.
+Per [[second-ready-for-rtvm-update-closes-directly]], this is the
+reconfirmation case, not the promotion case: **RTVM-405 and RTVM-406
+stay Verified at `a78f0d2`** (already the terminal status — nothing
+left to discharge on these two rows), and RTVM-300 stays In Test at
+`668f9a4`, both unchanged from the previous follow-up above. No new
+§7 interpretations. Closed directly, no CI/CD hand-off, since the
+regression evidence didn't discharge anything this row was still
+waiting on.
+
+### 9.31 Adversarial-input corpus tested and verified — no code change needed ([RTVM-505], issue #20)
+
+Issue #20 was late in the plan by design (Finish-Start on #5 and #18):
+it asserts a property of the finished program — no input crashes it,
+every exit code lands in the RTVM-405 set — rather than adding new
+behaviour, and it needed every earlier issue's work to exist for a
+corpus to mean anything. The Software Engineer confirmed no product
+code change was needed: `InputSource.cpp`'s bounded reads (§7 I-13,
+`kMaxLineBytes = 4096`), `Parser.cpp`'s byte-oriented parsing (never
+`strlen`, never a NUL-terminator assumption), and `main.cpp`'s
+catch-all mapping any internal fault to exit `1` were all already in
+place from #6/#7/#8/#18. `git diff --stat` over `src/` across
+`issue-20` is empty (Software Engineer's own commit, confirmed
+directly rather than taken on faith) — this matches the
+[[no-code-measurement-still-routes-to-cicd]] shape exactly, a third
+instance after RTVM-500 (§9.14) and RTVM-504 (§9.29).
+
+**What was exercised, real Windows evidence at the branch tip
+(`662b6ed`).** `tests/windows/run-procedures.ps1`'s `TP-505` section
+was already fully scripted (built during #18, unused until this issue)
+and asserts, for each corpus entry, exit code ∈ {0,1,2,3}, no crash
+dialog / unhandled-exception text, and completion under 60 s:
+
+- **27 corpus entries**, comfortably over TP-505's "at least 25": the 8
+  hand-built edge cases named in the issue body (empty input / zero-byte
+  file argument, a single newline, 10 000 lines of digits, a 1 MB
+  single line, an embedded NUL byte, a UTF-8 BOM, full-width digits, and
+  binary content read from a `.exe`), all 17 §6.1 fixtures, and a
+  directory-argument case plus a locked-file-argument case. All 27
+  `[PASS]`.
+- **Not just the summary text.** `runtime-procedures.json`'s per-case
+  `observed` field cross-checked directly: every entry shows
+  `exit=N timedOut=False crashText=False` with N ∈ {0,1,2} (3 —
+  `Aborted` — never exercised by this corpus, expected, not a gap).
+  Several stdout/stderr bodies spot-checked: the NUL-byte case reports
+  "line 1 is too long"; the binary-from-`.exe` case reports an illegal
+  character; the directory/locked-file cases report "Permission
+  denied"; `P-BLANK` (81 empty cells, a valid non-unique puzzle) returns
+  a genuine `SolvedNotUnique` grid and note at exit `0` in ~6.7 ms,
+  confirming the [RTVM-202] `maxSolutions = 2` bound finds its second
+  solution instantly rather than hanging, exactly as this issue's design
+  pointers predicted.
+- **Regression scope unaffected.** Unit driver 67/67 (unchanged from
+  #18); runtime-procedures summary 47/55 PASS, 8 NOT-RUN, 0 FAIL — the
+  same standing 8-item gap as #19's baseline (no VS 2022 image for
+  TP-900/901; TP-004/005/006/007/008/TP-405-aborted/TP-507 still waiting
+  on #25's ConPTY spike), identical reason text each time.
+- **Independent Linux substitute**, not just a read of the Windows
+  artifact: `g++ -std=c++17 -O2 -DNDEBUG -Wall -Wextra` clean build, 0
+  warnings; hand-ran empty input, a bare newline, an embedded-NUL file,
+  and a directory argument directly against the built binary — same
+  shape (exit `1`, sane stderr, no crash) as the Windows evidence.
+
+**One naming nuance, not a gap.** The script passes every corpus entry
+as a file *argument*, never via stdin, so `empty-input-zero-bytes`
+already **is** the "file argument pointing at a zero-byte file" case
+the issue text asks for — no separate case was needed.
+
+| Req | Executed here and passed | Still outstanding |
+| --- | --- | --- |
+| RTVM-505 | TP-505 in full: 27-entry corpus (≥25 required), every case exit-code-gated in {0,1,2,3}, no crash/unhandled-exception text, under 60 s, real Windows evidence at the branch tip | None — this row is the last NFR in the plan |
+
+**Status outcome: RTVM-505 promoted Approved → Verified.** Test
+evidence was gathered at branch-tip SHA `662b6ed`; this is a genuine,
+first-time promotion for this row — no SHA was recorded before this
+handoff — so per [[no-code-measurement-still-routes-to-cicd]] it took
+the literal fast-path hand-off to `agent:cicd` even though the diff
+was `docs/RTVM.md` and agent memory only, no `src/` or `tests/` change
+(the TP-505 harness itself shipped on #18, not here). No A-row in §9.4
+references TP-505, so nothing there needed updating. CI/CD merged
+`issue-20` `--no-ff` as `68c9cde` (two-parent merge commit, confirmed
+via `git log -1 --format="%P"`); per
+[[commit-sha-recorded-is-the-merge-commit]] the Commit(s) column now
+carries that merge SHA rather than the pre-merge evidence tip. No
+regression testing was flagged as needed (the merged diff was
+memory-files-only — no `src/`, `tests/`, or `docs/` content on the
+branch side; the RTVM promotion itself landed directly on `main`
+separately, at `a238b06`).
+
+**§7 interpretations raised in this thread: none.**
+
+### 9.32 README filled in — RTVM-901/904/905 move In Implementation → In Test, RTVM-907's remaining clause closed (issue #22)
+
+This section's number collided with issue #20's independently-cut
+`### 9.31` when both branches were rebased onto the same trunk tip at
+the same time — each claimed the same next-free number at the point it
+was cut, the same shape as §9.30's collision with issue #19. Per that
+precedent, this section is renumbered **9.32** here as the Systems
+Engineer's resolution; issue #20's section keeps its original 9.31.
+
+State at branch `issue-22` (tip `af71da8`), tested by the Test Engineer
+2026-08-15 — **PASS**. This is the last `DELIV` issue; `README.md` moved
+from the #5 scaffold's TODO stubs (§9.2's row) to the seven required
+`docs/SDD.md` §3.4 sections in full. No `src/`/`tests/` path touched —
+`git diff main...issue-22 --stat` shows only `README.md` and Software
+Engineer memory, confirmed independently by the Test Engineer.
+
+**What was closed, per requirement.**
+
+- **RTVM-904 — every TP-904 content clause now executed and passed.**
+  All seven §3.4 sections present in the required order; the "Run"
+  section's worked example byte-diffed against a real rebuild's stdout
+  (338 bytes, identical); the input-format section states the `0`/`.`
+  clause TP-904 checks for specifically, and the cosmetic "givens;" /
+  capitalised "Both" artefact flagged earlier in this thread (§9.5's
+  note, trunk commit `3497383`) is gone — confirmed by reading the
+  current text, not by re-deriving the claim. §3.4's explicit exclusion
+  holds: no mention of RTVM-507 or `SUDOKU_DIAG_MIN_SOLVE_MS` anywhere
+  in `README.md`. **No clause of TP-904 needs the VS 2022 toolchain**,
+  so nothing is left outstanding on this row once a trunk SHA exists.
+- **RTVM-905 — TP-905's real clause (the one §9.2 left outstanding)
+  is now closed with genuine evidence, not a placeholder.** Real
+  Windows evidence for this exact branch tip (run `31866476995`,
+  `af71da8`, `win25-vs2026`) shows `vstest.console.exe` discovery and
+  execution — 67/67 passed — via exactly the command the new README
+  documents, plus Test Explorer named as the interactive route. Nothing
+  left outstanding on this row either.
+- **RTVM-907 — its remaining clause (§9.2: "the README clause — all
+  five named with their expected outcome") is now closed.** All five
+  `samples/*.txt` are named with the outcome each produces, including
+  the `unsolvable.txt` worked example (exit `2`); the fixture clause
+  (90 bytes each, LF, `.gitattributes`-pinned) was reconfirmed
+  unaffected by this diff. Both TP-907 clauses now hold.
+- **RTVM-901 stays partially outstanding — the VS 2022 loader clause
+  is not closed, and this issue cannot close it.** The build clause is
+  real evidence, not a substitute: `Debug|x64` and `Release|x64` both
+  built clean via exactly `msbuild SudokuSolver.sln
+  /p:Configuration=Release /p:Platform=x64` (Debug equivalent) — no
+  restore step, no `/p:` beyond `Configuration`/`Platform` — matching
+  the README character for character, so the "no undocumented manual
+  step" clause holds on the evidence available. `runtime-procedures.txt`
+  still shows the same standing 8-item NOT-RUN gap seen on every
+  regression pass since #19: `TP-900/TP-901`'s "opens in the actual VS
+  2022 IDE with no migration prompt" clause is `vs-instance-enumeration`
+  (§9.4 A-2, reconfirmed at §9.25) — no VS 2022 image on this runner —
+  and `TP-004/005/006/007/008/405/507` are the interactive-protocol
+  driver owned by #25. Neither is introduced by this issue and neither
+  is this issue's to close.
+
+| Req | Executed here and passed | Still outstanding |
+| --- | --- | --- |
+| RTVM-901 | TP-901's build clause, on the real MSVC toolchain, matching the README's documented command exactly | The VS 2022 loader clause (§9.4 A-2) — unautomatable on this runner image, same standing gap since #21 |
+| RTVM-904 | All of TP-904 | — |
+| RTVM-905 | All of TP-905, on real Windows evidence (67/67 via the documented `vstest.console.exe` command) | — |
+| RTVM-907 | All of TP-907 (fixture clause reconfirmed unaffected; README-naming clause now closed) | — |
+
+**Status at hand-off to CI/CD.** Per standing convention, Verified
+needs a trunk commit SHA in addition to full clause execution, and at
+this point all of the evidence above was taken on branch `issue-22`.
+**RTVM-901, RTVM-904 and RTVM-905 move In Implementation → In Test**
+(§5); Commit(s) left unchanged at `85bab27` (the scaffold SHA they
+still sit on) pending CI/CD's merge SHA. **RTVM-907 keeps its existing
+status (In Test) and existing Commit(s) (`85bab27`)** — its clause is
+closed above without a promotion, the same discharge-not-promotion
+pattern established at §9.11: closing a row's last outstanding clause
+moves it forward only as far as the evidence and the recorded SHA
+jointly support, and no SHA for this new work exists on trunk yet.
+
+Once CI/CD records the merge SHA: per
+[[fast-path-promotion-after-sha-recorded]] and
+[[verified-on-first-commit-confirmation-not-gated-by-v1]], RTVM-904,
+RTVM-905 and RTVM-907 have nothing left to discharge and should
+promote straight to Verified on that first commit confirmation.
+RTVM-901 should **not** promote on that same confirmation — its VS
+2022 loader clause is still open, and per
+[[verification-platform-trap]] a fast-path promotion covers only
+clauses actually discharged, not a row's remaining gaps.
+
+**§7 interpretations raised in this thread: none.**
+
+### 9.33 CI/CD merge recorded — RTVM-904/905/907 promoted to Verified, RTVM-901 held at In Test (issue #22, commit confirmation)
+
+CI/CD merged `issue-22` into `main` `--no-ff` at merge commit
+**`146a5d1`** (branch head `018704d`), and flagged this as **not**
+needing regression testing — the merge brings only `README.md` plus
+Software Engineer/Test Engineer memory to trunk, no `src/`/`tests/`
+path touched, matching what both the Software Engineer and Test
+Engineer independently confirmed on `issue-22` (§9.32).
+
+Per §9.32's own pre-committed plan and
+[[verified-on-first-commit-confirmation-not-gated-by-v1]]:
+
+- **RTVM-904, RTVM-905 and RTVM-907 promote In Test → Verified.**
+  Each had nothing left to discharge once a trunk SHA existed — §9.32
+  already closed every clause of TP-904 and TP-907, and TP-905's real
+  clause on genuine Windows `vstest.console.exe` evidence (67/67). No
+  regression pass is a precondition for this promotion; that's what a
+  later regression run (not requested here) would be for, not what
+  Verified is gated on.
+- **RTVM-901 stays In Test, not promoted** — its VS 2022 loader clause
+  (§9.4 A-2: no VS 2022 image on this runner, opens-with-no-migration-
+  prompt cannot be exercised) remains open, the same standing gap since
+  #21. Per [[verification-platform-trap]], a commit confirmation
+  promotes only the clauses it actually discharged; this row's
+  outstanding clause carries forward unchanged.
+- **Commit(s) updated to `146a5d1` for all four rows this issue owns —
+  RTVM-901, RTVM-904, RTVM-905, RTVM-907 — including RTVM-901 despite
+  it staying In Test.** Per §9.27's precedent (commit SHA recorded for
+  all rows a merge touches regardless of whether status promotes),
+  updating Commit(s) is not conditioned on promotion to Verified; it
+  records which tree the row's current evidence — including RTVM-901's
+  reconfirmed build clause — was actually taken against. The merge SHA
+  is recorded per [[commit-sha-recorded-is-the-merge-commit]], not the
+  pre-merge evidence SHA `af71da8` the Test Engineer's run was pinned
+  to (that SHA remains the citation of record in §9.32's prose above).
+
+This is the last `DELIV` issue and the last row-owning issue in this
+thread; no further work is queued against RTVM-901/904/905/907 beyond
+the standing VS-2022-image gap tracked at §9.4 A-2, which is not this
+issue's to close.
+
+**§7 interpretations raised in this thread: none.**
+
+**Regression testing needed: no**, per CI/CD's hand-back — closing this
+issue outright rather than routing to Test Engineer.

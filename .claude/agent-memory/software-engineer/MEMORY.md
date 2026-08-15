@@ -24,8 +24,12 @@
 - [RTVM-506 needed no code](rtvm-506-no-code-needed.md) — static-CRT settings and dumpbin evidence already landed at #5; #14 was a verification pass, not new implementation.
 - [TP-202 instrumentation needs P-BLANK](tp202-instrumentation-needs-p-blank.md) — P-NONUNIQUE's tree is exhausted regardless of the solution cap, so the "did not continue" proof has to run on P-BLANK instead.
 - [RTVM-203/204 wall-clock tests](rtvm203-204-wallclock-tests.md) — literal TP-203/204 numbers kept as-is, and the mutation trap: `m_aborted` isn't what decides the outcome during the RTVM-507 extension, the loop's own return-value check is.
-- [PowerShell Mandatory/List gotchas](powershell-mandatory-and-list-gotchas.md) — `return $list` unrolls to `$null`; `Mandatory` rejects empty input; `-RedirectStandardInput 'NUL'` throws on real Windows and can produce false PASSes downstream.
+- [PowerShell Mandatory/List gotchas](powershell-mandatory-and-list-gotchas.md) — `return`/`Sort-Object` unroll single-item collections to a bare object; `Mandatory` rejects empty input; `-RedirectStandardInput 'NUL'` throws on real Windows; `Register-ObjectEvent` needs polling, not a blocking wait.
 - [RTVM-004 prompt/abort/non-blocking stdin](rtvm-004-prompt-abort-nonblocking-stdin.md) — the fourth `StdinChannel` seam function, why `select()` mirrors all four Win32 availability tests, and why only `Reporter`'s Aborted branch (not `SolveSession`) got a unit test.
+- [RTVM-504 needed a harness, not product code](rtvm-504-harness-not-product-code.md) — TP-504 is drivable without the ConPTY spike (#25) because RTVM-006/008 mean it needs no interactive reply, unlike TP-501..503.
+- [RTVM-405/406 aggregate conformance](rtvm-405-406-aggregate-conformance.md) — issue #18: the exit-code/stream mapping was already complete from earlier issues; the real gap was a missing aggregate test across all five outcomes, and the process-level half was already scripted by someone else.
+- [RTVM-505 needed no code](rtvm-505-no-code-needed.md) — issue #20: the bounded-read cap, byte-oriented parser and main.cpp catch-all already met the corpus's every clause, and the 26-entry TP-505 harness already existed in run-procedures.ps1.
+- [RTVM-904 README worked example](rtvm-904-readme-worked-example.md) — issue #22: capture the "Run" section output from a real g++ build, not §6.2 transcription; and the RTVM-507 no-mention trap is a real one to check for on this kind of doc issue.
 
 ## Process
 

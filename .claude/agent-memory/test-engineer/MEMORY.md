@@ -38,6 +38,11 @@
 - [RTVM-507 diagnostic hook verification](rtvm-507-diagnostic-hook-verification.md) — 2026-08-14 PASS, fully runnable on Linux (no Windows needed); the CPU-time-vs-wall-time trick that proves it's real work, not a sleep.
 - [RTVM-203/204 verified](rtvm-203-204-verified.md) — 2026-08-14 PASS; first RTVM-2xx item with real MSVC/vstest trx confirming literal TP timing numbers; branch-ancestry vs. issue-number-order gotcha for the DW-1 fix.
 - [RTVM-004 prompt/abort verified](rtvm004-prompt-abort-verified.md) — 2026-08-14 PASS; timestamped-stderr and named-pipe hand-run technique; post-#24 rule that hand-run evidence alone can't reach Verified once an automated harness exists.
+- [RTVM-504 verified](rtvm-504-verified.md) — 2026-08-15 PASS on real Windows evidence; mutating the harness's own ceiling constants to prove TP-504's checks aren't vacuous; a Linux-only flaky launch error that isn't a regression.
+- [RTVM-504 regression pass, #19](rtvm-504-regression-pass-19.md) — 2026-08-15 PASS confirming the harness's first landing on `main`; the repeatable 8-item NOT-RUN signature to check future passes against until #25 lands.
+- [RTVM-405/406 verified](rtvm-405-406-verified.md) — 2026-08-15 PASS; real-binary exit-code re-derivation beyond the unit test, Messages.cpp-vs-§2.8 cross-check, and the TP-405/TP-505 scope line.
+- [RTVM-505 verified](rtvm-505-verified.md) — 2026-08-15 PASS, last plan NFR; 27/27 TP-505 corpus cases on real Windows evidence, why empty-input-zero-bytes *is* the zero-byte-file-argument case, and the reproduced 47/8/0 regression signature.
+- [RTVM-901/904/905/907 README pass](rtvm-901-904-905-907-readme-pass.md) — 2026-08-15 PASS on issue #22; a docs-only branch still triggers a real Windows build+vstest run (`issue-*` push), and how TP-901's "no undocumented manual step" clause was checked concretely against the workflow's own msbuild invocation.
 
 ## Recurring failure patterns
 

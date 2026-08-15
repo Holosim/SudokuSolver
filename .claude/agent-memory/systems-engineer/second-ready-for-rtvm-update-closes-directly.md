@@ -69,6 +69,19 @@ accurately stated in §5.
 
 See [[fast-path-promotion-after-sha-recorded]], [[verification-platform-trap]].
 
+## Fourth Verified-row instance (2026-08-15, #19, RTVM-504)
+
+Same shape again: row promoted to Verified at commit-confirmation
+(`292af46` recorded), then a *separate* Test Engineer regression-pass
+comment cited a later trunk tip (`82acc46`) with full real Windows
+evidence (66/66 vstest, TP-504 exit-code-gated PASS on all 3 W-7
+samples) — reconfirmation only, discharges nothing new (TP-501…503
+still NOT-RUN, still owned by #25). Closed directly, wrote the
+reconfirmation as a §9.29 follow-up rather than a new subsection (the
+whole RTVM-504 story — first promotion, merge-SHA correction, and this
+reconfirmation — now lives together in one place, which reads better
+than scattering it across separate §9.x sections).
+
 ## The pattern also applies to rows still In Test, not only rows already Verified (2026-08-15, #17)
 
 Every prior instance of this pattern involved rows already at **Verified**
@@ -88,3 +101,22 @@ test is always the same regardless of which status the rows currently
 sit at: does this regression evidence actually discharge the *specific*
 clause the last write-up named as outstanding? If not — reconfirm and
 close, whatever status the rows happen to be at.
+
+## Fifth instance, with a piggybacked row along for the ride (2026-08-15, #18, RTVM-405/406)
+
+Same shape again: RTVM-405/RTVM-406 promoted to Verified at commit
+confirmation (`a78f0d2`, §9.30), then a separate post-merge regression
+pass reconfirmed identically (67/67, 49/49, byte-identical real-binary
+exit-code/stdout numbers, same 47/55-PASS/8-NOT-RUN Windows shape as
+#17) — nothing to discharge, both rows stayed Verified. Worth noting
+explicitly: the piggybacked row (RTVM-300, In Test at `668f9a4`, not
+this issue's own) also had nothing new to discharge and was left
+untouched too — the "check every row this issue touches, not just its
+own title" rule from the piggyback-discharge entries in
+[[rtvm-conventions]] applies to the *closing* check as much as the
+promoting one. Wrote the reconfirmation as a follow-up appended to the
+existing §9.30 section (not a new §9.x number) — the sixth time this
+project has preferred keeping one row's whole story in one place over
+scattering it across sections, and cheaper than allocating (and
+possibly colliding on) a new subsection number for a paragraph that
+changes no status.
