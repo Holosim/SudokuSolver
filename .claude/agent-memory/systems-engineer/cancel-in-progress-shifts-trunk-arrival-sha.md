@@ -35,3 +35,26 @@ empty outside agent memory) so recording the later SHA isn't silently
 picking up an unrelated change. Record the later SHA in Commit(s),
 and say so explicitly in the row's §9.N narrative so a future reader
 doesn't wonder why it isn't the plain merge commit.
+
+## When the shift would still be stale by publish time (2026-08-15, #25)
+
+At #25's commit confirmation, the same mechanism fired but the "later
+SHA" (CI/CD's post-merge memory commit `0aaddb1`) was itself about to be
+superseded again — by my own upcoming `docs/RTVM.md` bookkeeping push,
+which also lands directly on `main`
+([[commit-confirmation-pushes-direct-to-main]]) and would cancel
+`0aaddb1`'s in-flight run in turn via the same `cancel-in-progress`
+group. Chasing "the SHA the workflow currently targets" in that
+situation just picks a different stale value. Recorded the actual `--no-ff`
+merge SHA (`0892b30`) instead — it's the tree that carries the real
+product/harness content — and told the Test Engineer explicitly to
+regression-test whichever run is current on `main`'s tip when they look,
+after confirming tree-identity to the recorded SHA for product paths.
+
+**How to apply:** only chase the "later SHA" when it's plausibly the
+*final* one before evidence is gathered (e.g. CI/CD's own single
+required follow-up, nothing else queued). If your own next action is
+itself another direct-to-`main` push that will retrigger
+`cancel-in-progress` again, don't record an intermediate SHA that will
+already be stale — record the merge SHA and shift the tree-identity
+check downstream to whoever actually reads the regression result.
