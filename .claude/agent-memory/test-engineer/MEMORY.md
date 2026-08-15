@@ -43,6 +43,7 @@
 - [RTVM-405/406 verified](rtvm-405-406-verified.md) — 2026-08-15 PASS; real-binary exit-code re-derivation beyond the unit test, Messages.cpp-vs-§2.8 cross-check, and the TP-405/TP-505 scope line.
 - [RTVM-505 verified](rtvm-505-verified.md) — 2026-08-15 PASS, last plan NFR; 27/27 TP-505 corpus cases on real Windows evidence, why empty-input-zero-bytes *is* the zero-byte-file-argument case, and the reproduced 47/8/0 regression signature.
 - [RTVM-901/904/905/907 README pass](rtvm-901-904-905-907-readme-pass.md) — 2026-08-15 PASS on issue #22; a docs-only branch still triggers a real Windows build+vstest run (`issue-*` push), and how TP-901's "no undocumented manual step" clause was checked concretely against the workflow's own msbuild invocation.
+- [TP-004/005/006 ConPTY harness verified](tp004-006-conpty-harness-verified.md) — 2026-08-15 on #25; the A-4 gap finally has a real automated driver. TP-004 PASS, TP-006 partial, TP-005 FAIL — an isolated hosted-image console-input-delivery gap, not a product or harness defect.
 
 ## Recurring failure patterns
 

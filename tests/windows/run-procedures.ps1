@@ -49,6 +49,7 @@ param(
 
 . (Join-Path $PSScriptRoot 'lib/Common.ps1')
 . (Join-Path $PSScriptRoot 'lib/Fixtures.ps1')
+. (Join-Path $PSScriptRoot 'lib/ConPty.ps1')
 
 if (-not $RepoRoot) {
     $RepoRoot = (Resolve-Path (Join-Path $PSScriptRoot '..\..')).Path
@@ -560,15 +561,143 @@ Invoke-Section -Name 'TP-505' -Body {
         -Observed "$($entries.Count) entries run; distinct exit codes seen: $((($exitCodesSeen | Sort-Object -Unique) -join ', '))"
 }
 
+# Diagnostic only, not a TP - see the doc comment on Invoke-ConPtyDiagnostics.
+# Written to conpty-diag.txt in the artifact so a "the real probes saw
+# nothing" result below can be bisected without a second Windows run.
+Invoke-Section -Name 'ConPTY-diag' -Body {
+    Invoke-ConPtyDiagnostics -Exe $Exe -FixtureFile $FixturePaths['P-EASY'] -EvidenceDir $EvidenceDir
+}
+
 # ===========================================================================
-# P4 - the NOT-RUN set, with a measured reason rather than an assumed one.
+# P4a - TP-004/005/006 under a real ConPTY (issue #25, docs/RTVM.md §9.4
+# A-4). Everything else in this script drives $Exe over a pipe or a file
+# (Invoke-Sudoku, Common.ps1) - StdinChannel's `Console` `StdinKind` branch
+# (GetFileType==console, PeekConsoleInput, ReadConsoleA) is never entered
+# that way. This section puts a genuine Windows console handle in front of
+# it instead, via ConPty.ps1's CreatePseudoConsole-based driver.
+#
+# TP-007/TP-008 and TP-507's active-hook clause are deliberately left in the
+# P4b NOT-RUN set below, unchanged - the issue that added this section
+# scoped the ConPTY attempt to TP-004/005/006 specifically (RTVM-007/008
+# already have hand-run pipe/file/Null evidence that doesn't turn on which
+# StdinKind was used; TP-507's hook-is-active clause is a property of the
+# environment variable, not of the console, so Test-DiagHookActive's
+# existing pipe-based probe already speaks to it as far as this script
+# goes).
+Invoke-Section -Name 'TP-004,TP-006' -Body {
+    $r = Invoke-ConPty004006Probe -Exe $Exe -FixtureFile $FixturePaths['P-EASY'] -EvidenceDir $EvidenceDir
+
+    if (-not $r.Started) {
+        # The honest negative result the issue asks for: precisely what was
+        # tried (CreatePseudoConsole + CreateProcessW under EXTENDED_STARTUPINFO_PRESENT)
+        # and precisely what stopped it, not "consoles are hard".
+        foreach ($case in @('prompt-content-and-timing', 'nothing-on-stdout-at-first-prompt')) {
+            Add-Check -Checks $Checks -Tp 'TP-004' -Case $case -State 'NOT-RUN' `
+                -Reason "ConPTY session did not start: $($r.StartError)"
+        }
+        foreach ($case in @('four-scheduled-prompts-no-long-gap', 'still-running-past-45s', 'stop-response-exit-3')) {
+            Add-Check -Checks $Checks -Tp 'TP-006' -Case $case -State 'NOT-RUN' `
+                -Reason "ConPTY session did not start: $($r.StartError)"
+        }
+        return
+    }
+
+    $gotFirstPrompt = $r.PromptTimestampsSec.Count -ge 1
+    $contentOk = $gotFirstPrompt -and
+        $r.FirstPromptText -match 'Still working \(\d+s elapsed\)\.' -and
+        $r.FirstPromptText -match '(?i)stop' -and
+        $r.FirstPromptText -match '(?i)no response'
+    Add-Check -Checks $Checks -Tp 'TP-004' -Case 'prompt-content-and-timing' `
+        -State $(if ($contentOk) { 'PASS' } else { 'FAIL' }) `
+        -Expected 'a line matching "Still working (Ns elapsed)." plus the stop gesture and "no response needed", visible at the first prompt over a real console handle' `
+        -Observed "gotFirstPrompt=$gotFirstPrompt promptSeconds=$(if ($gotFirstPrompt) { $r.PromptTimestampsSec[0] } else { 'n/a' }) text='$($r.FirstPromptText)'" `
+        -Reason $(if (-not $contentOk) { "see $($r.RawOutputPath | Split-Path -Leaf) in the artifact ($($r.RawOutputPath))" } else { $null })
+
+    # $Exe runs under a cmd.exe intermediary attached to the pseudoconsole
+    # (ConPty.ps1's Start(), "sixth Windows round"): stdin is still the
+    # genuine console handle, but stdout/stderr are cmd's own ordinary file
+    # redirects, independently readable - not inferred from one merged VT
+    # transcript the way rounds 1-5 had to. $r.StdoutBytesAtFirstPrompt is a
+    # real byte count on $r.StdoutPath at the moment the first prompt
+    # appeared on $r.StderrPath.
+    $noGridYet = $gotFirstPrompt -and (-not $r.GridSeenBeforeFirstPrompt)
+    Add-Check -Checks $Checks -Tp 'TP-004' -Case 'nothing-on-stdout-at-first-prompt' `
+        -State $(if ($noGridYet) { 'PASS' } else { 'FAIL' }) `
+        -Expected 'stdout.txt is still 0 bytes at the moment the first prompt appears on stderr.txt' `
+        -Observed "stdoutBytesAtFirstPrompt=$($r.StdoutBytesAtFirstPrompt)" `
+        -Reason $(if (-not $noGridYet) { "see $($r.StdoutPath | Split-Path -Leaf)/$($r.StderrPath | Split-Path -Leaf) in the artifact: $($r.StdoutPath)" } else { $null })
+
+    $fourPrompts = $r.PromptTimestampsSec.Count -ge 4
+    $gapOk = ($null -eq $r.MaxGapAfterFirstPromptSec) -or ($r.MaxGapAfterFirstPromptSec -le 11.0)
+    Add-Check -Checks $Checks -Tp 'TP-006' -Case 'four-scheduled-prompts-no-long-gap' `
+        -State $(if ($fourPrompts -and $gapOk) { 'PASS' } else { 'FAIL' }) `
+        -Expected 'prompts at ~15/25/35/45s (4 total) and no gap between them over 11.0s (§7 I-12)' `
+        -Observed "timestampsSec=$($r.PromptTimestampsSec -join ', ') maxGapSec=$($r.MaxGapAfterFirstPromptSec)" `
+        -Reason $(if (-not ($fourPrompts -and $gapOk)) { "see $($r.RawOutputPath | Split-Path -Leaf) in the artifact: $($r.RawOutputPath)" } else { $null })
+
+    Add-Check -Checks $Checks -Tp 'TP-006' -Case 'still-running-past-45s' `
+        -State $(if ($r.StillRunningAfterFourth) { 'PASS' } else { 'FAIL' }) `
+        -Expected 'process still running (not exited) once the fourth prompt has appeared' `
+        -Observed "stillRunningAfterFourth=$($r.StillRunningAfterFourth)"
+
+    $stopOk = $r.StopExitCode -eq 3
+    Add-Check -Checks $Checks -Tp 'TP-006' -Case 'stop-response-exit-3' `
+        -State $(if ($stopOk) { 'PASS' } else { 'FAIL' }) `
+        -Expected 'sending the stop response over the console input pipe ends the process with exit code 3' `
+        -Observed "stopExitCode=$($r.StopExitCode) stopLatencyMs=$($r.StopLatencyMs) stopWriteOk=$($r.StopWriteOk) stopWriteError=$($r.StopWriteError) promptsAfterStopAttempt=$($r.PromptsAfterStopAttempt)" `
+        -Reason $(if (-not $stopOk) { "see $($r.RawOutputPath | Split-Path -Leaf) in the artifact: $($r.RawOutputPath) - promptsAfterStopAttempt>0 means the process kept running its normal schedule (the stop response was never recognised, not just slow to act on); 0 means it stopped prompting without exiting either. Root cause isolated in conpty-diag.txt probe (6) (round 10, the true-direct-attachment case with no cmd.exe and no redirect wrapper anywhere in the chain): host-written bytes reach $Exe's pty input pipe (WriteFile succeeds) but never arrive as a console input event on this hosted image - GetNumberOfConsoleInputEvents stays 0 and ReadConsoleA never unblocks, even measured from inside the directly-attached child itself. Not a defect in StdinChannel.cpp or SolveSession.cpp - the console handle this harness attaches never receives the write in the first place." } else { $null })
+}
+
 # ===========================================================================
-Invoke-Section -Name 'TP-004..008,507' -Body {
+# P4b - TP-005, a dedicated (shorter) ConPTY session: the stop response has
+# to land at the *first* prompt specifically (TP-005's own wording, as
+# opposed to TP-006's fourth), and the 1.0s response-to-exit bound is its
+# own assertion.
+# ===========================================================================
+Invoke-Section -Name 'TP-005' -Body {
+    $r = Invoke-ConPty005Probe -Exe $Exe -FixtureFile $FixturePaths['P-EASY'] -EvidenceDir $EvidenceDir
+
+    if (-not $r.Started) {
+        foreach ($case in @('exit-3-within-1s', 'abandonment-message-and-empty-stdout')) {
+            Add-Check -Checks $Checks -Tp 'TP-005' -Case $case -State 'NOT-RUN' `
+                -Reason "ConPTY session did not start: $($r.StartError)"
+        }
+        return
+    }
+
+    if ($null -eq $r.FirstPromptSeconds) {
+        foreach ($case in @('exit-3-within-1s', 'abandonment-message-and-empty-stdout')) {
+            Add-Check -Checks $Checks -Tp 'TP-005' -Case $case -State 'FAIL' `
+                -Reason "no prompt appeared within the 25s ceiling - see $($r.RawOutputPath | Split-Path -Leaf): $($r.RawOutputPath)"
+        }
+        return
+    }
+
+    $latencyOk = ($null -ne $r.StopLatencyMs) -and ($r.StopLatencyMs -lt 1000)
+    $exitOk = $r.StopExitCode -eq 3
+    Add-Check -Checks $Checks -Tp 'TP-005' -Case 'exit-3-within-1s' `
+        -State $(if ($latencyOk -and $exitOk) { 'PASS' } else { 'FAIL' }) `
+        -Expected 'responding at the first prompt over a real console handle ends the process with exit 3 within 1.0s (RTVM-203)' `
+        -Observed "firstPromptSeconds=$($r.FirstPromptSeconds) stopExitCode=$($r.StopExitCode) stopLatencyMs=$($r.StopLatencyMs) stopWriteOk=$($r.StopWriteOk) stopWriteError=$($r.StopWriteError)" `
+        -Reason $(if (-not ($latencyOk -and $exitOk)) { "see $($r.RawOutputPath | Split-Path -Leaf) in the artifact: $($r.RawOutputPath) - same root cause as TP-006/stop-response-exit-3: see conpty-diag.txt probe (6), the true-direct-attachment isolation showing host-written input never becomes a console input event on this hosted image, independent of cmd.exe wrapping or encoding" } else { $null })
+
+    $contentOk = $r.AbandonedTextSeen -and $r.StdoutStayedEmpty
+    Add-Check -Checks $Checks -Tp 'TP-005' -Case 'abandonment-message-and-empty-stdout' `
+        -State $(if ($contentOk) { 'PASS' } else { 'FAIL' }) `
+        -Expected 'stderr.txt gains a line containing "abandoned at"; stdout.txt stays 0 bytes throughout (RTVM-404)' `
+        -Observed "abandonedTextSeen=$($r.AbandonedTextSeen) stdoutStayedEmpty=$($r.StdoutStayedEmpty)" `
+        -Reason $(if (-not $contentOk) { "see $($r.StdoutPath | Split-Path -Leaf)/$($r.StderrPath | Split-Path -Leaf) in the artifact: $($r.StdoutPath) - the stop response written by this probe is subject to the same conpty-diag.txt probe (6) input-delivery gap, so the process runs its normal (non-abandoned) schedule instead of exiting via the stop path" } else { $null })
+}
+
+# ===========================================================================
+# P4c - the remaining NOT-RUN set, with a measured reason rather than an
+# assumed one. TP-004/005/006 moved to the sections above (issue #25);
+# TP-007/008 and TP-507's active-hook clause are unaffected by this issue -
+# see the comment on the P4a section for why.
+# ===========================================================================
+Invoke-Section -Name 'TP-007,TP-008,TP-507' -Body {
     $probe = Test-DiagHookActive -Exe $Exe -FixtureFile $FixturePaths['P-EASY'] -EvidenceDir $EvidenceDir
     $rows = @(
-        @{ Tp = 'TP-004'; Case = 'prompt-content-and-destination' },
-        @{ Tp = 'TP-005'; Case = 'abort' },
-        @{ Tp = 'TP-006'; Case = 'no-response-required' },
         @{ Tp = 'TP-007'; Case = 'lapsed-prompt-abandoned' },
         @{ Tp = 'TP-008'; Case = 'non-interactive-invocation' },
         @{ Tp = 'TP-507'; Case = 'active-hook-demonstration' }
