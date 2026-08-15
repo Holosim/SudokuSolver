@@ -914,9 +914,25 @@ function Invoke-ConPtyDiagnostics {
         # reached cmd.exe at all, so it proved nothing. `/V:ON` enables
         # delayed expansion for the entire cmd.exe instance before it reads
         # any command, which is unaffected by this gotcha.
-        $p4 = New-ConPtyProcess -Exe $comspec4 `
-            -Arguments '/V:ON /c "set /p REPLY=& echo GOT:!REPLY!"' `
-            -Columns 120 -Rows 30 -StdoutRedirectPath $out4 -StderrRedirectPath $err4
+        # Round 8: /V:ON alone did NOT fix it (still literal "GOT:!REPLY!")
+        # - a second, independent bug in this probe, not a second real
+        # finding. -StdoutRedirectPath/-StderrRedirectPath make Start()
+        # wrap $comspec4 in *another* cmd.exe /c layer (see Start()'s own
+        # doc comment), so this was actually running
+        # `cmd /c "cmd /V:ON /c "set /p REPLY=& echo GOT:!REPLY!" 1>out 2>err"`
+        # - a doubly-nested command line whose quoting cmd.exe's own
+        # ambiguous /C-argument stripping cannot be trusted to parse the
+        # way intended (exactly the hazard the "doubled outer quote"
+        # comment on Start() itself warns about, self-inflicted here by
+        # nesting a second /V:ON /c inside it). Redirection is now inline
+        # in this probe's own single /c string instead, so $comspec4 is
+        # attached to the pseudoconsole directly - one level of cmd.exe,
+        # not two. EvidenceDir is the GitHub Actions workspace root
+        # (D:\a\...\..., confirmed space-free in every prior round's
+        # transcript path), so the redirect targets need no quoting of
+        # their own within this single-quoted /c string.
+        $argString4 = '/V:ON /c "set /p REPLY=& echo GOT:!REPLY! 1>' + $out4 + ' 2>' + $err4 + '"'
+        $p4 = New-ConPtyProcess -Exe $comspec4 -Arguments $argString4 -Columns 120 -Rows 30
         $lines.Add("Started=$($p4.Started) LastError=$($p4.LastError) ProcessId=$($p4.ProcessId)")
         if ($p4.Started) {
             # `set /p` needs a moment to actually be waiting on stdin before
