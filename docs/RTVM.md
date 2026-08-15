@@ -1350,7 +1350,7 @@ than for a plan.
 | A-1 | **TP-506** — run the exe on a clean Windows machine with no VS, no redistributable, no build tools | Every hosted Windows image ships the full VS toolchain and the VC++ runtimes, so "runs where the runtime was never installed" cannot be demonstrated there — the negative is unobservable on the only machine we have | `dumpbin /dependents` asserting the import list is stock system DLLs only (`KERNEL32`, `USER32`, …) with no `MSVCP140.dll` / `VCRUNTIME140*.dll` — TP-506's own last sentence, and it is strong evidence | **Closed 2026-08-14 (§9.20, issue #14) — Test Engineer PASS.** The `dumpbin` clause re-executed and clean at `9e801cd` (run `31811410503`): `KERNEL32.dll` only, no `MSVCP140.dll` / `VCRUNTIME140*.dll`. The one residual sentence — "launches on a machine that never had the VC++ runtime installed" — is accepted per this row's own standing ruling, not re-litigated: no rentable/hosted image can ever demonstrate it. TP-506 treated as fully discharged on that basis; RTVM-506 promoted to In Test pending CI/CD's trunk-commit confirmation (§9.2's second Verified precondition), then to **Verified** 2026-08-14 once CI/CD reported merge commit `6166cb4` (§9.2's second precondition satisfied) |
 | A-2 | **TP-900** — the solution *opening* in VS 2022 with no "project unavailable" and no migration prompt | The prompt is modal GUI behaviour; a headless runner never renders it | `devenv.exe SudokuSolver.sln /Build "Debug\|x64"` uses the same solution loader as the IDE and fails or hangs where the IDE would prompt; combined with a toolset/`ToolsVersion` inspection this covers the substance | **Genuine V-4 item — measured 2026-08-13 (§9.1.6), not a suspicion.** `vswhere -legacy -all -products *` (P2, `run-procedures.ps1`) confirms **no VS `17.x` instance exists on `win25-vs2026`**, on both the pre-fix and post-fix runs. The toolset half is covered — the build ran on `PlatformToolset=v143` / MSVC 14.44, the VS 2022 toolset shipped side-by-side. What remains, and cannot be automated on this image, is one sentence: *"the solution opens in the VS 2022 IDE itself with no migration prompt."* Ready to go forward with A-1 once A-4 is attempted (V-5) |
 | A-3 | **TP-905** — tests appearing in **Test Explorer** | Test Explorer is a GUI surface | `vstest.console.exe` is the discovery and execution engine Test Explorer drives; if it discovers and runs both methods, the substantive claim holds | **CLOSED 2026-08-13 (§9.1.6, DW-1 fixed).** `run-procedures.ps1` now runs `vstest.console.exe /ListTests:<dll>` for discovery and a separate `/Logger:trx` execution; both artifacts exist at SHA `3658728` (Windows run `31739274812`): 25/25 tests discovered, 25/25 executed and passed. No longer a V-4 candidate |
-| A-4 | **TP-004…008** — the console-handle behaviour (`PeekConsoleInput`, `GetFileType` = console, an interactive-equivalent stdin held open) | A runner step has no interactive console attached: stdin is a pipe or `NUL`, so `GetFileType` never reports a console and the console path is never entered. TP-008's redirected half runs fine; TP-004/005/006's do not | Drive the exe under a **ConPTY pseudoconsole** (`CreatePseudoConsole`, available on Windows Server 2022) from a small harness, so the child genuinely sees a console handle. This is the same mechanism Windows Terminal uses and it is not exotic | **Still undecided — the #17 spike was not attempted.** §9.26: the console-handle *product* code shipped on #17 (RTVM-004…008 promoted to In Test) but both the Software Engineer and Test Engineer independently declined the ConPTY harness spike itself as out of scope for a feature branch ("no pty available in this harness"), same reasoning #24 gave for splitting `ProcessRunner` into its own issue. **Reassigned to #25**, a dedicated issue, Finish-Start on #17. Still the largest row on this list if it closes |
+| A-4 | **TP-004…008** — the console-handle behaviour (`PeekConsoleInput`, `GetFileType` = console, an interactive-equivalent stdin held open) | A runner step has no interactive console attached: stdin is a pipe or `NUL`, so `GetFileType` never reports a console and the console path is never entered. TP-008's redirected half runs fine; TP-004/005/006's do not | Drive the exe under a **ConPTY pseudoconsole** (`CreatePseudoConsole`, available on Windows Server 2022) from a small harness, so the child genuinely sees a console handle. This is the same mechanism Windows Terminal uses and it is not exotic | **Attempted 2026-08-15 (§9.34, issue #25) — genuinely split, not undecided any more.** `tests/windows/lib/ConPty.ps1` allocates a real `CreatePseudoConsole` pseudoconsole and attaches `SudokuSolver.exe` to it directly (no `cmd.exe`, no redirect wrapper). **Output/detection half closes**: TP-004 passes in full (real console handle, correct stderr wording and 15.18 s timing, 0 bytes on stdout) and TP-006's cadence/non-blocking clauses pass (four scheduled prompts 15.18/25.02/35.13/45.21 s, still running past 45 s) — genuine automated Windows CI evidence for `GetFileType`=console detection and prompt emission, on `win25-vs2026`. **Input-delivery half does not close, and is now a measured V-4 negative, same shape as A-2**: TP-005 (both clauses) and TP-006's stop-response-exit-3 clause FAIL, isolated by three progressively-tighter probes in `conpty-diag.txt` to one root cause — probe (6), a true direct-attachment session with no `cmd.exe` and no redirect layer anywhere in the chain, reporting via a file write from inside the child itself: `writeInputOk=True` (the host-side `WriteFile` succeeds) but `inputReachedConsoleInputBuffer=False` (`GetNumberOfConsoleInputEvents` stays 0, `ReadConsoleA` never unblocks). This is upstream of `StdinChannel.cpp`/`SolveSession.cpp` entirely — confirmed independently by the Software Engineer (who built the isolation) and the Test Engineer (who re-read the raw per-run streams rather than trusting the harness's own grading). Ready to go forward with A-1/A-2 per V-5 — the residual list is now A-1's launch clause, A-2's IDE-load clause, and A-4's input-delivery clause, all three measured rather than assumed |
 | A-5 | **TP-500…504** — the timing set | Shared-tenant runner jitter against a ±1.0 s tolerance (§7 I-6) | W-7: three samples, Release build, all reported | **Not a V-4 item, and now has real data behind that call.** `tests/windows/run-timing.ps1` lands 2026-08-13 (§9.1.6) and, once DW-4's exit-code gate was fixed, produced genuine TP-500 evidence at SHA `3658728`: `easy`/`hard17` max 20–30 ms, `unsolvable` max ~12 ms, 30/30 runs at the correct exit code, all three W-7 samples present. Nowhere close to the 10 s ceiling on this modest 2-core/4-logical machine, so §7 I-6's tolerance is not in question yet. **Superseded 2026-08-14 (§9.14, issue #15)** by fresher, issue-scoped evidence gathered at pre-merge SHA `00d0c38` on the `win25-vs2026` image: `easy` max 22.2 ms, `hard17` max 28.6 ms, `unsolvable` max 10.7 ms, all three W-7 samples exit-code-gated (0/0/2). RTVM-500 promoted to Verified, Commit(s) recorded as merge commit `699abde` per the standing "record the trunk merge SHA" convention (§9.5, §9.8.5, §9.11). **TP-504 itself discharged 2026-08-15 (§9.29, issue #19)** — it needs no ConPTY (RTVM-006/008 mean non-interactive invocation is never blocked), so it was drivable without waiting on #25: `run-timing.ps1` now asserts the full piecewise I-12 bound (first byte ≤16.0 s, post-first-byte gaps ≤11.0 s) for `P-EASY`/`P-HARD17`/`P-UNSOLVABLE`/`P-BADCHAR`/the long-solve hook, real Windows evidence at `d4d79b2` (run `31863267320`), all 5 PASS, mutation-tested against a false-tightened ceiling to rule out a vacuous check. RTVM-504 promoted to Verified. TP-501…503 stay NOT-RUN pending #25, unaffected |
 | A-6 | **TP-901** — build "on a machine that has never built this project" | — none; a fresh hosted runner satisfies this clause **better** than a client engineer's machine, which has VS configured and a warm state | n/a | **Not a V-4 item.** Recorded only to stop it being added later by association |
 
@@ -1378,8 +1378,21 @@ permission:
    **A-3**.~~ **Done 2026-08-13 — closed.**
 2. ~~`vswhere -legacy -all -products *` instance enumeration → closes or
    confirms **A-2**.~~ **Done 2026-08-13 — confirmed open, measured.**
-3. The ConPTY spike → closes or confirms **A-4**, the largest remaining
-   row. Still outstanding, on #17.
+3. ~~The ConPTY spike → closes or confirms **A-4**, the largest remaining
+   row.~~ **Done 2026-08-15 (§9.34, issue #25) — split.** The
+   output/detection half closes (real automated evidence); the
+   input-delivery half comes back measured-negative on this hosted
+   image, joining A-2 as a genuine V-4 candidate rather than an
+   unattempted row.
+
+**Fourth pass, 2026-08-15 — all three attempts are done; the residual
+list is ready for V-5.** A-1's launch clause, A-2's IDE-load clause, and
+A-4's input-delivery clause are the three rows left, each measured (not
+assumed) to be unautomatable on the hosted images this pipeline actually
+has. A-3, A-4's output/detection half, and A-5's TP-504 clause have all
+closed by automation. This is the Solutions Architect's step (V-5), not
+recorded here as a hand-off — it is noted so the next reader sees the
+list is finally stable.
 
 ### 9.5 DATA-IN coverage after the parser ([RTVM-100], issue #6)
 
@@ -3986,3 +3999,102 @@ issue's to close.
 
 **Regression testing needed: no**, per CI/CD's hand-back — closing this
 issue outright rather than routing to Test Engineer.
+
+### 9.34 ConPTY spike attempted — A-4 splits into a closed half and a measured V-4 negative (issue #25)
+
+State at branch `issue-25` (tip `7f59989`; product/harness content ends
+at `cf67e0d`, followed only by two Software/Test Engineer memory
+commits — confirmed by `git diff --stat cf67e0d..7f59989`), Test
+Engineer verdict 2026-08-15 on Windows CI run
+[31903980994](https://github.com/Holosim/SudokuSolver/actions/runs/31903980994)
+(`windows-latest`, headSha `cf67e0d`). This is the issue §9.26 named as
+the vehicle for A-4 (Finish-Start on #17, which shipped the
+console-handle product code but declined the harness spike itself as
+out of scope).
+
+**What was built.** `tests/windows/lib/ConPty.ps1`: a real
+`CreatePseudoConsole` driver — `CreateProcessW` under
+`EXTENDED_STARTUPINFO_PRESENT`, raw `ReadFile`/`WriteFile` on the pty
+pipes, input written only after the child is already running (a human
+at a keyboard, not queued stdin). New `TP-004,TP-006` and `TP-005`
+sections in `tests/windows/run-procedures.ps1` drive `SudokuSolver.exe`
+under it and grade each clause PASS/FAIL/NOT-RUN off the run's own exit
+code and stream content (the DW-4 convention). `git diff --stat` over
+`src/` across every commit on this branch is empty — this issue adds no
+product code, only test infrastructure.
+
+**Evidence, read from the raw artifact by both the Software Engineer
+(who built it) and the Test Engineer (who independently re-verified by
+reading `runtime-procedures.json`'s per-check fields and the raw
+`stderr.txt`/`stdout.txt` under `runs/`, not the harness's own
+PASS/FAIL summary):**
+
+- **TP-004 — PASS, both clauses**, over a genuine console handle:
+  `runs/TP-004-006-conpty/stderr.txt` carries the reference prompt line
+  verbatim (`Still working (15s elapsed)...Type s then Enter to stop; no response needed - the solve continues.`)
+  at 15.18 s; `stdout.txt` is 0 bytes.
+- **TP-006 — PASS on cadence and non-blocking, FAIL on
+  stop-response-exit-3.** Four scheduled prompts at 15.18/25.02/35.13/
+  45.21 s (max gap 10.11 s, within the ±1.0 s tolerance each), process
+  confirmed still running past the fourth. A stop response sent after
+  the fourth prompt does not produce exit `3` — a fifth prompt fires
+  instead, meaning the response never landed.
+- **TP-005 — FAIL, both clauses**, same shape: no `abandoned at`
+  line, no exit `3`, the process runs its ordinary unattended schedule.
+
+**Root cause, isolated rather than assumed.** `conpty-diag.txt` runs
+three progressively-tighter probes at the one question that matters —
+does host-written pty input ever reach the child's console input
+buffer on `win25-vs2026` — because probe (4)'s `cmd.exe`-wrapped
+`set /p` was ambiguous (`cmd.exe` itself is a second variable) and
+probe (5) still ran through a redirect wrapper. **Probe (6) is a true
+direct attachment**: no `cmd.exe`, no redirect layer anywhere in the
+chain, the result reported via a file write from *inside* the directly
+attached child itself. `writeInputOk=True` (the host-side `WriteFile`
+succeeds cleanly) but `inputReachedConsoleInputBuffer=False` —
+`GetNumberOfConsoleInputEvents` never rises above 0, `ReadConsoleA`
+never unblocks, measured from inside the child. This is upstream of
+`StdinChannel.cpp`'s `Console` `StdinKind` branch and
+`SolveSession.cpp`'s stop-response check entirely — those code paths
+are never reached because the console handle this harness attaches to
+never receives the write in the first place. TP-004's pass and TP-006's
+non-input passes are themselves evidence the ConPTY *output* path and
+`GetFileType`/console-handle detection genuinely work; only input
+delivery on this specific hosted image is the gap. This is the
+"specific negative result, not a vague one" the issue's own body asked
+for.
+
+**Consequence for §9.4.** A-4 is no longer undecided. It splits: the
+output/detection half (TP-004 in full, TP-006's cadence/non-blocking
+clauses) closes on genuine automated evidence; the input-delivery half
+(TP-005 in full, TP-006's stop-response clause) is now a measured,
+isolated V-4 candidate — same shape as A-2's "measured, not assumed"
+finding, not an unattempted row. §9.4's A-4 row updated in place.
+
+**Consequence for the row table, by clause — what's discharged and
+what still isn't:**
+
+| Req | This round | Still outstanding |
+| --- | --- | --- |
+| RTVM-004 | TP-004 executed in full against a genuine console handle on real Windows CI — both the automated-harness gap and the standing V-1 MSVC/process-level re-execution gap (§9.26's table) are now closed for this row. **Zero outstanding clauses.** | Nothing. Flagged per the RTVM-001/002/003 precedent (§9.10.2): this evidence is on branch `issue-25`, not yet a trunk commit, so the row stays **In Test**, Commit(s) unchanged (`2ca7deb`) — but recording the merge SHA on the next CI/CD commit-confirmation should move it straight to **Verified** without a further regression round, since nothing remains for a regression pass to discharge |
+| RTVM-501 | TP-501's first-prompt clause gains one genuine automated sample (15.18 s, within ±1.0 s) on a real console handle | TP-501's own text asks for 5 repeats; this round supplies 1. Per V-6, recorded as partial, not "in full." Row stays In Test |
+| RTVM-502 | TP-502's cadence clause gains genuine automated evidence for 4 of its 5 scheduled prompts (15/25/35/45 s, all within tolerance) on a real console handle | The 55 s fifth prompt was not captured — the session moved to the stop-response attempt after the fourth instead. Per V-6, partial. Row stays In Test |
+| RTVM-503 | Nothing — the ConPTY harness measures prompt cadence and exit behaviour, not the RTVM-204 search-step count | TP-503's step-count sampling during a prompt window, still entirely unattempted under any console handle. Row stays In Test, unchanged since §9.26 |
+| RTVM-006 | The substantive non-blocking/lapses-by-default behaviour (RTVM-006's own text) gains genuine automated Console-shape evidence: four prompts fired on schedule with nothing acknowledged, process kept running throughout | TP-006's own procedure also asks for a subsequent accepted stop response, which fails for the same infra reason as RTVM-005 below. Per V-6, TP-006 is not "in full." Row stays In Test |
+| RTVM-005, RTVM-404 | Attempted for the first time under a genuine console handle | Both FAIL, isolated to the ConPTY input-delivery gap above — not a product defect, but not a discharge either. Converts from "not yet attempted" to "attempted, blocked, measured V-4 candidate" (§9.4 A-4). Rows stay In Test, Commit(s) unchanged (`2ca7deb`) |
+| RTVM-203 | TP-005's 1.0 s abort-latency clause was not reached (the stop response never landed), so this round adds nothing to or against RTVM-203 | None from this round — RTVM-203 was already **Verified** on TP-203's unit-level evidence (issue #16) and that evidence is unaffected. Not a regression |
+
+**No status-cell changes in §5's table.** Every row this issue touches
+stays exactly as recorded before (§9.27/§9.28's In Test, `2ca7deb`) —
+only RTVM-004 is flagged for likely automatic promotion on the next
+commit confirmation, per the standing precedent, once that
+confirmation exists. This is a discharge-and-measurement round, not a
+promotion round, same distinction §9.10.1/§9.10.2 drew for RTVM-400 and
+RTVM-001…003.
+
+**§7 interpretations raised in this thread: none.**
+
+Real test-infrastructure code lands on this branch
+(`tests/windows/lib/ConPty.ps1`, `tests/windows/run-procedures.ps1`)
+regardless of the promotion outcome above, so this still needs a real
+merge — handed to CI/CD next with `status:ready-for-commit`.
