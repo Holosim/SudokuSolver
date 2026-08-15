@@ -26,6 +26,19 @@
 # InitializeProcThreadAttributeList/UpdateProcThreadAttribute,
 # CreateProcessW with EXTENDED_STARTUPINFO_PRESENT) is the sequence
 # Microsoft's own ConPTY sample documents — nothing invented here.
+#
+# Third Windows round (issue #25): the reader thread's output pipe was
+# originally wrapped in a .NET FileStream (Read()/Write()/Dispose()).
+# Real evidence from the first two Windows runs (see the ReaderReadCallCount
+# instrumentation and its call sites further down) showed the first Read()
+# call returning but every one after it blocking forever, even against a
+# session that was actively producing output for 55+ seconds — the
+# FileStream layer's own buffering/lifetime behaviour over a raw pipe
+# handle was a live suspect with no way to rule it out from this Linux
+# development environment. ReadFile/WriteFile below call the pipe directly,
+# the same Win32 functions StdinChannel.cpp already uses successfully on
+# every other StdinKind in this codebase, removing that layer rather than
+# instrumenting around it further.
 
 Set-StrictMode -Off
 
@@ -34,8 +47,6 @@ using System;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
-using Microsoft.Win32.SafeHandles;
-using System.IO;
 
 namespace SudokuTests
 {
@@ -123,6 +134,25 @@ namespace SudokuTests
         [DllImport("kernel32.dll", SetLastError = true)]
         private static extern bool TerminateProcess(IntPtr hProcess, uint uExitCode);
 
+        // Third Windows round (issue #25): the reader thread's very first
+        // Read() call returned (ReaderReadCallCount=1) but every subsequent
+        // one blocked forever, even against a SudokuSolver.exe session
+        // actively writing prompts for 55+ seconds - i.e. not "no data was
+        // ever produced" but "this thread stopped seeing it after the
+        // first call". That symptom points at .NET's FileStream, not at
+        // ConPTY itself: FileStream applies its own internal buffering/
+        // read-ahead heuristics on top of a raw handle, and those
+        // heuristics are documented for regular files, not for anonymous
+        // pipes wrapped this way. ReadFile/WriteFile below call the same
+        // Win32 functions StdinChannel.cpp already uses successfully on
+        // every other StdinKind in this codebase, with nothing in between
+        // to second-guess.
+        [DllImport("kernel32.dll", SetLastError = true)]
+        private static extern bool ReadFile(IntPtr hFile, byte[] lpBuffer, uint nNumberOfBytesToRead, out uint lpNumberOfBytesRead, IntPtr lpOverlapped);
+
+        [DllImport("kernel32.dll", SetLastError = true)]
+        private static extern bool WriteFile(IntPtr hFile, byte[] lpBuffer, uint nNumberOfBytesToWrite, out uint lpNumberOfBytesWritten, IntPtr lpOverlapped);
+
         private const uint EXTENDED_STARTUPINFO_PRESENT = 0x00080000;
         // ProcThreadAttributeValue(ProcThreadAttributePseudoConsole=22, Thread=FALSE, Input=TRUE, Additive=FALSE)
         // == 22 | 0x00020000. Documented constant, not derived at runtime.
@@ -134,8 +164,11 @@ namespace SudokuTests
         private IntPtr _hProcess = IntPtr.Zero;
         private IntPtr _hThread = IntPtr.Zero;
         private IntPtr _attrList = IntPtr.Zero;
-        private FileStream _inputStream;
-        private FileStream _outputStream;
+        // Raw handles, not FileStream (see the ReadFile/WriteFile P/Invoke
+        // comment above) - _hInputWrite is written to with WriteInput,
+        // _hOutputRead is drained by ReaderLoop.
+        private IntPtr _hInputWrite = IntPtr.Zero;
+        private IntPtr _hOutputRead = IntPtr.Zero;
         private readonly object _bufferLock = new object();
         private readonly StringBuilder _outputBuffer = new StringBuilder();
         private Thread _readerThread;
@@ -245,10 +278,10 @@ namespace SudokuTests
                 _hThread = pi.hThread;
                 ProcessId = pi.dwProcessId;
 
-                _inputStream = new FileStream(new SafeFileHandle(inputWrite, true), FileAccess.Write, 4096, false);
-                _outputStream = new FileStream(new SafeFileHandle(outputRead, true), FileAccess.Read, 4096, false);
-                inputWrite = IntPtr.Zero;  // ownership moved into the FileStream/SafeFileHandle
-                outputRead = IntPtr.Zero;
+                _hInputWrite = inputWrite;
+                _hOutputRead = outputRead;
+                inputWrite = IntPtr.Zero;  // ownership moved to the fields above -
+                outputRead = IntPtr.Zero;  // the finally block below must not also close these
 
                 _readerThread = new Thread(ReaderLoop);
                 _readerThread.IsBackground = true;
@@ -279,6 +312,12 @@ namespace SudokuTests
             }
         }
 
+        // Total bytes ever appended to _outputBuffer - independent of
+        // PeekOutput()'s string length, so a diagnostic can tell "the
+        // buffer really is empty" apart from "something downstream of the
+        // buffer (a UTF-8 decode, a caller's own filtering) is losing it".
+        public long TotalBytesRead;
+
         private void ReaderLoop()
         {
             var buf = new byte[4096];
@@ -286,17 +325,28 @@ namespace SudokuTests
             {
                 while (!_stopReader)
                 {
-                    int n = _outputStream.Read(buf, 0, buf.Length);
+                    uint read;
+                    bool ok = ReadFile(_hOutputRead, buf, (uint)buf.Length, out read, IntPtr.Zero);
                     Interlocked.Increment(ref ReaderReadCallCount);
-                    if (n <= 0) break;
-                    string text = Encoding.UTF8.GetString(buf, 0, n);
+                    if (!ok)
+                    {
+                        // ERROR_BROKEN_PIPE (109) once ClosePseudoConsole
+                        // tears the session down is the expected end of
+                        // this loop, not a fault worth recording as one.
+                        int err = Marshal.GetLastWin32Error();
+                        if (err != 109) ReaderException = "ReadFile failed, GetLastError=" + err;
+                        break;
+                    }
+                    if (read == 0) break;
+                    Interlocked.Add(ref TotalBytesRead, read);
+                    string text = Encoding.UTF8.GetString(buf, 0, (int)read);
                     lock (_bufferLock) { _outputBuffer.Append(text); }
                 }
             }
             catch (Exception ex)
             {
                 // Recorded rather than swallowed (issue #25 diagnostics) -
-                // the stream being closed under us at Dispose time is the
+                // the handle being closed under us at Dispose time is the
                 // expected/benign case, but this also catches a genuine
                 // read-side failure that would otherwise look identical to
                 // "nothing was ever written".
@@ -313,16 +363,22 @@ namespace SudokuTests
         }
 
         // Writes 'text' (already including any line terminator the caller
-        // wants) as UTF-8 bytes and flushes immediately, exactly like a
-        // real keypress stream — nothing is queued before the process
-        // starts, since this can only be called on an already-running one.
+        // wants) as UTF-8 bytes, exactly like a real keypress stream -
+        // nothing is queued before the process starts, since this can only
+        // be called on an already-running one. A pipe write completes as
+        // soon as the bytes are handed to the OS buffer, so there is
+        // nothing to separately flush (unlike the FileStream this replaced).
         public bool WriteInput(string text)
         {
             try
             {
                 byte[] bytes = Encoding.UTF8.GetBytes(text);
-                _inputStream.Write(bytes, 0, bytes.Length);
-                _inputStream.Flush();
+                uint written;
+                if (!WriteFile(_hInputWrite, bytes, (uint)bytes.Length, out written, IntPtr.Zero))
+                {
+                    LastError = "WriteFile failed, GetLastError=" + Marshal.GetLastWin32Error();
+                    return false;
+                }
                 return true;
             }
             catch (Exception ex)
@@ -367,13 +423,26 @@ namespace SudokuTests
         public void Dispose()
         {
             _stopReader = true;
-            try { if (_inputStream != null) _inputStream.Dispose(); } catch { }
-            try { if (_outputStream != null) _outputStream.Dispose(); } catch { }
+
+            // ClosePseudoConsole FIRST, before touching our own pipe
+            // handles: it is what tears down the conhost session backing
+            // this pseudoconsole, and conhost holds its own duplicated
+            // write handle onto the output pipe for as long as it is
+            // alive. Until that happens, the reader thread's blocking
+            // ReadFile has a live writer on the other end and will not see
+            // EOF no matter how long Dispose waits - closing our own read
+            // handle out from under it first (the previous ordering) does
+            // not fix that, it just turns a clean EOF into an
+            // undefined-behaviour close-during-a-pending-synchronous-read.
+            if (_hPC != IntPtr.Zero) { ClosePseudoConsole(_hPC); _hPC = IntPtr.Zero; }
+
             if (_readerThread != null)
             {
-                try { _readerThread.Join(500); } catch { }
+                try { _readerThread.Join(1000); } catch { }
             }
-            if (_hPC != IntPtr.Zero) { ClosePseudoConsole(_hPC); _hPC = IntPtr.Zero; }
+
+            if (_hInputWrite != IntPtr.Zero) { CloseHandle(_hInputWrite); _hInputWrite = IntPtr.Zero; }
+            if (_hOutputRead != IntPtr.Zero) { CloseHandle(_hOutputRead); _hOutputRead = IntPtr.Zero; }
             if (_attrList != IntPtr.Zero) { DeleteProcThreadAttributeList(_attrList); Marshal.FreeHGlobal(_attrList); _attrList = IntPtr.Zero; }
             if (_hThread != IntPtr.Zero) { CloseHandle(_hThread); _hThread = IntPtr.Zero; }
             if (_hProcess != IntPtr.Zero) { CloseHandle(_hProcess); _hProcess = IntPtr.Zero; }
@@ -401,6 +470,36 @@ function Remove-AnsiCodes {
     param([Parameter(Mandatory)][AllowEmptyString()][string]$Text)
     $noCsi = [regex]::Replace($Text, "`e\[[0-9;?]*[a-zA-Z]", '')
     return [regex]::Replace($noCsi, "`e\][^`a]*(`a|`e\\)", '')
+}
+
+# Renders control characters visibly (<ESC>, <BEL>, <CR>, <LF>, <NUL> or
+# <0xNN> for anything else non-printable) instead of stripping them, so a
+# diagnostic dump shows exactly what arrived rather than what a filter
+# thinks mattered. Used only for conpty-diag.txt (never for a TP content
+# assertion, which stays on Remove-AnsiCodes's plain-text view) - the whole
+# point here is to see past that filter when a result is unexpectedly empty.
+function ConvertTo-VisibleEscapes {
+    param([Parameter(Mandatory)][AllowEmptyString()][string]$Text)
+    $sb = New-Object System.Text.StringBuilder
+    foreach ($ch in $Text.ToCharArray()) {
+        $code = [int]$ch
+        switch ($code) {
+            0x1B { [void]$sb.Append('<ESC>'); break }
+            0x07 { [void]$sb.Append('<BEL>'); break }
+            0x0D { [void]$sb.Append('<CR>'); break }
+            0x0A { [void]$sb.Append("<LF>`n"); break }
+            0x00 { [void]$sb.Append('<NUL>'); break }
+            default {
+                if ($code -lt 0x20 -or $code -eq 0x7F) {
+                    [void]$sb.Append("<0x$($code.ToString('X2'))>")
+                }
+                else {
+                    [void]$sb.Append($ch)
+                }
+            }
+        }
+    }
+    return $sb.ToString()
 }
 
 # Spawns $Exe under a real ConPTY. Never throws (C1) — a construction
@@ -496,8 +595,9 @@ function Invoke-ConPtyDiagnostics {
             $exited = $p1.WaitForExit(3000)
             Start-Sleep -Milliseconds 300  # let the reader thread catch up to a just-exited process
             $lines.Add("seenMarker=$seen exited=$exited exitCode=$(if ($exited) { $p1.ExitCode } else { 'n/a' }) hasExited=$($p1.HasExited)")
-            $lines.Add("readerThreadAlive=$($p1.ReaderThreadAlive) readerReadCallCount=$($p1.ReaderReadCallCount) readerException=$($p1.ReaderException)")
-            $lines.Add('raw: [' + (Remove-AnsiCodes $p1.PeekOutput()) + ']')
+            $lines.Add("readerThreadAlive=$($p1.ReaderThreadAlive) readerReadCallCount=$($p1.ReaderReadCallCount) totalBytesRead=$($p1.TotalBytesRead) readerException=$($p1.ReaderException)")
+            $lines.Add('stripped: [' + (Remove-AnsiCodes $p1.PeekOutput()) + ']')
+            $lines.Add('rawEscaped: [' + (ConvertTo-VisibleEscapes $p1.PeekOutput()) + ']')
             if (-not $exited) { $p1.Kill() }
             try { $p1.Dispose() } catch { }
         }
@@ -518,8 +618,9 @@ function Invoke-ConPtyDiagnostics {
             while ($sw2.Elapsed.TotalSeconds -lt 8 -and -not $p2.HasExited) { Start-Sleep -Milliseconds 200 }
             Start-Sleep -Milliseconds 300  # let the reader thread catch up to a just-exited process
             $lines.Add("elapsedSec=$([math]::Round($sw2.Elapsed.TotalSeconds,1)) hasExitedAfter8s=$($p2.HasExited) exitCode=$(if ($p2.HasExited) { $p2.ExitCode } else { 'n/a' })")
-            $lines.Add("readerThreadAlive=$($p2.ReaderThreadAlive) readerReadCallCount=$($p2.ReaderReadCallCount) readerException=$($p2.ReaderException)")
-            $lines.Add('raw: [' + (Remove-AnsiCodes $p2.PeekOutput()) + ']')
+            $lines.Add("readerThreadAlive=$($p2.ReaderThreadAlive) readerReadCallCount=$($p2.ReaderReadCallCount) totalBytesRead=$($p2.TotalBytesRead) readerException=$($p2.ReaderException)")
+            $lines.Add('stripped: [' + (Remove-AnsiCodes $p2.PeekOutput()) + ']')
+            $lines.Add('rawEscaped: [' + (ConvertTo-VisibleEscapes $p2.PeekOutput()) + ']')
             if (-not $p2.HasExited) { $p2.Kill() }
             try { $p2.Dispose() } catch { }
         }
@@ -555,6 +656,8 @@ function Invoke-ConPty004006Probe {
         StopExitCode              = $null
         StopLatencyMs             = $null
         RawOutputPath             = $null
+        TotalBytesRead            = $null
+        ReaderReadCallCount       = $null
     }
 
     $proc = New-ConPtyProcess -Exe $Exe -Arguments ('"' + $FixtureFile + '"') `
@@ -610,10 +713,13 @@ function Invoke-ConPty004006Probe {
     if (-not $exited) { $proc.Kill() }
 
     Start-Sleep -Milliseconds 200
+    $result.TotalBytesRead = $proc.TotalBytesRead
+    $result.ReaderReadCallCount = $proc.ReaderReadCallCount
     $rawDir = Join-Path $EvidenceDir 'runs/TP-004-006-conpty'
     New-Item -ItemType Directory -Force -Path $rawDir | Out-Null
     $rawPath = Join-Path $rawDir 'transcript.txt'
     Write-Utf8NoBom -Path $rawPath -Content (Remove-AnsiCodes $proc.PeekOutput())
+    Write-Utf8NoBom -Path (Join-Path $rawDir 'transcript-raw-escaped.txt') -Content (ConvertTo-VisibleEscapes $proc.PeekOutput())
     $result.RawOutputPath = $rawPath
 
     try { $proc.Dispose() } catch { }
@@ -642,6 +748,8 @@ function Invoke-ConPty005Probe {
         AbandonedTextSeen = $false
         StdoutStayedEmpty = $null
         RawOutputPath     = $null
+        TotalBytesRead    = $null
+        ReaderReadCallCount = $null
     }
 
     $proc = New-ConPtyProcess -Exe $Exe -Arguments ('"' + $FixtureFile + '"') `
@@ -677,10 +785,13 @@ function Invoke-ConPty005Probe {
         $result.StdoutStayedEmpty = -not [bool]($final -match '\+-------\+')
     }
 
+    $result.TotalBytesRead = $proc.TotalBytesRead
+    $result.ReaderReadCallCount = $proc.ReaderReadCallCount
     $rawDir = Join-Path $EvidenceDir 'runs/TP-005-conpty'
     New-Item -ItemType Directory -Force -Path $rawDir | Out-Null
     $rawPath = Join-Path $rawDir 'transcript.txt'
     Write-Utf8NoBom -Path $rawPath -Content (Remove-AnsiCodes $proc.PeekOutput())
+    Write-Utf8NoBom -Path (Join-Path $rawDir 'transcript-raw-escaped.txt') -Content (ConvertTo-VisibleEscapes $proc.PeekOutput())
     $result.RawOutputPath = $rawPath
 
     try { $proc.Dispose() } catch { }
